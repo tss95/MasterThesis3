@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 4, 'index': 0}
+{'batch_size': 128, 'epochs': 50, 'learning_rate': 0.001, 'optimizer': 'adam'}
+{'activation': 'sigmoid', 'dropout_rate': 0.1, 'filters': 17, 'kernel_size': 3, 'l1_r': 0.01, 'l2_r': 0.2, 'output_layer_activation': 'softmax', 'padding': 'valid', 'start_neurons': 16}

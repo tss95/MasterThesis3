@@ -1,0 +1,119 @@
+"""
+if model_nr == 1:
+    model = build_model((batch_size, d, k), dropout_rate=dropout, num_classes = num_classes)
+
+    model.compile(**model_args)
+    model.summary()
+    if load_weights:
+        if detrend:
+            weights_dir = 'model_chkpts/model_1/detrend/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + weights_list[-1]}')
+        else:
+            weights_dir = 'model_chkpts/model_1/normal/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + weights_list[-1]}')
+
+if model_nr == 2:
+    model = build_model2((batch_size, d, k), dropout_rate=dropout, num_classes = num_classes)
+
+    model.compile(**model_args)
+    model.summary()
+    if load_weights:
+        if detrend:
+            weights_dir = 'model_chkpts/model_2/detrend/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + weights_list[-1]}')
+        else:
+            weights_dir = 'model_chkpts/model_2/normal/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + bweights_list[-1]}')
+            
+if model_nr == 3:
+    model = build_model3((batch_size, d, k), dropout_rate=dropout, num_classes = num_classes)
+
+    model.compile(**model_args)
+    model.summary()
+    if load_weights:
+        if detrend:
+            weights_dir = 'model_chkpts/model_3/detrend/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + weights_list[-1]}')
+        else:
+            weights_dir = 'model_chkpts/model_3/normal/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + bweights_list[-1]}')
+
+if model_nr == 4:
+    model = build_model4((batch_size, d, k), dropout_rate=dropout, num_classes = num_classes)
+
+    model.compile(**model_args)
+    model.summary()
+    if load_weights:
+        if detrend:
+            weights_dir = 'model_chkpts/model_4/detrend/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + weights_list[-1]}')
+        else:
+            weights_dir = 'model_chkpts/model_4/normal/'
+            weights_list = os.listdir(weights_dir)
+            model.load_weights(weights_dir + weights_list[-1])
+            print(f'Loaded weights from {weights_dir + bweights_list[-1]}')
+"""
+
+"""if model_nr == 1:
+    if detrend:
+        filepath="model_chkpts/model_1/detrend/m1_detrend--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+    else:
+        filepath="model_chkpts/model_1/normal/m1_normal--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+if model_nr == 2:
+    if detrend:
+        filepath="model_chkpts/model_2/detrend/m2_detrend--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+    else:
+        filepath="model_chkpts/model_2/normal/m2_normal--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
+if model_nr == 3:
+    if detrend:
+        filepath="model_chkpts/model_3/detrend/m3_detrend--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+    else:
+        filepath="model_chkpts/model_3/normal/m3_normal--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
+if model_nr == 4:
+    if detrend:
+        filepath="model_chkpts/model_4/detrend/m4_detrend--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+    else:
+        filepath="model_chkpts/model_4/normal/m4_normal--weights-improvement--{epoch:02}--{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
+args = {'steps_per_epoch' : get_steps_per_epoch(train_ds, batch_size, test),
+        'epochs' : epochs,
+        'validation_data' : val_gen,
+        'validation_steps' : get_steps_per_epoch(val_ds, batch_size, test),
+        'verbose' : 1,
+        'use_multiprocessing' : False, 
+        'workers' : 1,
+        'callbacks' : callbacks_list
+}
+"""

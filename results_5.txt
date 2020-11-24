@@ -1,0 +1,34 @@
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 0}
+{'batch_size': 64, 'epochs': 65, 'learning_rate': 0.1, 'optimizer': 'adam'}
+{'activation': 'sigmoid', 'dropout_rate': 0.2, 'filters': 9, 'kernel_size': 3, 'l1_r': 0.3, 'l2_r': 0.01, 'output_layer_activation': 'softmax', 'padding': 'same', 'start_neurons': 512}
+{'test_loss': 571.2318115234375, 'test_accuracy': 0.4375, 'test_precision': 0.0, 'test_recall': 0.0}
+{'train_loss': 571.2392578125, 'train_accuracy': 0.3268229067325592, 'train_precision': 0.0, 'train_recall': 0.0}
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 1}
+{'batch_size': 64, 'epochs': 70, 'learning_rate': 0.01, 'optimizer': 'adam'}
+{'activation': 'softmax', 'dropout_rate': 0.3, 'filters': 17, 'kernel_size': 3, 'l1_r': 0.1, 'l2_r': 0.2, 'output_layer_activation': 'softmax', 'padding': 'same', 'start_neurons': 128}
+{'test_loss': 35.37379837036133, 'test_accuracy': 0.46875, 'test_precision': 0.0, 'test_recall': 0.0}
+{'train_loss': 35.422332763671875, 'train_accuracy': 0.38671875, 'train_precision': 1.0, 'train_recall': 0.00390625}
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 2}
+{'batch_size': 256, 'epochs': 75, 'learning_rate': 1e-05, 'optimizer': 'rmsprop'}
+{'activation': 'relu', 'dropout_rate': 0.5, 'filters': 13, 'kernel_size': 3, 'l1_r': 0.3, 'l2_r': 0.3, 'output_layer_activation': 'softmax', 'padding': 'same', 'start_neurons': 256}
+{'test_loss': 492.99884033203125, 'test_accuracy': 0.34765625, 'test_precision': 0.7777777910232544, 'test_recall': 0.02734375}
+{'train_loss': 492.9971618652344, 'train_accuracy': 0.3294270932674408, 'train_precision': 0.875, 'train_recall': 0.009114583022892475}
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 3}
+{'batch_size': 128, 'epochs': 65, 'learning_rate': 1e-05, 'optimizer': 'sgd'}
+{'activation': 'sigmoid', 'dropout_rate': 0.3, 'filters': 11, 'kernel_size': 3, 'l1_r': 0.1, 'l2_r': 0.001, 'output_layer_activation': 'softmax', 'padding': 'valid', 'start_neurons': 8}
+{'test_loss': 173.9798583984375, 'test_accuracy': 0.328125, 'test_precision': 0.0, 'test_recall': 0.0}
+{'train_loss': 173.98609924316406, 'train_accuracy': 0.30859375, 'train_precision': 0.3333333432674408, 'train_recall': 0.0013020833721384406}
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 4}
+{'batch_size': 16, 'epochs': 75, 'learning_rate': 1e-05, 'optimizer': 'sgd'}
+{'activation': 'softmax', 'dropout_rate': 0.01, 'filters': 13, 'kernel_size': 3, 'l1_r': 0.3, 'l2_r': 0.01, 'output_layer_activation': 'softmax', 'padding': 'valid', 'start_neurons': 256}
+{'test_loss': 89.1249771118164, 'test_accuracy': 0.28044870495796204, 'test_precision': 0.0, 'test_recall': 0.0}
+{'train_loss': 89.12252044677734, 'train_accuracy': 0.35171568393707275, 'train_precision': 0.0, 'train_recall': 0.0}
+-------------------------------------------------------------------------------------------------------------------------------------------
+{'model_nr': 5, 'index': 5}
+{'batch_size': 256, 'epochs': 75, 'learning_rate': 0.1, 'optimizer': 'rmsprop'}
+{'activation': 'softmax', 'dropout_rate': 0.4, 'filters': 15, 'kernel_size': 3, 'l1_r': 0.0001, 'l2_r': 0.001, 'output_layer_activation': 'softmax', 'padding': 'valid', 'start_neurons': 512}

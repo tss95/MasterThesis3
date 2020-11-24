@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,optimizer,activation,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+512,1,1e-05,sgd,relu,0.5,23,9,0.2,0.001,sigmoid,same,8,650.678955078,0.529296875,0.515283823013,0.345703125,3257.4621582,0.51171875,0.53021979332,0.376953125
