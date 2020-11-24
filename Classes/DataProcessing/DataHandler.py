@@ -27,16 +27,16 @@ class DataHandler(LoadData):
         return num_ds, trace_shape[0], trace_shape[1]
 
     def path_to_trace(self, path):
-        trace_array = np.empty((3,6001))
         with h5py.File(path, 'r') as dp:
-            trace_array[:3] = dp.get('traces')
+            trace_array = np.array(dp.get('traces'))
             info = np.array(dp.get('event_info'))
             info = json.loads(str(info))
         return trace_array, info
     
     def batch_to_trace(self, batch):
         path_array = batch[:,0]
-        batch_trace = np.empty((len(batch), 3, 6001))
+        _, channels, datapoints = self.get_trace_shape_no_cast(batch)
+        batch_trace = np.empty((len(batch), channels, datapoints))
         batch_info = []
         for idx, path in enumerate(path_array):
             batch_trace[idx] = self.path_to_trace(path)[0]
