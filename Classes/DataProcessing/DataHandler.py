@@ -14,11 +14,12 @@ import random
 import tensorflow as tf
 from .LoadData import LoadData
 
-class DataHandler(LoadData):
+class DataHandler():
     
-    def __init__(self):
-        super().__init__()
-        self.label_dict = {'earthquake':0, 'noise':1, 'explosion':2, 'induced':3}
+    def __init__(self, loadData):
+        self.loadData = loadData
+        self.label_dict = self.loadData.get_label_dict()
+            
         
     def get_trace_shape_no_cast(self, ds):
         num_ds = len(ds)
@@ -95,3 +96,12 @@ class DataHandler(LoadData):
             if label == "noise":
                 class_array[idx][2] = 1
         return class_array
+    
+    def get_class_distribution_from_ds(self, ds):
+        labels, counts =  np.unique(ds[:,1], return_counts = True)
+        statement_list = [(labels[i], counts[i]) for i in range(0, len(labels))]
+        statement = f"Total: {sum(counts)}"
+        for label, count in statement_list:
+            statement += f", {label}: {count}"
+        print(statement)
+        return labels, counts

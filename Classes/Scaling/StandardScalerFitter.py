@@ -18,6 +18,8 @@ class StandardScalerFitter(ScalerFitter):
             for i in range(num_samples):
                 X = self.path_to_trace(ds[i][0])[0]
                 if detrend:
+                    
                     X = self.detrend_trace(X)
+                self.progress_bar(i, num_samples)
                 self.scaler.partial_fit(X)
             return self.scaler

@@ -8,8 +8,8 @@ from .NoiseAugmentor import NoiseAugmentor
 
 class DataGenerator(DataHandler):
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, loadData):
+        super().__init__(loadData)
    
    
     def data_generator(self, ds, batch_size, test = False, detrend = False, num_classes = 3, 
