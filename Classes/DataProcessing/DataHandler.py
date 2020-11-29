@@ -13,19 +13,22 @@ import random
 
 import tensorflow as tf
 from .LoadData import LoadData
+from .TimeAugmentor import TimeAugmentor
 
 class DataHandler():
     
     def __init__(self, loadData):
         self.loadData = loadData
         self.label_dict = self.loadData.get_label_dict()
-            
         
-    def get_trace_shape_no_cast(self, ds):
+    def get_trace_shape_no_cast(self, ds, use_time_augmentor):
         num_ds = len(ds)
-        with h5py.File(ds[0][0], 'r') as dp:
-            trace_shape = dp.get('traces').shape
-        return num_ds, trace_shape[0], trace_shape[1]
+        if use_time_augmentor:
+            return num_ds, 3, 6000
+        else:
+            with h5py.File(ds[0][0], 'r') as dp:
+                trace_shape = dp.get('traces').shape
+            return num_ds, trace_shape[0], trace_shape[1]
 
     def path_to_trace(self, path):
         with h5py.File(path, 'r') as dp:
@@ -38,11 +41,20 @@ class DataHandler():
         path_array = batch[:,0]
         _, channels, datapoints = self.get_trace_shape_no_cast(batch)
         batch_trace = np.empty((len(batch), channels, datapoints))
-        batch_info = []
+        batch_label = []
         for idx, path in enumerate(path_array):
             batch_trace[idx] = self.path_to_trace(path)[0]
-            batch_info.append(self.label_dict.get(batch[idx][1]))
-        return batch_trace, np.array(batch_info)
+            batch_label.append(self.label_dict.get(batch[idx][1]))
+        return batch_trace, np.array(batch_label)
+    
+    def batch_to_aug_trace(self, batch, timeAug):
+        path_array = batch[:,0]
+        batch_trace = np.empty((len(batch), 3, 6000))
+        batch_label = np.empty((len(batch), 1))
+        for idx, path in enumerate(path_array):
+            batch_trace[idx] = timeAug.augment_event(path)
+            batch_label[idx] = self.label_dict.get(batch[idx][1])
+        return batch_trace, batch_label
     
     def transform_batch(self, scaler, batch_X):
         transformed_X = batch_X
@@ -86,6 +98,7 @@ class DataHandler():
         stream.filter('highpass', freq = highpass_freq)
         return np.array(stream)
     
+    # This function is emberrasing. Please improve.
     def get_class_array(self, ds, num_classes = 3):
         class_array = np.zeros((len(path),num_classes))
         for idx, path, label in enumerate(ds):

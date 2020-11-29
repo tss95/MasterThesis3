@@ -35,10 +35,15 @@ class LoadData():
         
         if downsample or upsample:
             self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        else:
+            np.random.seed(self.seed)
+            np.random_shuffle(self.full_ds)
             
         
         # Remove uninteresting label from ds but keep noise seperately if removed
         self.refine_full_ds()
+        
+        self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
         
         # The noise needs to be reduced in order to work properly in noise augmentor (creating training set for noise augmentor).
         if self.earth_explo_only or self.noise_earth_only:
@@ -48,18 +53,12 @@ class LoadData():
         self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
         self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
         
-        
-            
-        self.train = self.train[0:int((len(self.train)*self.subsample_size))]
-        self.val = self.val[0:int((len(self.val)*self.subsample_size))]
-        self.test = self.test[0:int((len(self.test)*self.subsample_size))]
-        
         if self.earth_explo_only:
             self.label_dict = {'earthquake' : 0, 'explosion' : 1}
         elif self.noise_earth_only:
             self.label_dict = {'earthquake' : 0, 'noise' : 1}
         else:
-            self.label_dict = {'earthquake':0, 'noise':1, 'explosion':2, 'induced':3}
+            self.label_dict = {'earthquake' : 0, 'noise' : 1, 'explosion' : 2, 'induced' : 3}
     
     def refine_full_ds(self):
         if self.earth_explo_only or self.noise_earth_only:
@@ -72,7 +71,7 @@ class LoadData():
             raise Exception("Cannot have both earth_explo_only = True and noise_earth_only = True")
     
     def get_datasets(self):
-        return self.train, self.val, self.test  
+        return self.full_ds, self.train, self.val, self.test  
         
     def csv_to_numpy(self, data_csv, csv_folder):
         with open(csv_folder + '/' + data_csv) as file:
@@ -88,12 +87,14 @@ class LoadData():
     def downsample_label(self, target_label, ds, n_samples):
         target_array = np.array([x for x in ds if x[1] == target_label], dtype = object)
         down_ds = np.array([y for y in ds if y[1] != target_label], dtype = object)
+        np.random.seed(self.seed)
         down_ds = np.concatenate((down_ds, target_array[np.random.choice(target_array.shape[0], n_samples, replace = True)]))
         return np.array(down_ds)
 
     def upsample_label(self, target_label, ds, n_samples):
         target_array = np.array([x for x in ds if x[1] == target_label])
         up_ds = [y for y in ds if y[1] != target_label]
+        np.random.seed(self.seed)
         up_ds = np.concatenate((up_ds, target_array[np.random.choice(target_array.shape[0], n_samples, replace = True)]))
         return np.array(up_ds)
 
@@ -118,6 +119,7 @@ class LoadData():
                 least_occuring_label = unique_labels[np.where(counts == min(counts))]
                 n_samples_for_balance = max(counts)
                 ds = self.upsample_label(least_occuring_label, ds, n_samples_for_balance)
+        np.random.seed(self.seed)
         np.random.shuffle(ds)
         return ds
     

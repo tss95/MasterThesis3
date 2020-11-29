@@ -17,9 +17,13 @@ import tensorflow as tf
 
 class ScalerFitter():
     
-    def __init__(self, train_ds, scaler):
+    def __init__(self, train_ds, scaler, timeAugmentor):
         self.train_ds = train_ds
+        self.timeAug = timeAugmentor
         self.scaler = scaler
+        self.use_time_augmentor = False
+        if self.timeAug != None:
+            self.use_time_augmentor = True
 
     def subsample(self, ds, shuffle = False, subsample_rate = 0.2):
         num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds)
@@ -43,8 +47,10 @@ class ScalerFitter():
     def transform_sample(self, sample_X):
         return self.scaler.transform(sample_X)
 
-    def get_trace_shape_no_cast(self, ds):
+    def get_trace_shape_no_cast(self, ds, use_time_augmentor):
         num_ds = len(ds)
+        if use_time_augmentor:
+            return num_ds, 3, 6000
         with h5py.File(ds[0][0], 'r') as dp:
             trace_shape = dp.get('traces').shape
         return num_ds, trace_shape[0], trace_shape[1]
@@ -52,6 +58,8 @@ class ScalerFitter():
     def path_to_trace(self, path):
         with h5py.File(path, 'r') as dp:
             trace_array = np.array(dp.get('traces'))
+            if self.use_time_augmentor:
+                trace_array = self.timeAug.augment_event(path)
             info = np.array(dp.get('event_info'))
             info = json.loads(str(info))
         return trace_array, info

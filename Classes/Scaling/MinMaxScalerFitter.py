@@ -8,12 +8,9 @@ class MinMaxScalerFitter(ScalerFitter):
             self.scaler = MinMaxScaler()
             
             
-        def fit_scaler(self, test = False, detrend = False):
+        def fit_scaler(self, detrend = False):
             ds = self.train_ds
             num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds)
-
-            if test:
-                num_samples = int(num_samples * 0.1)
 
             for i in range(num_samples):
                 X = self.path_to_trace(ds[i][0])[0]

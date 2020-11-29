@@ -36,9 +36,9 @@ modeling_dir = 'C:\Documents\Thesis_ssd\MasterThesis\Classes\Modeling'
 os.chdir(modeling_dir)
 from CustomCallback import CustomCallback
 
-class BaselineHelperFunctions():
+class HelperFunctions():
     
-    def plot_confusion_matrix(self, model, gen, test_ds, batch_size, num_classes, train_ds = None, train_testing = False):
+    def plot_confusion_matrix(self, model, gen, test_ds, batch_size, class_dict, train_ds = None, train_testing = False):
         if not train_testing:
             ds = test_ds
         else:
@@ -46,9 +46,8 @@ class BaselineHelperFunctions():
         steps = len(ds)/batch_size
         predictions = model.predict_generator(gen, steps)
         predicted_classes = self.convert_to_class(predictions)[0:len(ds)]
-        true_classes = self.get_class_array(ds, num_classes)
-        labels = ['earthquake', 'noise', 'explosion']
-        labels = labels[0:num_classes]
+        true_classes = self.get_class_array(ds, class_dict)
+        labels = list(class_dict.keys())[0:true_classes.shape[1]]
         cm = confusion_matrix(true_classes.argmax(axis=1), predicted_classes.argmax(axis=1))
         print(cm)
         fig = plt.figure()
@@ -64,16 +63,17 @@ class BaselineHelperFunctions():
         return
         
         
-    def get_steps_per_epoch(self, gen_set, batch_size, test):
-        if test:
-            if (int(0.1*len(gen_set)/batch_size) == 0):
-                print("oof")
-                return 1
-            return int(0.1*len(gen_set)/batch_size)
-        return len(gen_set)/batch_size
+    def get_steps_per_epoch(self, gen_set, batch_size):
+        return int(len(gen_set)/batch_size)
     
-    def get_class_array(self, ds, num_classes = 3):
-        class_array = np.zeros((len(ds),num_classes))
+    def get_class_array(self, ds, class_dict):
+        uniques = np.unique(ds[:,1])
+        class_array = np.zeros((len(ds), len(uniques)))
+        for idx, path_and_label in enumerate(ds):
+            label = path_and_label[1]
+            class_array[idx][class_dict.get(label)] = 1
+        return class_array
+                                
         for idx, path_and_label in enumerate(ds):
             if path_and_label[1] == "earthquake":
                 class_array[idx][0] = 1
@@ -198,6 +198,36 @@ class BaselineHelperFunctions():
         else:
             raise Exception(f"{optimizer} not implemented into getOptimizer")    
     
+    def plot_event(trace, info):
+        start_time = info['trace_stats']['starttime']
+        channels = info['trace_stats']['channels']
+        sampl_rate = info['trace_stats']['sampling_rate']
+        station = info['trace_stats']['station']
+
+        trace_BHE = Trace(
+        data=trace[0],
+        header={
+            'station': station,
+            'channel': channels[0],
+            'sampling_rate': sampl_rate,
+            'starttime': start_time})
+        trace_BHN = Trace(
+            data=trace[1],
+            header={
+                'station': station,
+                'channel': channels[1],
+                'sampling_rate': sampl_rate, 
+                'starttime': start_time})
+        trace_BHZ = Trace(
+            data=trace[2],
+            header={
+                'station': station,
+                'channel': channels[2],
+                'sampling_rate': sampl_rate,
+                'starttime': start_time})
+        stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
+        stream.plot()
+
     def get_n_points_with_highest_training_loss(self, train_ds, n, full_logs):
         train_ds_dict = {}
         for path, label in train_ds:
