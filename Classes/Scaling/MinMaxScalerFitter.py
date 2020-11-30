@@ -13,7 +13,7 @@ class MinMaxScalerFitter(ScalerFitter):
             num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds)
 
             for i in range(num_samples):
-                X = self.path_to_trace(ds[i][0])[0]
+                X = self.path_to_trace(ds[i][0], ds[i][2])[0]
                 if detrend:
                     X = self.detrend_trace(X)
                 self.progress_bar(i, num_samples)

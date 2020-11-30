@@ -61,7 +61,12 @@ class HelperFunctions():
         plt.ylabel('True')
         plt.show()
         return
-        
+    
+    def evaluate_model(self, model, gen, test_ds, batch_size, class_dict):
+        steps = len(test_ds)/batch_size
+        print(model.evaluate_generator(gen, steps, verbose = 1))
+        # Add this later!!! print(classification_report(, y_pred_bool))
+        self.plot_confusion_matrix(model, gen, test_ds, batch_size, class_dict)
         
     def get_steps_per_epoch(self, gen_set, batch_size):
         return int(len(gen_set)/batch_size)
@@ -122,7 +127,7 @@ class HelperFunctions():
     
     def generate_build_model_args(self, model_nr, batch_size, dropout_rate, activation, output_layer_activation, l2_r, l1_r, 
                                   start_neurons, filters, kernel_size, padding, 
-                                  num_classes = 3, channels = 3, timesteps = 6001):
+                                  num_classes = 3, channels = 3, timesteps = 6000):
         return {"model_nr" : model_nr,
                 "input_shape" : (batch_size, channels, timesteps),
                 "num_classes" : num_classes,
@@ -148,18 +153,22 @@ class HelperFunctions():
                                    tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
                                    tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
     
-    def generate_gen_args(self, batch_size, test, detrend, use_scaler = False, scaler = None, 
-                          use_noise_augmentor = False, augmentor = None,  num_classes = 3):
+    def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
+                          use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
+                          noiseAug = None,  num_classes = 3, use_highpass = False, highpass_freq = 0.3):
         return {"batch_size" : batch_size,
-                    "test" : test,
                     "detrend" : detrend,
                     "use_scaler" : use_scaler,
                     "scaler" : scaler,
+                    "use_time_augmentor": use_time_augmentor,
+                    "timeAug" : timeAug,
                     "use_noise_augmentor" : use_noise_augmentor,
-                    "augmentor" : augmentor,
-                    "num_classes" : num_classes}
+                    "noiseAug" : noiseAug,
+                    "num_classes" : num_classes,
+                    "use_highpass" : use_highpass,
+                    "highpass_freq" : highpass_freq}
     
-    def generate_fit_args(self, train_ds, val_ds, batch_size, test, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping):
+    def generate_fit_args(self, train_ds, val_ds, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping):
         callbacks = []
         if use_liveplots:
             callbacks.append(PlotLossesKeras())
@@ -178,10 +187,10 @@ class HelperFunctions():
                           restore_best_weights = True)
             callbacks.append(earlystop)
         
-        return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size, test),
+        return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                         "epochs" : epoch,
                         "validation_data" : val_gen,
-                        "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size, test),
+                        "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                         "verbose" : 1,
                         "use_multiprocessing" : False, 
                         "workers" : 1,

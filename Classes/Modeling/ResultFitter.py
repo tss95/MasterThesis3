@@ -1,5 +1,5 @@
 from Classes.DataProcessing.LoadData import LoadData
-from Classes.DataProcessing.BaselineHelperFunctions import BaselineHelperFunctions
+from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from .GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.DataProcessing.DataGenerator import DataGenerator
 from .Models import Models
@@ -13,12 +13,12 @@ from os.path import isfile, join
 
 class ResultFitter(GridSearchResultProcessor):
     
-    def __init__(self, num_classes, is_balanced = True, shuffle = False):
+    def __init__(self, loadData):
         super().__init__()
-        self.num_classes = num_classes
-        self.full_ds, self.train_ds, self.val_ds, self.test_ds = LoadData(num_classes = num_classes, 
-                                                                          isBalanced = is_balanced).getDatasets(shuffle = shuffle)
-        self.helper = BaselineHelperFunctions()
+        self.loadData = loadData
+        self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.getDatasets()
+        self.num_classes = len(np.unique(train_ds[:,1]))
+        self.helper = HelperFunctions()
     
     
 
@@ -104,8 +104,12 @@ class ResultFitter(GridSearchResultProcessor):
         major_params = file_name.split('_')[1:]
         model_nr = int(major_params[0])
         del major_params[0]
-
+        
+        earth_explo_only = 'earthExplo' in major_params
+        noise_earth_only = 'noiseEarth' in major_params
+        noise_not_noise = 'noiseNotNoise' in major_params
         use_scaler = 'sscale' in major_params
+        use_time_augmentor = 'timeAug' in major_params
         use_noise_augmentor = 'noiseAug' in major_params
         detrend = 'detrend' in major_params
         use_minmax = 'mmscale' in major_params
@@ -117,4 +121,4 @@ class ResultFitter(GridSearchResultProcessor):
                 use_highpass = True
                 highpass_freq = float(word.split('-')[1])
 
-        return model_nr, detrend, use_scaler, use_minmax, use_noise_augmentor, use_early_stopping, use_highpass, highpass_freq
+        return model_nr, earth_explo_only, noise_earth_only, noise_not_noise, detrend, use_scaler, use_minmax, use_time_augmentor, use_noise_augmentor, use_early_stopping, use_highpass, highpass_freq

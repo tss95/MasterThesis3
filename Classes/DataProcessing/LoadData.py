@@ -20,6 +20,7 @@ class LoadData():
         np.random.seed(self.seed)
         self.earth_explo_only = earth_explo_only
         self.noise_earth_only = noise_earth_only
+        self.noise_not_noise = False
         self.downsample = downsample
         self.upsample = upsample
         self.frac_diff = frac_diff
@@ -37,21 +38,36 @@ class LoadData():
             self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
         else:
             np.random.seed(self.seed)
-            np.random_shuffle(self.full_ds)
-            
+            np.random.shuffle(self.full_ds)
+        #self.map_redundancy(self.full_ds)   
+        
+        # Reduce sample size if needed:
+        self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
         
         # Remove uninteresting label from ds but keep noise seperately if removed
         self.refine_full_ds()
         
-        self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
+        
+        
+        # Only need to map redundency if upsampling, as upsampling is the cause of redundancy
+        if self.upsample:
+            self.full_ds = self.map_redundancy(self.full_ds)
+        else:
+            zero_column = np.zeros((len(self.full_ds), 1))
+            self.full_ds = np.hstack((self.full_ds, zero_column))
         
         # The noise needs to be reduced in order to work properly in noise augmentor (creating training set for noise augmentor).
-        if self.earth_explo_only or self.noise_earth_only:
+        if self.earth_explo_only:
             self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.15, random_state = self.seed)
-            self.noise_ds = self.noise_ds[0:int(len(self.noise_ds)*self.subsample_size)]
+        
         
         self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
         self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
+        
+        # Need to seperate noise for noise augmentor
+        if not self.earth_explo_only:
+            self.noise_ds = self.train[self.train[:,1] == "noise"]
+        
         
         if self.earth_explo_only:
             self.label_dict = {'earthquake' : 0, 'explosion' : 1}
@@ -62,8 +78,8 @@ class LoadData():
     
     def refine_full_ds(self):
         if self.earth_explo_only or self.noise_earth_only:
-            self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
             if self.earth_explo_only:
+                self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
                 self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "noise"])
             if self.noise_earth_only:
                 self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
@@ -126,3 +142,30 @@ class LoadData():
     
     def get_label_dict(self):
         return self.label_dict
+    
+    def map_redundancy(self, ds):
+        # This only works if we are upsampling EARTHQUAKES (NOTHING ELSE)!
+        new_column = np.zeros((len(ds), 1), dtype = int)
+        mapped_ds = np.hstack((ds, new_column))
+        earth_ds = ds[ds[:,1] == "earthquake"]
+        unique_earth_paths = set(earth_ds[:,0])
+        nr_unique_earth_paths = len(unique_earth_paths)
+        for idx, path in enumerate(unique_earth_paths):
+            self.progress_bar(idx + 1, nr_unique_earth_paths)
+            nr_repeats = len(earth_ds[earth_ds[:,0] == path])
+            label = earth_ds[earth_ds[:,0] == path][0][1]
+            repeating_indexes = np.where(ds[ds[:,0] == path][:,0][0] == ds[:,0])[0]
+            current_index = 0
+            if len(repeating_indexes) > 1:
+                for event in earth_ds[earth_ds[:,0] == path]:
+                    mapped_ds[repeating_indexes[current_index]][0] = path
+                    mapped_ds[repeating_indexes[current_index]][1] = label
+                    mapped_ds[repeating_indexes[current_index]][2] = current_index
+                    current_index += 1
+        return mapped_ds
+
+    def progress_bar(self, current, total, barLength = 40):
+        percent = float(current) * 100 / total
+        arrow   = '-' * int(percent/100 * barLength - 1) + '>'
+        spaces  = ' ' * (barLength - len(arrow))
+        print('Mapping redundancy: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')

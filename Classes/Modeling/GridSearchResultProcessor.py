@@ -9,7 +9,7 @@ from os.path import isfile, join
 class GridSearchResultProcessor():
 
     def __init__(self):
-        super().__init__()
+        pass
     
     def create_results_df(self):
         hyper_keys = list(self.hyper_grid.keys())
@@ -51,10 +51,16 @@ class GridSearchResultProcessor():
     
     def get_results_file_name(self):
         file_name = f"{self.get_results_file_path()}/results_{self.model_nr}"
-        if self.test:
-            file_name = f"{file_name}_test"
+        if self.loadData.earth_explo_only:
+            file_name = f"{file_name}_earthExplo"
+        if self.loadData.noise_earth_only:
+            file_name = f"{file_name}_noiseEarth"
+        if self.loadData.noise_not_noise:
+            file_name = f"{file_name}_noiseNotNoise"
         if self.detrend:
             file_name = f"{file_name}_detrend"
+        if self.use_time_augmentor:
+            file_name = f"{file_name}_timeAug"
         if self.use_scaler:
             if self.use_minmax:
                 file_name = f"{file_name}_mmscale"
@@ -70,7 +76,7 @@ class GridSearchResultProcessor():
         return file_name
     
     def get_results_file_path(self):
-        file_path = f'C:\Documents/Thesis_ssd/MasterThesis/GridSearchResults/{self.num_classes}_classes'
+        file_path = f'F:/Thesis_ssd/MasterThesis3.0/GridSearchResults/{self.num_classes}_classes'
         return file_path
     
     def store_params_before_fit(self, current_picks, results_df, file_name):
@@ -135,7 +141,7 @@ class GridSearchResultProcessor():
         return min_loss, max_accuracy, max_precision, max_recall
     
     def get_results_df_by_name(self, file_name, num_classes):
-        file_path = f"C:\Documents/Thesis_ssd/MasterThesis/GridSearchResults/{num_classes}_classes"
+        file_path = f"F:/Thesis_ssd/MasterThesis3.0/GridSearchResults/{num_classes}_classes"
         loaded_df = pd.read_csv(file_path+'/'+file_name)
         return loaded_df
     

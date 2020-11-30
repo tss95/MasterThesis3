@@ -52,7 +52,7 @@ class DataHandler():
         batch_trace = np.empty((len(batch), 3, 6000))
         batch_label = np.empty((len(batch), 1))
         for idx, path in enumerate(path_array):
-            batch_trace[idx] = timeAug.augment_event(path)
+            batch_trace[idx] = timeAug.augment_event(path, batch[idx][2])
             batch_label[idx] = self.label_dict.get(batch[idx][1])
         return batch_trace, batch_label
     

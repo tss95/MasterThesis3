@@ -12,16 +12,16 @@ class DataGenerator(DataHandler):
         super().__init__(loadData)
    
    
-    def data_generator(self, ds, batch_size, detrend = False, num_classes = 3, 
+    def data_generator(self, ds, batch_size, detrend = False, num_classes = 3,
                        use_scaler = False, scaler = None, use_time_augmentor = True, timeAug = None, 
-                       use_noise_augmentor = False, augmentor = None, use_highpass = False, highpass_freq = 0.49):
+                       use_noise_augmentor = False, noiseAug = None, use_highpass = False, highpass_freq = 0.49):
         
         num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds, use_time_augmentor)
         num_samples = len(ds)
         while True:
             for offset in range(0, num_samples, batch_size):
                 # Get the samples you'll use in this batch
-                self.batch_samples = np.empty((batch_size,2), dtype = np.ndarray)
+                self.batch_samples = np.empty((batch_size,3), dtype = np.ndarray)
                 
                 # Handle what happens when asking for a batch but theres no more new data
                 if offset+batch_size > num_samples:
@@ -34,7 +34,7 @@ class DataGenerator(DataHandler):
                 # Preprocessinng
                 X, y = self.preprocessing(self.batch_samples, detrend, use_highpass, 
                                           use_scaler, scaler, use_time_augmentor, timeAug, 
-                                          use_noise_augmentor, augmentor, highpass_freq)
+                                          use_noise_augmentor, noiseAug, highpass_freq)
                 try:
                     y = np_utils.to_categorical(y, num_classes, dtype=np.int64)
                 except:

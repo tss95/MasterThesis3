@@ -32,7 +32,7 @@ import tensorflow as tf
 class Models():
     
     """
-    Class that allows the user to load a predefined model this class. Models are numbered between 1 and 4.
+    Class that allows the user to load a predefined model this class. Models are numbered between 1 and 8.
     
     PARAMETERS
     ---------

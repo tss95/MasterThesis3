@@ -24,9 +24,12 @@ from .Models import Models
 
 
 from Classes.DataProcessing.LoadData import LoadData
-from Classes.DataProcessing.BaselineHelperFunctions import BaselineHelperFunctions
+from Classes.DataProcessing.HelperFunctions import HelperFunctions
+from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
+from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
+from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from .GridSearchResultProcessor import GridSearchResultProcessor
@@ -63,46 +66,45 @@ class RandomGridSearch(GridSearchResultProcessor):
     }
     
 
-    def __init__(self, train_ds, val_ds, test_ds, model_nr, test, detrend, use_scaler, use_noise_augmentor,
-                 use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, num_classes = 3, 
-                 use_tensorboard = False, use_liveplots = True, use_custom_callback = False, use_early_stopping = False,
-                 highpass_freq = 0.1, start_from_scratch = True):
+    def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
+                 use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
+                 use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
+                 start_from_scratch = True):
+        
+        self.loadData = loadData
         self.train_ds = train_ds
         self.val_ds = val_ds
         self.test_ds = test_ds
         self.model_nr = model_nr
-        self.test = test
         self.detrend = detrend
         self.use_scaler = use_scaler
         self.use_noise_augmentor = use_noise_augmentor
+        self.use_time_augmentor = use_time_augmentor
         self.use_minmax = use_minmax
         self.use_highpass = use_highpass
         self.n_picks = n_picks
         self.hyper_grid = hyper_grid
         self.model_grid = model_grid
-        self.num_classes = num_classes
+        self.num_classes = len(np.unique(train_ds[:,1]))
         self.use_tensorboard = use_tensorboard
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
         self.use_early_stopping = use_early_stopping
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
-        self.helper = BaselineHelperFunctions()
-        self.data_gen = DataGenerator()
+        self.helper = HelperFunctions()
+        self.dataGen = DataGenerator(self.loadData)
+        self.handler = DataHandler(self.loadData)
+        if self.loadData.earth_explo_only:
+            self.full_ds = np.concatenate((self.loadData.noise_ds, self.loadData.full_ds))
+        else:
+            self.full_ds = self.loadData.full_ds
             
 
     def fit(self):
-        if self.use_scaler:
-            if self.use_minmax:
-                self.scaler = MinMaxScalerFitter(self.train_ds).fit_scaler(test = self.test, detrend = self.detrend)
-            else:
-                self.scaler = StandardScalerFitter(self.train_ds).fit_scaler(test = self.test, detrend = self.detrend)
-        else:
-            self.scaler = None
-        if self.use_noise_augmentor:
-            self.augmentor = NoiseAugmentor(self.train_ds, self.use_scaler, self.scaler)
-        else:
-            self.augmentor = None
+        self.timeAug, self.scaler, self.noiseAug = self.init_preprocessing(self.use_time_augmentor, 
+                                                                           self.use_scaler, 
+                                                                           self.use_noise_augmentor)
         
         # Create name of results file, get initiated results df, either brand new or continue old.
         self.results_file_name = self.get_results_file_name()
@@ -140,12 +142,16 @@ class RandomGridSearch(GridSearchResultProcessor):
             model = Models(**build_model_args).model
             
             # Generate generator args using picks.
-            gen_args = self.helper.generate_gen_args(batch_size, self.test, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler, use_noise_augmentor = self.use_noise_augmentor, augmentor = self.augmentor, num_classes = self.num_classes)
+            gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
+                                                     use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
+                                                     use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug, 
+                                                     num_classes = self.num_classes, use_highpass = self.use_highpass,
+                                                     highpass_freq = self.highpass_freq)
             
             # Initiate generators using the args
-            train_gen = self.data_gen.data_generator(self.train_ds, **gen_args)
-            val_gen = self.data_gen.data_generator(self.val_ds, **gen_args)
-            test_gen = self.data_gen.data_generator(self.test_ds, **gen_args)
+            train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
+            val_gen = self.dataGen.data_generator(self.val_ds, **gen_args)
+            test_gen = self.dataGen.data_generator(self.test_ds, **gen_args)
             
             # Generate compiler args using picks
             model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)
@@ -159,7 +165,7 @@ class RandomGridSearch(GridSearchResultProcessor):
 
             
             # Generate fit args using picks.
-            fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, batch_size, self.test, 
+            fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, batch_size, 
                                                      epoch, val_gen, use_tensorboard = self.use_tensorboard, 
                                                      use_liveplots = self.use_liveplots, 
                                                      use_custom_callback = self.use_custom_callback,
@@ -169,8 +175,7 @@ class RandomGridSearch(GridSearchResultProcessor):
             
             # Evaluate the fitted model on the validation set
             loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
-                                                                       steps=self.helper.get_steps_per_epoch(self.val_ds, 
-                                                                                                             batch_size, False))
+                                                                       steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
             # Record metrics for train
             metrics = []
             metrics_val = {"val_loss" : loss,
@@ -183,8 +188,7 @@ class RandomGridSearch(GridSearchResultProcessor):
             # Evaluate the fitted model on the train set
             train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
                                                                                         steps=self.helper.get_steps_per_epoch(self.train_ds,
-                                                                                                                              batch_size,
-                                                                                                                              True))
+                                                                                                                              batch_size))
             metrics_train = {"train_loss" : train_loss,
                              "train_accuracy" : train_accuracy,
                              "train_precision": train_precision,
@@ -193,9 +197,10 @@ class RandomGridSearch(GridSearchResultProcessor):
             current_picks.append(metrics_train)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             
-        min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
-        self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
-        return self.results_df, min_loss, max_accuracy, max_precision, max_recall
+        #min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
+        #self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
+        #return self.results_df, min_loss, max_accuracy, max_precision, max_recall
+        return self.results_df
 
     def print_best_performers(self, min_loss, max_accuracy, max_precision, max_recall):
         print("----------------------------------------------------LOSS----------------------------------------------------------")
@@ -230,8 +235,10 @@ class RandomGridSearch(GridSearchResultProcessor):
         # Generate generator args using picks.
         gen_args = self.helper.generate_gen_args(int(params['batch_size']), False, self.detrend, 
                                                  use_scaler = self.use_scaler, scaler = self.scaler, 
+                                                 use_time_augmentor = self.use_time_augmentor,
+                                                 timeAug = self.timeAug,
                                                  use_noise_augmentor = self.use_noise_augmentor, 
-                                                 augmentor = self.augmentor, num_classes = self.num_classes)
+                                                 noiseAug = self.noiseAug, num_classes = self.num_classes)
 
         # Initiate generators using the args
         train_gen = self.data_gen.data_generator(self.train_ds, **gen_args)
@@ -278,7 +285,25 @@ class RandomGridSearch(GridSearchResultProcessor):
             del grid_list[rand_int]
             n_picks -= 1
         return picks
-
+    
+    def init_preprocessing(self, use_time_augmentor, use_scaler, use_noise_augmentor):
+        if use_time_augmentor:
+            timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
+            timeAug.fit()
+        else:
+            timeAug = None
+        if use_scaler:
+            if self.use_minmax:
+                scaler = MinMaxScalerFitter(self.train_ds, timeAug).fit_scaler(detrend = self.detrend)
+            else:
+                scaler = StandardScalerFitter(self.train_ds, timeAug).fit_scaler(detrend = self.detrend)
+        else:
+            scaler = None
+        if use_noise_augmentor:
+            noiseAug = NoiseAugmentor(self.loadData.noise_ds, use_scaler, scaler)
+        else:
+            noiseAug = None
+        return timeAug, scaler, noiseAug 
 
 
 

@@ -4,7 +4,9 @@ import math
 import random
 import datetime
 from dateutil import parser
-
+import time
+import h5py
+import json
 from .LoadData import LoadData
 
 
@@ -17,49 +19,50 @@ class TimeAugmentor():
         self.seed = seed
              
     def fit(self):
-        path_ds = self.ds[:,0]
-        len_ds = len(path_ds)
+        time_start = time.time()
+        path_red_ds = self.ds[:,[0,2]]
+        len_ds = len(path_red_ds)
         _,_,pre_length = self.handler.get_trace_shape_no_cast(self.ds, False)
         post_length = 6000
-        if self.seed != None:
-            np.random.seed(self.seed)
-        for idx, path in enumerate(path_ds):
+        np.random.seed(self.seed)
+        for idx, path_red in enumerate(path_red_ds):
+            path = path_red[0]
+            red = int(path_red[1])
             self.progress_bar(idx + 1, len_ds)
             initial_index, info = self.find_initial_event_index(path)
-            random_start_index = np.random.randint(0, 5000)
-            interesting_part_length = pre_length - initial_index
-            # Handling what happens when the duration of the interesting event is shorter than what is needed to fill the array:
-            ideal_length = post_length - random_start_index
-            missing_length = ideal_length - interesting_part_length
-            # Only interesting for events where we need to fill in at the end:
-            # Problem occurs if initial_index - missing_length  < 0.
-            if initial_index - missing_length <= 0:
-                filler_index = 0
-            else: 
-                filler_index_start = np.random.randint(0, (initial_index - missing_length))
-            filler_index_end = filler_index_start + missing_length
-            # First index of what requires more filling
-            required_fill_index_start = post_length - missing_length
-            self.fitted_dict[path] = { 'initial_index' : initial_index,
-                                       'random_start_index' : random_start_index,
-                                       'interesting_part_length' : interesting_part_length,
-                                       'missing_length' : missing_length,
-                                       'filler_index_start' : filler_index_start,
-                                       'filler_index_end' : filler_index_end,
-                                       'required_fill_index_start' : required_fill_index_start}
+            if path in self.fitted_dict:
+                if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
+                    continue
+                else:
+                    random_start_index = np.random.randint(0,4500, red + 1)
+                    self.fitted_dict[path]['random_start_index'] = random_start_index
+            else:
+                random_start_index = np.random.randint(0, 4500, red+1)
+                self.fitted_dict[path] = { 'initial_index' : initial_index,
+                                           'random_start_index' : random_start_index}
+        time_end = time.time()
+        print(f"Fit process completed after {time_end - time_start} seconds. Total datapoints fitted: {len(path_red_ds)}.")
+        print(f"Average time per datapoint: {(time_end - time_start) / len(path_red_ds)}")
+              
+
             
             
-            
-            
-    def augment_event(self, path):
+    def augment_event(self, path, redundancy_index):
         trace, info = self.handler.path_to_trace(path)
         fit = self.fitted_dict[path]
         augmented_trace = np.empty((3, 6000))
+        
+        random_start_index = fit['random_start_index'][int(redundancy_index)]
+        initial_index = fit['initial_index']
+        interesting_part_length = trace.shape[1] - initial_index
+        missing_length = (augmented_trace.shape[1] - random_start_index) - interesting_part_length
+        
         for i in range(augmented_trace.shape[0]):
-            augmented_trace[i] = self.fill_start(trace, augmented_trace, fit['random_start_index'], fit['initial_index'], i)
-            augmented_trace[i] = self.fill_interesting_part(trace, augmented_trace, fit['random_start_index'], fit['interesting_part_length'], fit['initial_index'], i)
-            if fit['missing_length'] > 0:
-                augmented_trace[i] = self.fill_lacking_ends(trace, augmented_trace, fit['random_start_index'], fit['interesting_part_length'], i)
+            augmented_trace[i] = self.fill_start(trace, augmented_trace, random_start_index, initial_index, i)
+            augmented_trace[i] = self.fill_interesting_part(trace, augmented_trace, random_start_index, interesting_part_length, initial_index, i)
+            if missing_length > 0:
+                # missing_length was intereting_part_length. Why? Error?
+                augmented_trace[i] = self.fill_lacking_ends(trace, augmented_trace, random_start_index, missing_length, i)
         return augmented_trace
     
     def fill_start(self, trace, augmented_trace, random_start_index, initial_index, i_channel):
@@ -87,27 +90,33 @@ class TimeAugmentor():
     
 
     def find_initial_event_index(self, path):
-        _, info = self.handler.path_to_trace(path)
+        info = self.path_to_info(path)
         start_time = parser.isoparse(info['trace_stats']['starttime']).replace(tzinfo=None)
         if info['analyst_pick_time'] != None:
             event_time = parser.isoparse(info['analyst_pick_time']).replace(tzinfo=None)
+            uncertainty = 0
         else:
             event_time = parser.isoparse(info['est_arrivaltime_arces']).replace(tzinfo=None)
+            uncertainty = 0
+            if 'origins' in info:
+                if 'time_errors' in info['origins'][0]:
+                    uncertainty = float(info['origins'][0]['time_errors']['uncertainty'])
         sampling_rate = info['trace_stats']['sampling_rate']
         relative_seconds = (event_time - start_time).total_seconds()
         # Problem with uncertainty: Some events have very large uncertainty.
-        # This can be so high that the interesting event could have potentially occured prior to the recording.
-        uncertainty = 0
-        if 'origins' in info:
-            if 'time_errors' in info['origins'][0]:
-                uncertainty = float(info['origins'][0]['time_errors']['uncertainty'])
-            
+        # This can be so high that the interesting event could have potentially occured prior to the recording.          
         initial_index = max(math.floor((relative_seconds-uncertainty)*sampling_rate),0)
-
         return initial_index, info
+    
+    def path_to_info(self, path):
+        with h5py.File(path, 'r') as dp:
+            info = np.array(dp.get('event_info'))
+            info = json.loads(str(info))
+        return info
+        
     
     def progress_bar(self, current, total, barLength = 20):
         percent = float(current) * 100 / total
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
-        print('Fitting time augmentor: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')   
+        print('Fitting time augmentor: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')     

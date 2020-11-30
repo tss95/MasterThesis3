@@ -55,11 +55,11 @@ class ScalerFitter():
             trace_shape = dp.get('traces').shape
         return num_ds, trace_shape[0], trace_shape[1]
 
-    def path_to_trace(self, path):
+    def path_to_trace(self, path, redundancy_index):
         with h5py.File(path, 'r') as dp:
             trace_array = np.array(dp.get('traces'))
             if self.use_time_augmentor:
-                trace_array = self.timeAug.augment_event(path)
+                trace_array = self.timeAug.augment_event(path, redundancy_index)
             info = np.array(dp.get('event_info'))
             info = json.loads(str(info))
         return trace_array, info
