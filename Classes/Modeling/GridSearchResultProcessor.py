@@ -11,26 +11,26 @@ class GridSearchResultProcessor():
     def __init__(self):
         pass
     
-    def create_results_df(self):
-        hyper_keys = list(self.hyper_grid.keys())
-        model_keys = list(self.model_grid.keys())
+    def create_results_df(self, hyper_picks, model_picks):
+        hyper_keys = list(hyper_picks.keys())
+        model_keys = list(model_picks.keys())
         metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall"]
         metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall"]
         header = np.concatenate((hyper_keys, model_keys, metrics_train_keys, metrics_val_keys))
         results_df = pd.DataFrame(columns = header)
         return results_df
     
-    def initiate_results_df(self, file_name, num_classes, start_from_scratch):
+    def initiate_results_df(self, file_name, num_classes, start_from_scratch, hyper_picks, model_picks):
         if start_from_scratch:
             self.clear_results_df(file_name)
-            return self.create_results_df()
+            return self.create_results_df(hyper_picks, model_picks)
         else:
             if self.does_result_exist(file_name):
                 file_name = file_name.split('/')[-1]
                 results_df = self.get_results_df_by_name(file_name, num_classes)
                 return results_df
             else:
-                return self.create_results_df()
+                return self.create_results_df(hyper_picks, model_picks)
 
         
     def does_result_exist(self, file_name):
@@ -80,7 +80,7 @@ class GridSearchResultProcessor():
         return file_path
     
     def store_params_before_fit(self, current_picks, results_df, file_name):
-        
+
         hyper_params = current_picks[1]
         model_params = current_picks[2]
         picks = []

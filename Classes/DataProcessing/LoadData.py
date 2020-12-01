@@ -59,6 +59,8 @@ class LoadData():
         # The noise needs to be reduced in order to work properly in noise augmentor (creating training set for noise augmentor).
         if self.earth_explo_only:
             self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.15, random_state = self.seed)
+            zero_column = np.zeros((len(self.noise_ds), 1))
+            self.noise_ds = np.hstack((self.noise_ds, zero_column))
         
         
         self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)

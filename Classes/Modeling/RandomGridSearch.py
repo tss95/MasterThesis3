@@ -108,14 +108,16 @@ class RandomGridSearch(GridSearchResultProcessor):
         
         # Create name of results file, get initiated results df, either brand new or continue old.
         self.results_file_name = self.get_results_file_name()
-        self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch)
+        
         
         self.hyper_picks = self.get_n_params_from_list(list(ParameterGrid(self.hyper_grid)), self.n_picks)
         self.model_picks = self.get_n_params_from_list(list(ParameterGrid(self.model_grid)), self.n_picks)
+        self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
         pp = pprint.PrettyPrinter(indent=4)
         for i in range(self.n_picks):
             model_info = {"model_nr" : self.model_nr, "index" : i}
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
+            print(current_picks)
             # Store picked parameters:
             self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
             
@@ -197,10 +199,10 @@ class RandomGridSearch(GridSearchResultProcessor):
             current_picks.append(metrics_train)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             
-        #min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
-        #self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
-        #return self.results_df, min_loss, max_accuracy, max_precision, max_recall
-        return self.results_df
+        min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
+        self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
+        return self.results_df, min_loss, max_accuracy, max_precision, max_recall
+        #return self.results_df
 
     def print_best_performers(self, min_loss, max_accuracy, max_precision, max_recall):
         print("----------------------------------------------------LOSS----------------------------------------------------------")
