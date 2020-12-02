@@ -235,7 +235,7 @@ class RandomGridSearch(GridSearchResultProcessor):
         model = Models(**build_model_args).model
 
         # Generate generator args using picks.
-        gen_args = self.helper.generate_gen_args(int(params['batch_size']), False, self.detrend, 
+        gen_args = self.helper.generate_gen_args(int(params['batch_size']), self.detrend, 
                                                  use_scaler = self.use_scaler, scaler = self.scaler, 
                                                  use_time_augmentor = self.use_time_augmentor,
                                                  timeAug = self.timeAug,
@@ -243,9 +243,9 @@ class RandomGridSearch(GridSearchResultProcessor):
                                                  noiseAug = self.noiseAug, num_classes = self.num_classes)
 
         # Initiate generators using the args
-        train_gen = self.data_gen.data_generator(self.train_ds, **gen_args)
-        val_gen = self.data_gen.data_generator(self.val_ds, **gen_args)
-        test_gen = self.data_gen.data_generator(self.test_ds, **gen_args)
+        train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
+        val_gen = self.dataGen.data_generator(self.val_ds, **gen_args)
+        test_gen = self.dataGen.data_generator(self.test_ds, **gen_args)
 
         # Generate compiler args using picks
         opt = self.helper.getOptimizer(params['optimizer'], float(params['learning_rate']))
@@ -254,7 +254,7 @@ class RandomGridSearch(GridSearchResultProcessor):
         model.compile(**model_compile_args)
 
         # Generate fit args using picks.
-        fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, int(params['batch_size']), False, 
+        fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, int(params['batch_size']), 
                                                  int(params['epochs']), test_gen, use_tensorboard = self.use_tensorboard, 
                                                  use_liveplots = True, 
                                                  use_custom_callback = self.use_custom_callback,
@@ -267,8 +267,7 @@ class RandomGridSearch(GridSearchResultProcessor):
         # Evaluate the fitted model on the test set
         loss, accuracy, precision, recall = model.evaluate_generator(generator=test_gen,
                                                                    steps=self.helper.get_steps_per_epoch(self.test_ds, 
-                                                                                                         int(params['batch_size']), 
-                                                                                                         False))
+                                                                                                         int(params['batch_size'])))
 
         pp = pprint.PrettyPrinter(indent=4)
         print(f'Test loss: {loss}')

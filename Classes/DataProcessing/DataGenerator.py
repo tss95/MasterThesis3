@@ -1,6 +1,7 @@
 import numpy as np
 from keras.utils import np_utils
 import random
+from sklearn.preprocessing import LabelEncoder
 
 from .LoadData import LoadData
 from .DataHandler import DataHandler
@@ -10,6 +11,8 @@ class DataGenerator(DataHandler):
     
     def __init__(self, loadData):
         super().__init__(loadData)
+        self.labelEncoder = LabelEncoder()
+        self.labelEncoder.fit(loadData.train[:,1])
    
    
     def data_generator(self, ds, batch_size, detrend = False, num_classes = 3,
@@ -36,7 +39,9 @@ class DataGenerator(DataHandler):
                                           use_scaler, scaler, use_time_augmentor, timeAug, 
                                           use_noise_augmentor, noiseAug, highpass_freq)
                 try:
-                    y = np_utils.to_categorical(y, num_classes, dtype=np.int64)
+                        y = np_utils.to_categorical(y, num_classes, dtype=np.int64)
+                        if num_classes == 2:
+                            y = y[:,1]
                 except:
                     raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {num_classes}')               
                 yield X, y

@@ -93,7 +93,12 @@ class Models():
     def bias_variable(self, shape, w=0.1):
         initial = tf.constant(w, shape=shape)
         return tf.Variable(initial)
-
+    
+    def output_nr_nodes(self, num_classes):
+        if num_classes > 2:
+            return num_classes
+        else:
+            return 1
     
     def create_model_1(self):
         self.model = Sequential()
@@ -126,7 +131,7 @@ class Models():
         self.model.add(BatchNormalization())
         self.model.add(Dropout(self.dropout_rate/2))
 
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
 
         return self.model
         
@@ -171,7 +176,7 @@ class Models():
         self.model.add(Dropout(self.dropout_rate/4))
         self.model.add(Flatten())
 
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
         return self.model
         
     def create_model_3(self):
@@ -188,7 +193,7 @@ class Models():
         self.model.add(Dropout(self.dropout_rate))
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
         return self.model
     
     def create_model_4(self):
@@ -205,7 +210,7 @@ class Models():
         self.model.add(Dropout(self.dropout_rate))
         self.model.add(BatchNormalization())
         #model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
         return self.model
     
     
@@ -221,7 +226,7 @@ class Models():
             self.model.add(Conv1D(filters  = self.filters, activation = self.activation))
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation = self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
         print(self.output_layer_activation)
          
         return self.model
@@ -242,7 +247,7 @@ class Models():
                               activity_regularizer = regularizers.l2(self.l2_r*0.1)))
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation = self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
         print(self.output_layer_activation)
          
         return self.model
@@ -264,7 +269,7 @@ class Models():
         self.model.add(Dropout(self.dropout_rate))
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
         return self.model
     
     
@@ -292,7 +297,7 @@ class Models():
         self.model.add(Dropout(self.dropout_rate))
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.num_classes, activation=self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation=self.output_layer_activation))
         return self.model
       
                                   

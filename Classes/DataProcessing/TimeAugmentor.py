@@ -29,7 +29,6 @@ class TimeAugmentor():
             path = path_red[0]
             red = int(path_red[1])
             self.progress_bar(idx + 1, len_ds)
-            initial_index, info = self.find_initial_event_index(path)
             if path in self.fitted_dict:
                 if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
                     continue
@@ -38,6 +37,7 @@ class TimeAugmentor():
                     self.fitted_dict[path]['random_start_index'] = random_start_index
             else:
                 random_start_index = np.random.randint(0, 4500, red+1)
+                initial_index, info = self.find_initial_event_index(path)
                 self.fitted_dict[path] = { 'initial_index' : initial_index,
                                            'random_start_index' : random_start_index}
         time_end = time.time()
@@ -100,7 +100,7 @@ class TimeAugmentor():
             uncertainty = 0
             if 'origins' in info:
                 if 'time_errors' in info['origins'][0]:
-                    uncertainty = float(info['origins'][0]['time_errors']['uncertainty'])
+                    uncertainty = min(float(info['origins'][0]['time_errors']['uncertainty']), 15)
         sampling_rate = info['trace_stats']['sampling_rate']
         relative_seconds = (event_time - start_time).total_seconds()
         # Problem with uncertainty: Some events have very large uncertainty.
