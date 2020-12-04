@@ -39,7 +39,7 @@ class DataHandler():
     
     def batch_to_trace(self, batch):
         path_array = batch[:,0]
-        _, channels, datapoints = self.get_trace_shape_no_cast(batch)
+        _, channels, datapoints = self.get_trace_shape_no_cast(batch, False)
         batch_trace = np.empty((len(batch), channels, datapoints))
         batch_label = []
         for idx, path in enumerate(path_array):

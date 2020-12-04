@@ -13,70 +13,88 @@ base_dir = 'F:\Thesis_ssd\MasterThesis3.0'
 os.chdir(base_dir)
 
         
+        
 class LoadData():
     
-    def __init__(self, earth_explo_only = False, noise_earth_only = False, downsample = False, upsample = False, frac_diff = 1, seed = None, subsample_size = 1):
+    def __init__(self, earth_explo_only = False, noise_earth_only = False, noise_not_noise = False, 
+                 downsample = False, upsample = False, frac_diff = 1, seed = None, subsample_size = 1,
+                 balance_non_train_set = False, use_true_test_set = False):
         self.seed = seed
         np.random.seed(self.seed)
         self.earth_explo_only = earth_explo_only
         self.noise_earth_only = noise_earth_only
-        self.noise_not_noise = False
+        self.noise_not_noise = noise_not_noise
         self.downsample = downsample
         self.upsample = upsample
         self.frac_diff = frac_diff
         self.subsample_size = subsample_size
+        self.balance_non_train_set = balance_non_train_set
+        self.use_true_test_set = use_true_test_set
+        
         
         self.csv_folder = os.path.join('F:\\', 'Thesis_ssd','MasterThesis3.0','csv_folder')
-        self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
+        self.data_csv_name = 'full_no_test.csv'
+        self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
         self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
         
-        
-        # WARNING: If you ever want to do Noise + Explosion only then you CANNOT set downsample = True. 
-        # This will not produce the desired results
-        
-        if downsample or upsample:
-            self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        self.create_label_dict()
+        self.load_data()
+        if self.use_true_test_set:
+            self.true_test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
+            print("WARNING!")
+            print("You are using the true test set.")
+            print("THIS SHOULD ONLY BE USED ONCE")
+            print("If this is an error, please set use_true_test_set = False and reload the kernel")
+            
+        if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
+            raise Exception("Invalid load data arguments.")
+
+    def load_data(self):
+        if not self.use_true_test_set:
+            if self.balance_non_train_set:
+                self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
+                self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
+                self.refine_full_ds()
+                self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
+                self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
+                if not self.earth_explo_only:
+                    self.noise_ds = self.train[self.train[:,1] == "noise"]
+            else:
+                self.full_ds = self.balance_ds(self.full_ds, False, False, frac_diff = 1)
+                self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
+                if self.earth_explo_only or self.noise_earth_only:
+                    if self.earth_explo_only:
+                        self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
+                        self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "noise"])
+                        # The noise needs to be reduced in order to work properly in noise augmentor
+                        self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.15, random_state = self.seed)
+                        zero_column = np.zeros((len(self.noise_ds), 1))
+                        self.noise_ds = np.hstack((self.noise_ds, zero_column))
+                    else:
+                        self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
+                self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
+                self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
+                self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
+                if self.upsample:
+                    self.train = self.map_redundancy(self.train)
+                else:
+                    zero_column = np.zeros((len(self.train), 1))
+                    self.train = np.hstack((self.train, zero_column))
+                zero_val = np.zeros((len(self.val), 1))
+                zero_test = np.zeros((len(self.test), 1))
+                self.val = np.hstack((self.val, zero_val))
+                self.test = np.hstack((self.test, zero_test))
+                self.full_ds = np.concatenate((self.train, self.val))
+                self.full_ds = np.concatenate((self.full_ds, self.test))
+                if not self.earth_explo_only:
+                    self.noise_ds = self.train[self.train[:,1] == "noise"]
         else:
-            np.random.seed(self.seed)
-            np.random.shuffle(self.full_ds)
-        #self.map_redundancy(self.full_ds)   
-        
-        # Reduce sample size if needed:
-        self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
-        
-        # Remove uninteresting label from ds but keep noise seperately if removed
-        self.refine_full_ds()
-        
-        
-        
-        # Only need to map redundency if upsampling, as upsampling is the cause of redundancy
-        if self.upsample:
-            self.full_ds = self.map_redundancy(self.full_ds)
-        else:
-            zero_column = np.zeros((len(self.full_ds), 1))
-            self.full_ds = np.hstack((self.full_ds, zero_column))
-        
-        # The noise needs to be reduced in order to work properly in noise augmentor (creating training set for noise augmentor).
-        if self.earth_explo_only:
-            self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.15, random_state = self.seed)
-            zero_column = np.zeros((len(self.noise_ds), 1))
-            self.noise_ds = np.hstack((self.noise_ds, zero_column))
-        
-        
-        self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
-        self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
-        
-        # Need to seperate noise for noise augmentor
-        if not self.earth_explo_only:
-            self.noise_ds = self.train[self.train[:,1] == "noise"]
-        
-        
-        if self.earth_explo_only:
-            self.label_dict = {'earthquake' : 0, 'explosion' : 1}
-        elif self.noise_earth_only:
-            self.label_dict = {'earthquake' : 0, 'noise' : 1}
-        else:
-            self.label_dict = {'earthquake' : 0, 'noise' : 1, 'explosion' : 2, 'induced' : 3}
+            print("Write this code when you are ready to use the test set.")
+            raise Exception("The code has not yet been written for the true test set.")
+            
+                
+                
+                
     
     def refine_full_ds(self):
         if self.earth_explo_only or self.noise_earth_only:
@@ -87,6 +105,22 @@ class LoadData():
                 self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
         if self.earth_explo_only and self.noise_earth_only:
             raise Exception("Cannot have both earth_explo_only = True and noise_earth_only = True")
+        # Only need to map redundency if upsampling, as upsampling is the cause of redundancy
+        if self.upsample:
+            self.full_ds = self.map_redundancy(self.full_ds)
+        else:
+            zero_column = np.zeros((len(self.full_ds), 1))
+            self.full_ds = np.hstack((self.full_ds, zero_column))
+    
+    def create_label_dict(self):
+        if self.earth_explo_only:
+            self.label_dict = {'earthquake' : 0, 'explosion' : 1}
+        elif self.noise_earth_only:
+            self.label_dict = {'earthquake' : 0, 'noise' : 1}
+        elif self.noise_not_noise:
+            self.label_dict = { 'noise': 0, 'earthquake' : 1, 'explosion' : 1}
+        else:
+            self.label_dict = {'earthquake' : 0, 'noise' : 1, 'explosion' : 2, 'induced' : 3}
     
     def get_datasets(self):
         return self.full_ds, self.train, self.val, self.test  

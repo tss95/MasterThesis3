@@ -9,13 +9,14 @@ from .DataHandler import DataHandler
 class NoiseAugmentor(DataHandler):
     # TODO: Consider this: https://stackoverflow.com/questions/47324756/attributeerror-module-matplotlib-has-no-attribute-plot
     # How does SNR impact the use of this class???
-    def __init__(self, ds, use_scaler, scaler, loadData):
+    def __init__(self, ds, use_scaler, scaler, loadData, timeAug):
         super().__init__(loadData)
         self.loadData = loadData
         self.ds = ds
         self.use_scaler = use_scaler
         self.scaler = scaler
-        if self.loadData.earth_explo_only or self.loadData.noise_earth_only:
+        self.timeAug = timeAug
+        if self.loadData.earth_explo_only or self.loadData.noise_earth_only or self.loadData.noise_not_noise:
             self.noise_ds = self.loadData.noise_ds
         else:
             self.noise_ds = get_noise(self.ds)
@@ -33,10 +34,7 @@ class NoiseAugmentor(DataHandler):
     
 
     def get_noise(self, ds):
-        noise_ds = []
-        for path, label in ds:
-            if label == "noise":
-                noise_ds.append([path,label])
+        noise_ds = ds[ds[:,1] == "noise"]
         return np.array(noise_ds)
 
     def get_noise_mean_std(self, noise_ds, use_scaler, scaler):
@@ -44,9 +42,15 @@ class NoiseAugmentor(DataHandler):
         noise_std = 0
         nr_noise = len(noise_ds)
         idx = 0
-        for path, label in noise_ds:
-            if use_scaler:
+        for path, label, redundancy_index in noise_ds:
+            if self.timeAug != None and use_scaler:
+                X = scaler.transform(self.batch_to_aug_trace(np.array([[path, label, redundancy_index]]), self.timeAug)[0][0])
+            elif use_scaler:
                 X = scaler.transform(self.path_to_trace(path)[0])
+                noise_mean += np.mean(X)
+                noise_std += np.std(X)
+            elif self.timeAug != None:
+                X = self.batch_to_aug_trace([path, label, redundancy_inted], timeAug)[0][0]
                 noise_mean += np.mean(X)
                 noise_std += np.std(X)
             else:

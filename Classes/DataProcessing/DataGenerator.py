@@ -11,13 +11,12 @@ class DataGenerator(DataHandler):
     
     def __init__(self, loadData):
         super().__init__(loadData)
-        self.labelEncoder = LabelEncoder()
-        self.labelEncoder.fit(loadData.train[:,1])
+        self.num_classes = len(set(loadData.label_dict.values()))
    
    
-    def data_generator(self, ds, batch_size, detrend = False, num_classes = 3,
-                       use_scaler = False, scaler = None, use_time_augmentor = True, timeAug = None, 
-                       use_noise_augmentor = False, noiseAug = None, use_highpass = False, highpass_freq = 0.49):
+    def data_generator(self, ds, batch_size, detrend = False, use_scaler = False, scaler = None, 
+                       use_time_augmentor = True, timeAug = None, use_noise_augmentor = False, 
+                       noiseAug = None, use_highpass = False, highpass_freq = 0.49):
         
         num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds, use_time_augmentor)
         num_samples = len(ds)
@@ -39,11 +38,11 @@ class DataGenerator(DataHandler):
                                           use_scaler, scaler, use_time_augmentor, timeAug, 
                                           use_noise_augmentor, noiseAug, highpass_freq)
                 try:
-                        y = np_utils.to_categorical(y, num_classes, dtype=np.int64)
-                        if num_classes == 2:
+                        y = np_utils.to_categorical(y, self.num_classes, dtype=np.int8)
+                        if self.num_classes == 2:
                             y = y[:,1]
                 except:
-                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {num_classes}')               
+                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}')               
                 yield X, y
     
     def preprocessing(self, batch_samples, detrend, use_highpass, use_scaler, scaler, use_time_augmentor, timeAug, 
@@ -55,7 +54,7 @@ class DataGenerator(DataHandler):
         if use_scaler:
             batch_trace = self.transform_batch(scaler, batch_trace)
         if use_noise_augmentor:
-            batch_trace = augmentor.batch_augment_noise(batch_trace, 0, noiseAug.noise_std/10)
+            batch_trace = noiseAug.batch_augment_noise(batch_trace, 0, noiseAug.noise_std/10)
         if detrend or use_highpass:
             batch_trace = self.detrend_highpass_batch_trace(batch_trace, detrend, use_highpass, highpass_freq)
         return batch_trace, batch_label

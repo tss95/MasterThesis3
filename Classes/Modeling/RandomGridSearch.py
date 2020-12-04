@@ -85,7 +85,7 @@ class RandomGridSearch(GridSearchResultProcessor):
         self.n_picks = n_picks
         self.hyper_grid = hyper_grid
         self.model_grid = model_grid
-        self.num_classes = len(np.unique(train_ds[:,1]))
+        self.num_classes = len(set(loadData.label_dict.values()))
         self.use_tensorboard = use_tensorboard
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
@@ -146,9 +146,8 @@ class RandomGridSearch(GridSearchResultProcessor):
             # Generate generator args using picks.
             gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
                                                      use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
-                                                     use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug, 
-                                                     num_classes = self.num_classes, use_highpass = self.use_highpass,
-                                                     highpass_freq = self.highpass_freq)
+                                                     use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug,
+                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq)
             
             # Initiate generators using the args
             train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
@@ -240,7 +239,7 @@ class RandomGridSearch(GridSearchResultProcessor):
                                                  use_time_augmentor = self.use_time_augmentor,
                                                  timeAug = self.timeAug,
                                                  use_noise_augmentor = self.use_noise_augmentor, 
-                                                 noiseAug = self.noiseAug, num_classes = self.num_classes)
+                                                 noiseAug = self.noiseAug)
 
         # Initiate generators using the args
         train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
@@ -301,7 +300,7 @@ class RandomGridSearch(GridSearchResultProcessor):
         else:
             scaler = None
         if use_noise_augmentor:
-            noiseAug = NoiseAugmentor(self.loadData.noise_ds, use_scaler, scaler)
+            noiseAug = NoiseAugmentor(self.loadData.noise_ds, use_scaler, scaler, self.loadData, timeAug)
         else:
             noiseAug = None
         return timeAug, scaler, noiseAug 

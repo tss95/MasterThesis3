@@ -30,7 +30,6 @@ from keras.callbacks import EarlyStopping
 import tensorflow as tf
 import datetime
 import re
-from sklearn.metrics import confusion_matrix
 from livelossplot import PlotLossesKeras
 modeling_dir = 'C:\Documents\Thesis_ssd\MasterThesis\Classes\Modeling'
 os.chdir(modeling_dir)
@@ -38,18 +37,8 @@ from CustomCallback import CustomCallback
 
 class HelperFunctions():
     
-    def plot_confusion_matrix(self, model, gen, test_ds, batch_size, class_dict, train_ds = None, train_testing = False):
-        if not train_testing:
-            ds = test_ds
-        else:
-            ds = train_ds
-        steps = len(ds)/batch_size
-        predictions = model.predict_generator(gen, steps)
-        predicted_classes = self.convert_to_class(predictions)[0:len(ds)]
-        true_classes = self.get_class_array(ds, class_dict)
-        labels = list(class_dict.keys())[0:true_classes.shape[1]]
+    def plot_confusion_matrix(self, predicted_classes, true_classes, class_dict, labels):
         cm = confusion_matrix(true_classes.argmax(axis=1), predicted_classes.argmax(axis=1))
-        print(cm)
         fig = plt.figure()
         ax = fig.add_subplot(111)
         cax = ax.matshow(cm)
@@ -60,43 +49,53 @@ class HelperFunctions():
         plt.xlabel('Predicted')
         plt.ylabel('True')
         plt.show()
+        print(cm)
         return
     
     def evaluate_model(self, model, gen, test_ds, batch_size, class_dict):
         steps = len(test_ds)/batch_size
-        print(model.evaluate_generator(gen, steps, verbose = 1))
-        # Add this later!!! print(classification_report(, y_pred_bool))
-        self.plot_confusion_matrix(model, gen, test_ds, batch_size, class_dict)
+        model.evaluate_generator(gen, steps, verbose = 1)
+        predictions = model.predict_generator(gen, steps)
+        predicted_classes = self.convert_to_class(predictions)[0:len(test_ds)]
+        true_classes = self.get_class_array(test_ds, class_dict)
+        labels = list(class_dict.keys())[0:true_classes.shape[1]]
+        if len(list(class_dict.keys())) != len(set(class_dict.values())):
+            labels = [list(class_dict.keys())[0], "Non-noise"][0:true_classes.shape[1]]
+        
+        self.plot_confusion_matrix(predicted_classes, true_classes, class_dict, labels)
+        print(classification_report(true_classes, predicted_classes, labels=[predictions.shape[1]], 
+                              target_names=labels, sample_weight=None, digits=3, output_dict=False, 
+                              zero_division='warn'))
         
     def get_steps_per_epoch(self, gen_set, batch_size):
         return int(len(gen_set)/batch_size)
     
     def get_class_array(self, ds, class_dict):
-        uniques = np.unique(ds[:,1])
-        class_array = np.zeros((len(ds), len(uniques)))
-        for idx, path_and_label in enumerate(ds):
-            label = path_and_label[1]
-            class_array[idx][class_dict.get(label)] = 1
+        if len(list(class_dict.keys())) > len(set(class_dict.values())):
+            class_array = np.zeros((len(ds), len(set(class_dict.values())))) 
+            for idx, path_and_label in enumerate(ds):
+                label = path_and_label[1]
+                class_array[idx][class_dict.get(label)] = class_dict.get(label)
+        else:
+            class_array = np.zeros((len(ds), len(set(class_dict.values()))))       
+            for idx, path_and_label in enumerate(ds):
+                label = path_and_label[1]
+                class_array[idx][class_dict.get(label)] = 1
         return class_array
                                 
-        for idx, path_and_label in enumerate(ds):
-            if path_and_label[1] == "earthquake":
-                class_array[idx][0] = 1
-            elif path_and_label[1] == "noise":
-                class_array[idx][1] = 1
-            elif path_and_label[1] == "explosion":
-                class_array[idx][2] = 1
-            else:
-                print(f"No class available: {path_and_label[1]}")
-                break
-        return class_array
 
     def convert_to_class(self, predictions):
-        predicted_classes = np.zeros((predictions.shape))
-        for idx, prediction in enumerate(predictions):
-            highest_pred = max(prediction)
-            highest_pred_index = np.where(prediction == highest_pred)
-            predicted_classes[idx][highest_pred_index] = 1
+        
+        if predictions.shape[1] == 1:
+            predicted_classes = np.zeros((len(predictions), 2))
+            for idx, prediction in enumerate(predictions):
+                predicted_classes[idx][int(round(prediction[0]))] = round(prediction[0])
+        else:
+            predicted_classes = np.zeros((predictions.shape))
+            for idx, prediction in enumerate(predictions):
+                highest_pred = max(prediction)
+                highest_pred_index = np.where(prediction == highest_pred)
+                predicted_classes[idx][highest_pred_index] = 1
         return predicted_classes
     
     def get_class_distribution_from_csv(self,data_csv):
@@ -155,7 +154,7 @@ class HelperFunctions():
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
-                          noiseAug = None,  num_classes = 3, use_highpass = False, highpass_freq = 0.3):
+                          noiseAug = None, use_highpass = False, highpass_freq = 0.3):
         return {"batch_size" : batch_size,
                     "detrend" : detrend,
                     "use_scaler" : use_scaler,
@@ -164,7 +163,6 @@ class HelperFunctions():
                     "timeAug" : timeAug,
                     "use_noise_augmentor" : use_noise_augmentor,
                     "noiseAug" : noiseAug,
-                    "num_classes" : num_classes,
                     "use_highpass" : use_highpass,
                     "highpass_freq" : highpass_freq}
     
