@@ -22,6 +22,7 @@ from itertools import chain
 import tensorflow as tf
 
 from .StaticModels import StaticModels
+from .DynamicModels import DynamicModels
 
 
 from Classes.DataProcessing.LoadData import LoadData
@@ -80,7 +81,9 @@ class NarrowSearch(GridSearchResultProcessor):
         self.helper = HelperFunctions()
         self.dataGen = DataGenerator(self.loadData)
         self.handler = DataHandler(self.loadData)
-        print(self.num_classes)
+        self.is_dynamic = False
+        if type(self.model_nr_type) == str:
+            self.is_dynamic = True
         if self.loadData.earth_explo_only:
             self.full_ds = np.concatenate((self.loadData.noise_ds, self.loadData.full_ds))
         else:
@@ -96,11 +99,7 @@ class NarrowSearch(GridSearchResultProcessor):
         pp = pprint.PrettyPrinter(indent=4)
         for i in range(len(self.hyper_picks)):
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
-            current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
-            print(current_picks)
-            # Store picked parameters:
-            self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
-            
+                        
             # Translate picks to a more readable format:
             epoch = self.hyper_picks[i]["epochs"]
             batch_size = self.hyper_picks[i]["batch_size"]
@@ -110,18 +109,37 @@ class NarrowSearch(GridSearchResultProcessor):
             l2_r = self.model_picks[i]["l2_r"]
             l1_r = self.model_picks[i]["l1_r"]
             start_neurons = self.model_picks[i]["start_neurons"]
+            
             filters = self.model_picks[i]["filters"]
             kernel_size = self.model_picks[i]["kernel_size"]
             padding = self.model_picks[i]["padding"]
             opt = self.helper.getOptimizer(self.hyper_picks[i]["optimizer"], self.hyper_picks[i]["learning_rate"])
+            decay_sequence = None
+            num_layers = None
+            if self.is_dynamic:
+                num_layers = self.hyper_picks[i]["num_layers"]
+                self.model_picks[i]["decay_sequence"] = self.helper.get_max_decay_sequence(num_layers, 
+                                                                                            start_neurons, 
+                                                                                            self.model_picks[i]["decay_sequence"], 
+                                                                                            self.num_classes)
+                decay_sequence = self.model_picks[i]["decay_sequence"]
+                
+            current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
+            print(current_picks)
+            # Store picked parameters:
+            self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
             
             # Generate build model args using the picks from above.
-            build_model_args = self.helper.generate_build_model_args(self.model_nr_type, batch_size, dropout_rate, 
+            model_args = self.helper.generate_build_model_args(self.model_nr_type, batch_size, dropout_rate, 
                                                                      activation, output_layer_activation,
                                                                      l2_r, l1_r, start_neurons, filters, kernel_size, 
-                                                                     padding, num_classes = self.num_classes)
+                                                                     padding, num_layers = num_layers, num_classes = self.num_classes,
+                                                                     decay_sequence = decay_sequence)
             # Build model using args generated above
-            model = StaticModels(**build_model_args).model
+            if self.is_dynamic:  
+                model = DynamicModels(**model_args).model
+            else:
+                model = StaticModels(**model_args).model
             
             # Generate generator args using picks.
             gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
@@ -177,11 +195,11 @@ class NarrowSearch(GridSearchResultProcessor):
             metrics.append(metrics_train)
             current_picks.append(metrics_train)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+            break
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
         self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
         return self.results_df, min_loss, max_accuracy, max_precision, max_recall
-        #return self.results_df
 
     def print_best_performers(self, min_loss, max_accuracy, max_precision, max_recall):
         print("----------------------------------------------------LOSS----------------------------------------------------------")
@@ -201,7 +219,12 @@ class NarrowSearch(GridSearchResultProcessor):
         
     def create_search_space(self, main_grid, hyper_grid, model_grid):
         hypermodel_grid = {**hyper_grid, **model_grid}
-        key_list = list(hypermodel_grid.keys())
+        if not self.is_dynamic:
+            if 'num_layers' in main_grid:
+                del main_grid['num_layers']
+            if 'decay_sequence' in main_grid:
+                del main_grid['decay_sequence']
+        key_list = list(main_grid.keys())
         np.random.shuffle(key_list)
         search_list = []
         for key in key_list:

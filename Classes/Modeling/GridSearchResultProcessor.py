@@ -107,9 +107,11 @@ class GridSearchResultProcessor():
         metrics_val = metrics[0]
         finished_train = False
         # Get list of columns containing nan values
-        unfinished_columns = results_df.columns[results_df.isnull().any()].tolist()
+        results_df = results_df.replace('nan', np.nan)
+        unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
         # Iterate through every unfinished column and change values
         for idx, column in enumerate(unfinished_columns):
+            print(column)
             if not finished_train:
                 # Change value at column using the metrics
                 results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics_train[column]
