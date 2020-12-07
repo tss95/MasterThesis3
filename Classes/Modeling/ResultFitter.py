@@ -2,7 +2,8 @@ from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from .GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.DataProcessing.DataGenerator import DataGenerator
-from .Models import Models
+from .DynamicModels import DynamicModels
+from .StaticModels import StaticModels
 import os
 import sys
 import numpy as np
@@ -27,8 +28,8 @@ class ResultFitter(GridSearchResultProcessor):
 
         # Major parameter parser
         df = GridSearchResultProcessor().get_results_df_by_name(file_name, self.num_classes)
-        model_nr, detrend, use_scaler, use_minmax, use_noise_augmentor, use_early_stopping, use_highpass, highpass_freq = self.parse_result_name(file_name)
-        print(f"model number: {model_nr}")
+        model_nr_type, detrend, use_scaler, use_minmax, use_noise_augmentor, use_early_stopping, use_highpass, highpass_freq = self.parse_result_name(file_name)
+        print(f"model number/type: {model_nr_type}")
 
         if use_scaler:
             if use_minmax:
@@ -46,7 +47,7 @@ class ResultFitter(GridSearchResultProcessor):
         keys = list(df.columns[0:13])
         params = {keys[i]: values[i] for i in range(len(keys))}
 
-        build_model_args = self.helper.generate_build_model_args(model_nr, int(params['batch_size']), 
+        build_model_args = self.helper.generate_build_model_args(model_nr_type, int(params['batch_size']), 
                                                                  float(params['dropout_rate']), params['activation'], 
                                                                  params['output_layer_activation'], float(params['l2_r']), 
                                                                  float(params['l1_r']), int(params['start_neurons']),

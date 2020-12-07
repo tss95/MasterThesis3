@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,num_layers,optimizer,activation,decay_sequence,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+64,35,0.0001,5,sgd,softmax,"[1, 2, 4, 6, 8]",0.5,11,11,0.0001,0.2,sigmoid,same,32,,,,,,,,

@@ -124,10 +124,26 @@ class HelperFunctions():
             trace_shape = dp.get('traces').shape
         return num_ds, trace_shape[0], trace_shape[1]
     
-    def generate_build_model_args(self, model_nr, batch_size, dropout_rate, activation, output_layer_activation, l2_r, l1_r, 
-                                  start_neurons, filters, kernel_size, padding, 
-                                  num_classes = 3, channels = 3, timesteps = 6000):
-        return {"model_nr" : model_nr,
+    def generate_build_model_args(self, model_nr_type, batch_size, dropout_rate, activation, output_layer_activation, l2_r, l1_r, 
+                                  start_neurons, filters, kernel_size, padding, num_layers = 1,
+                                  decay_sequence = [1], num_classes = 3, channels = 3, timesteps = 6000):
+        if type(model_nr_type) is str:
+            return {"model_type" : model_nr_type,
+                    "num_layers": num_layers,
+                    "input_shape" : (batch_size, channels, timesteps),
+                    "num_classes" : num_classes,
+                    "dropout_rate" : dropout_rate,
+                    "activation" : activation,
+                    "output_layer_activation" : output_layer_activation,
+                    "l2_r" : l2_r,
+                    "l1_r" : l1_r,
+                    "full_regularizer" : True,
+                    "start_neurons" : start_neurons,
+                    "decay_sequence" : decay_sequence,
+                    "filters" : filters,
+                    "kernel_size" : kernel_size,
+                    "padding" : padding}
+        return {"model_nr" : model_nr_type,
                 "input_shape" : (batch_size, channels, timesteps),
                 "num_classes" : num_classes,
                 "dropout_rate" : dropout_rate,
@@ -148,8 +164,8 @@ class HelperFunctions():
             loss = "categorical_crossentropy"
         return {"loss" : loss,
                       "optimizer" : opt,
-                      "metrics" : ["accuracy",
-                                   tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                      "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                                   "accuracy",
                                    tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
@@ -259,3 +275,13 @@ class HelperFunctions():
         sorted_train_ds_list = sorted(train_ds_list, key=lambda x: x[2], reverse = True)
 
         return sorted_train_ds_list[0:n]
+    
+    def get_max_decay_sequence(self, num_layers, start_neurons, attempted_decay_sequence, num_classes):
+        decay_sequence = attempted_decay_sequence
+        num_out_neurons = num_classes
+        if num_classes == 2:
+            num_out_neurons = 1
+        for idx, decay in enumerate(attempted_decay_sequence):
+            if start_neurons//decay < num_out_neurons:
+                decay_sequence[idx] = decay_sequence[idx-1]
+        return decay_sequence[0:num_layers]

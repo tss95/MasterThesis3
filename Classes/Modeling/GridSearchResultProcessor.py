@@ -49,8 +49,10 @@ class GridSearchResultProcessor():
             f.close()
         
     
-    def get_results_file_name(self):
-        file_name = f"{self.get_results_file_path()}/results_{self.model_nr}"
+    def get_results_file_name(self, narrow = False):
+        file_name = f"{self.get_results_file_path()}/results_{self.model_nr_type}"
+        if narrow:
+            file_name = f"{file_name}_NARROW"
         if self.loadData.earth_explo_only:
             file_name = f"{file_name}_earthExplo"
         if self.loadData.noise_earth_only:
@@ -94,7 +96,7 @@ class GridSearchResultProcessor():
         temp_df = pd.DataFrame(np.array(picks).reshape(1,len(results_df.columns)), columns = results_df.columns)
         results_df = results_df.append(temp_df, ignore_index = True)
         for idx, column in enumerate(results_df.columns):
-            if idx >= 13:
+            if idx >= len(picks):
                 results_df[column] = results_df[column].astype('float')
         self.save_results_df(results_df, file_name)
         return results_df

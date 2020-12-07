@@ -29,7 +29,7 @@ from livelossplot import PlotLossesKeras
 
 import tensorflow as tf
 
-class Models():
+class StaticModels():
     
     """
     Class that allows the user to load a predefined model this class. Models are numbered between 1 and 8.
@@ -301,9 +301,6 @@ class Models():
         return self.model
       
                                   
-    
-    
-    
     
     
     

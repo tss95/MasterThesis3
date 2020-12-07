@@ -42,7 +42,7 @@ class DataGenerator(DataHandler):
                         if self.num_classes == 2:
                             y = y[:,1]
                 except:
-                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}')               
+                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}') 
                 yield X, y
     
     def preprocessing(self, batch_samples, detrend, use_highpass, use_scaler, scaler, use_time_augmentor, timeAug, 
