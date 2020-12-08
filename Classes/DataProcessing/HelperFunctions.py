@@ -221,7 +221,7 @@ class HelperFunctions():
         else:
             raise Exception(f"{optimizer} not implemented into getOptimizer")    
     
-    def plot_event(trace, info):
+    def plot_event(self, trace, info):
         start_time = info['trace_stats']['starttime']
         channels = info['trace_stats']['channels']
         sampl_rate = info['trace_stats']['sampling_rate']

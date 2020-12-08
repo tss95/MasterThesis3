@@ -195,7 +195,6 @@ class NarrowSearch(GridSearchResultProcessor):
             metrics.append(metrics_train)
             current_picks.append(metrics_train)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
-            break
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
         self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
@@ -225,7 +224,6 @@ class NarrowSearch(GridSearchResultProcessor):
             if 'decay_sequence' in main_grid:
                 del main_grid['decay_sequence']
         key_list = list(main_grid.keys())
-        np.random.shuffle(key_list)
         search_list = []
         for key in key_list:
             if len(hypermodel_grid[key]) > 1:
