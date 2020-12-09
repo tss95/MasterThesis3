@@ -95,7 +95,11 @@ class NarrowSearch(GridSearchResultProcessor):
                                                                            self.use_noise_augmentor)
         self.results_file_name = self.get_results_file_name(narrow = True)
         self.hyper_picks, self.model_picks = self.create_search_space(self.main_grid, self.hyper_grid, self.model_grid)
-        self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
+        self.results_df = self.initiate_results_df(self.results_file_name, 
+                                                   self.num_classes, 
+                                                   self.start_from_scratch, 
+                                                   self.hyper_picks[0], 
+                                                   self.model_picks[0])
         pp = pprint.PrettyPrinter(indent=4)
         for i in range(len(self.hyper_picks)):
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
@@ -196,7 +200,6 @@ class NarrowSearch(GridSearchResultProcessor):
                                  "train_precision": train_precision,
                                  "train_recall" : train_recall}
             current_picks.append(metrics['train'])
-            print(metrics)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)

@@ -18,7 +18,7 @@ class LoadData():
     
     def __init__(self, earth_explo_only = False, noise_earth_only = False, noise_not_noise = False, 
                  downsample = False, upsample = False, frac_diff = 1, seed = None, subsample_size = 1,
-                 balance_non_train_set = False, use_true_test_set = False):
+                 balance_non_train_set = False, use_true_test_set = False, load_everything = False):
         self.seed = seed
         np.random.seed(self.seed)
         self.earth_explo_only = earth_explo_only
@@ -34,20 +34,24 @@ class LoadData():
         
         self.csv_folder = os.path.join('F:\\', 'Thesis_ssd','MasterThesis3.0','csv_folder')
         self.data_csv_name = 'full_no_test.csv'
-        self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
-        self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
-        
-        self.create_label_dict()
-        self.load_data()
-        if self.use_true_test_set:
-            self.true_test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
-            print("WARNING!")
-            print("You are using the true test set.")
-            print("THIS SHOULD ONLY BE USED ONCE")
-            print("If this is an error, please set use_true_test_set = False and reload the kernel")
-            
-        if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
-            raise Exception("Invalid load data arguments.")
+        if load_everything:
+            self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
+            self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
+            self.create_label_dict()
+        else:
+            self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
+            self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
+            self.create_label_dict()
+            self.load_data()
+            if self.use_true_test_set:
+                self.true_test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
+                print("WARNING!")
+                print("You are using the true test set.")
+                print("THIS SHOULD ONLY BE USED ONCE")
+                print("If this is an error, please set use_true_test_set = False and reload the kernel")
+
+            if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
+                raise Exception("Invalid load data arguments.")
 
     def load_data(self):
         if not self.use_true_test_set:
