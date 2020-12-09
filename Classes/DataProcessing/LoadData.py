@@ -55,8 +55,8 @@ class LoadData():
                 self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
                 self.full_ds = self.full_ds[0:int(len(self.full_ds)*self.subsample_size)]
                 self.refine_full_ds()
-                self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
-                self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
+                self.train, val_test = train_test_split(self.full_ds, test_size = 0.25, random_state = self.seed)
+                self.val, self.test = train_test_split(val_test, test_size = 0.4, random_state = self.seed)
                 if not self.earth_explo_only:
                     self.noise_ds = self.train[self.train[:,1] == "noise"]
             else:
@@ -67,13 +67,13 @@ class LoadData():
                         self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
                         self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "noise"])
                         # The noise needs to be reduced in order to work properly in noise augmentor
-                        self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.15, random_state = self.seed)
+                        self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.25, random_state = self.seed)
                         zero_column = np.zeros((len(self.noise_ds), 1))
                         self.noise_ds = np.hstack((self.noise_ds, zero_column))
                     else:
                         self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
-                self.train, val_test = train_test_split(self.full_ds, test_size = 0.15, random_state = self.seed)
-                self.val, self.test = train_test_split(val_test, test_size = 0.5, random_state = self.seed)
+                self.train, val_test = train_test_split(self.full_ds, test_size = 0.25, random_state = self.seed)
+                self.val, self.test = train_test_split(val_test, test_size = 0.4, random_state = self.seed)
                 self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
                 if self.upsample:
                     self.train = self.map_redundancy(self.train)

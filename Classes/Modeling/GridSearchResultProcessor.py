@@ -103,6 +103,13 @@ class GridSearchResultProcessor():
 
 
     def store_metrics_after_fit(self, metrics, results_df, file_name):
+        results_df = results_df.replace('nan', np.nan)
+        unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
+        for column in unfinished_columns:
+            results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics[column.split('_')[0]][column]
+        self.save_results_df(results_df, file_name)
+        return results_df
+        """
         metrics_train = metrics[1]
         metrics_val = metrics[0]
         finished_train = False
@@ -122,6 +129,7 @@ class GridSearchResultProcessor():
                 results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics_val[column]
         self.save_results_df(results_df, file_name)
         return results_df
+        """
     
     def find_best_performers(self, results_df):
         train_loss_index = results_df.columns.get_loc('train_loss')

@@ -16,9 +16,10 @@ class DataGenerator(DataHandler):
    
     def data_generator(self, ds, batch_size, detrend = False, use_scaler = False, scaler = None, 
                        use_time_augmentor = True, timeAug = None, use_noise_augmentor = False, 
-                       noiseAug = None, use_highpass = False, highpass_freq = 0.49):
+                       noiseAug = None, use_highpass = False, highpass_freq = 0.49, num_channels = 3):
         
-        num_samples, channels, timesteps = self.get_trace_shape_no_cast(ds, use_time_augmentor)
+        num_samples, _, timesteps = self.get_trace_shape_no_cast(ds, use_time_augmentor)
+        channels = num_channels
         num_samples = len(ds)
         while True:
             for offset in range(0, num_samples, batch_size):
@@ -42,7 +43,8 @@ class DataGenerator(DataHandler):
                         if self.num_classes == 2:
                             y = y[:,1]
                 except:
-                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}') 
+                    raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}')
+                X = X[:][:,0:num_channels]
                 yield X, y
     
     def preprocessing(self, batch_samples, detrend, use_highpass, use_scaler, scaler, use_time_augmentor, timeAug, 
@@ -59,6 +61,5 @@ class DataGenerator(DataHandler):
             batch_trace = self.detrend_highpass_batch_trace(batch_trace, detrend, use_highpass, highpass_freq)
         return batch_trace, batch_label
         
-
     
             

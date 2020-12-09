@@ -66,6 +66,7 @@ class StaticModels():
         self.padding = padding
         self.load_model()
         
+        
     def load_model(self):
         self.model = None
         if self.model_nr == 1:

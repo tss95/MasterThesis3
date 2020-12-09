@@ -126,7 +126,8 @@ class HelperFunctions():
     
     def generate_build_model_args(self, model_nr_type, batch_size, dropout_rate, activation, output_layer_activation, l2_r, l1_r, 
                                   start_neurons, filters, kernel_size, padding, num_layers = 1,
-                                  decay_sequence = [1], num_classes = 3, channels = 3, timesteps = 6000):
+                                  decay_sequence = [1], use_layerwise_dropout_batchnorm = True, 
+                                  num_classes = 3, channels = 3, timesteps = 6000):
         if type(model_nr_type) is str:
             return {"model_type" : model_nr_type,
                     "num_layers": num_layers,
@@ -142,7 +143,8 @@ class HelperFunctions():
                     "decay_sequence" : decay_sequence,
                     "filters" : filters,
                     "kernel_size" : kernel_size,
-                    "padding" : padding}
+                    "padding" : padding,
+                    "use_layerwise_dropout_batchnorm" : use_layerwise_dropout_batchnorm}
         return {"model_nr" : model_nr_type,
                 "input_shape" : (batch_size, channels, timesteps),
                 "num_classes" : num_classes,
@@ -160,18 +162,21 @@ class HelperFunctions():
     def generate_model_compile_args(self, opt, nr_classes):
         if nr_classes == 2:
             loss = "binary_crossentropy"
+            acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuracy", dtype=None, threshold=0.5)
         else:
             loss = "categorical_crossentropy"
+            acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
         return {"loss" : loss,
                       "optimizer" : opt,
                       "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                   "accuracy",
+                                   acc,
                                    tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
-                          noiseAug = None, use_highpass = False, highpass_freq = 0.3):
-        return {"batch_size" : batch_size,
+                          noiseAug = None, use_highpass = False, highpass_freq = 0.3, num_channels = 3):
+        return {    "num_channels" : num_channels,
+                    "batch_size" : batch_size,
                     "detrend" : detrend,
                     "use_scaler" : use_scaler,
                     "scaler" : scaler,

@@ -50,7 +50,8 @@ class DynamicModels():
     def __init__(self, model_type, num_layers,  input_shape, num_classes = 3, dropout_rate = 0.25, 
                  activation = 'relu', output_layer_activation = "softmax", 
                  l2_r = 0.001, l1_r = 0.0001, start_neurons = 512, decay_sequence = [1],
-                 full_regularizer = False, filters = 16, kernel_size = 10, padding = 'valid'):
+                 full_regularizer = False, filters = 16, kernel_size = 10, padding = 'valid',
+                 use_layerwise_dropout_batchnorm = True):
         self.model_type = model_type
         self.num_layers = num_layers
         self.input_shape = input_shape
@@ -66,6 +67,7 @@ class DynamicModels():
         self.filters = filters
         self.kernel_size = kernel_size
         self.padding = padding
+        self.use_layerwise_dropout_batchnorm = use_layerwise_dropout_batchnorm
         self.load_model()
         
     def load_model(self):
@@ -105,8 +107,9 @@ class DynamicModels():
                                kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 
                                bias_regularizer = regularizers.l2(self.l2_r),
                                activity_regularizer = regularizers.l2(self.l2_r*0.1)))
-            self.model.add(Dropout(self.dropout_rate))
-            self.model.add(BatchNormalization())
+            if self.use_layerwise_dropout_batchnorm:
+                self.model.add(Dropout(self.dropout_rate))
+                self.model.add(BatchNormalization())
         self.model.add(Flatten())
         self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
         
@@ -125,7 +128,9 @@ class DynamicModels():
                                   kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 
                                   bias_regularizer = regularizers.l2(self.l2_r),
                                   activity_regularizer = regularizers.l2(self.l2_r*0.1)))
-
+            if self.use_layerwise_dropout_batchnorm:
+                self.model.add(Dropout(self.dropout_rate))
+                self.model.add(BatchNormalization())
         self.model.add(BatchNormalization())
         self.model.add(Flatten())
         self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
@@ -142,8 +147,9 @@ class DynamicModels():
                                 kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 
                                 bias_regularizer = regularizers.l2(self.l2_r),
                                 activity_regularizer = regularizers.l2(self.l2_r*0.1)))
-            self.model.add(Dropout(self.dropout_rate))
-            self.model.add(BatchNormalization())
+            if self.use_layerwise_dropout_batchnorm:
+                self.model.add(Dropout(self.dropout_rate))
+                self.model.add(BatchNormalization())
         self.model.add(Flatten())
         self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
         

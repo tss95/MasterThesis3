@@ -99,8 +99,9 @@ class NarrowSearch(GridSearchResultProcessor):
         pp = pprint.PrettyPrinter(indent=4)
         for i in range(len(self.hyper_picks)):
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
-                        
+            print(f"Model nr {i + 1} of {len(self.hyper_picks)}")           
             # Translate picks to a more readable format:
+            num_channels = self.hyper_picks[i]["num_channels"]
             epoch = self.hyper_picks[i]["epochs"]
             batch_size = self.hyper_picks[i]["batch_size"]
             dropout_rate = self.model_picks[i]["dropout_rate"]
@@ -109,13 +110,13 @@ class NarrowSearch(GridSearchResultProcessor):
             l2_r = self.model_picks[i]["l2_r"]
             l1_r = self.model_picks[i]["l1_r"]
             start_neurons = self.model_picks[i]["start_neurons"]
-            
             filters = self.model_picks[i]["filters"]
             kernel_size = self.model_picks[i]["kernel_size"]
             padding = self.model_picks[i]["padding"]
             opt = self.helper.getOptimizer(self.hyper_picks[i]["optimizer"], self.hyper_picks[i]["learning_rate"])
             decay_sequence = None
             num_layers = None
+            use_layerwise_dropout_batchnorm = None
             if self.is_dynamic:
                 num_layers = self.hyper_picks[i]["num_layers"]
                 self.model_picks[i]["decay_sequence"] = self.helper.get_max_decay_sequence(num_layers, 
@@ -123,6 +124,7 @@ class NarrowSearch(GridSearchResultProcessor):
                                                                                             self.model_picks[i]["decay_sequence"], 
                                                                                             self.num_classes)
                 decay_sequence = self.model_picks[i]["decay_sequence"]
+                use_layerwise_dropout_batchnorm = self.model_picks[i]["use_layerwise_dropout_batchnorm"]
                 
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
             print(current_picks)
@@ -131,10 +133,11 @@ class NarrowSearch(GridSearchResultProcessor):
             
             # Generate build model args using the picks from above.
             model_args = self.helper.generate_build_model_args(self.model_nr_type, batch_size, dropout_rate, 
-                                                                     activation, output_layer_activation,
-                                                                     l2_r, l1_r, start_neurons, filters, kernel_size, 
-                                                                     padding, num_layers = num_layers, num_classes = self.num_classes,
-                                                                     decay_sequence = decay_sequence)
+                                                               activation, output_layer_activation,
+                                                               l2_r, l1_r, start_neurons, filters, kernel_size, 
+                                                               padding, num_layers = num_layers, num_classes = self.num_classes,
+                                                               decay_sequence = decay_sequence, channels = num_channels,
+                                                               use_layerwise_dropout_batchnorm = use_layerwise_dropout_batchnorm)
             # Build model using args generated above
             if self.is_dynamic:  
                 model = DynamicModels(**model_args).model
@@ -145,7 +148,8 @@ class NarrowSearch(GridSearchResultProcessor):
             gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
                                                      use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
                                                      use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug,
-                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq)
+                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq, 
+                                                     num_channels = num_channels)
             
             # Initiate generators using the args
             train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
@@ -176,24 +180,23 @@ class NarrowSearch(GridSearchResultProcessor):
             loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
                                                                        steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
             # Record metrics for train
-            metrics = []
-            metrics_val = {"val_loss" : loss,
-                            "val_accuracy" : accuracy,
-                            "val_precision": precision,
-                            "val_recall" : recall}
-            metrics.append(metrics_val)
-            current_picks.append(metrics_val)
+            metrics = {}
+            metrics['val'] = {  "val_loss" : loss,
+                                "val_accuracy" : accuracy,
+                                "val_precision": precision,
+                                "val_recall" : recall}
+            current_picks.append(metrics['val'])
             
             # Evaluate the fitted model on the train set
             train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
                                                                                         steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                               batch_size))
-            metrics_train = {"train_loss" : train_loss,
-                             "train_accuracy" : train_accuracy,
-                             "train_precision": train_precision,
-                             "train_recall" : train_recall}
-            metrics.append(metrics_train)
-            current_picks.append(metrics_train)
+            metrics['train'] = { "train_loss" : train_loss,
+                                 "train_accuracy" : train_accuracy,
+                                 "train_precision": train_precision,
+                                 "train_recall" : train_recall}
+            current_picks.append(metrics['train'])
+            print(metrics)
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
@@ -224,6 +227,7 @@ class NarrowSearch(GridSearchResultProcessor):
             if 'decay_sequence' in main_grid:
                 del main_grid['decay_sequence']
         key_list = list(main_grid.keys())
+        np.random.shuffle(key_list)
         search_list = []
         for key in key_list:
             if len(hypermodel_grid[key]) > 1:
@@ -234,6 +238,7 @@ class NarrowSearch(GridSearchResultProcessor):
             else:
                 continue
         search_list = list(chain.from_iterable(search_list))
+        pprint.pprint(search_list)
         hyper_search, model_search = self.unmerge_search_space(search_list, hyper_grid, model_grid)
         return hyper_search, model_search
     
