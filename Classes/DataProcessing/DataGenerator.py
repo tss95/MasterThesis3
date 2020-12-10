@@ -16,7 +16,8 @@ class DataGenerator(DataHandler):
    
     def data_generator(self, ds, batch_size, detrend = False, use_scaler = False, scaler = None, 
                        use_time_augmentor = True, timeAug = None, use_noise_augmentor = False, 
-                       noiseAug = None, use_highpass = False, highpass_freq = 0.49, num_channels = 3):
+                       noiseAug = None, use_highpass = False, highpass_freq = 0.49, num_channels = 3,
+                       is_lstm = False):
         
         num_samples, _, timesteps = self.get_trace_shape_no_cast(ds, use_time_augmentor)
         channels = num_channels
@@ -45,6 +46,8 @@ class DataGenerator(DataHandler):
                 except:
                     raise Exception(f'Error when doing to_categorical. Inputs are y: {y} and num_classes: {self.num_classes}')
                 X = X[:][:,0:num_channels]
+                if is_lstm:
+                    X = np.reshape(X, (X.shape[0], X.shape[2], X.shape[1]))
                 yield X, y
     
     def preprocessing(self, batch_samples, detrend, use_highpass, use_scaler, scaler, use_time_augmentor, timeAug, 

@@ -97,7 +97,7 @@ class DynamicModels():
                                   
     def create_LSTM_model(self):
         self.model = Sequential()
-        self.model.add(InputLayer(batch_input_shape = self.input_shape))
+        self.model.add(InputLayer(batch_input_shape = (self.input_shape[0], self.input_shape[2], self.input_shape[1])))
         for i in range(self.num_layers):
             return_sequences = False
             if i != self.num_layers:

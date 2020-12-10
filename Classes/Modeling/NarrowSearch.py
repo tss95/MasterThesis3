@@ -55,7 +55,7 @@ class NarrowSearch(GridSearchResultProcessor):
     def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr_type, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
                  use_minmax, use_highpass, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
                  use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
-                 start_from_scratch = True):
+                 start_from_scratch = True, is_lstm = False):
         
         self.loadData = loadData
         self.train_ds = train_ds
@@ -78,6 +78,8 @@ class NarrowSearch(GridSearchResultProcessor):
         self.use_early_stopping = use_early_stopping
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
+        self.is_lstm = is_lstm
+        
         self.helper = HelperFunctions()
         self.dataGen = DataGenerator(self.loadData)
         self.handler = DataHandler(self.loadData)
