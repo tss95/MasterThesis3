@@ -71,7 +71,7 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
     def __init__(self, loadData, train_ds, val_ds, test_ds, model_type, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
                  use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
                  use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
-                 start_from_scratch = True):
+                 start_from_scratch = True, is_lstm = False):
         
         self.loadData = loadData
         self.train_ds = train_ds
@@ -94,9 +94,14 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
         self.use_early_stopping = use_early_stopping
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
+        self.is_lstm = is_lstm
+        
         self.helper = HelperFunctions()
         self.dataGen = DataGenerator(self.loadData)
         self.handler = DataHandler(self.loadData)
+        self.is_dynamic = False
+        if type(self.model_nr_type) == str:
+            self.is_dynamic = True
         if self.loadData.earth_explo_only:
             self.full_ds = np.concatenate((self.loadData.noise_ds, self.loadData.full_ds))
         else:
@@ -116,11 +121,11 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
         self.model_picks = self.get_n_params_from_list(list(ParameterGrid(self.model_grid)), self.n_picks)
         self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
         pp = pprint.PrettyPrinter(indent=4)
-        for i in range(self.n_picks):
+        for i in range(len(self.hyper_picks)):
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
-                        
+            print(f"Model nr {i + 1} of {len(self.hyper_picks)}")           
             # Translate picks to a more readable format:
-            num_layers = self.hyper_picks[i]["num_layers"]
+            num_channels = self.hyper_picks[i]["num_channels"]
             epoch = self.hyper_picks[i]["epochs"]
             batch_size = self.hyper_picks[i]["batch_size"]
             dropout_rate = self.model_picks[i]["dropout_rate"]
@@ -129,17 +134,22 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
             l2_r = self.model_picks[i]["l2_r"]
             l1_r = self.model_picks[i]["l1_r"]
             start_neurons = self.model_picks[i]["start_neurons"]
-            
             filters = self.model_picks[i]["filters"]
             kernel_size = self.model_picks[i]["kernel_size"]
             padding = self.model_picks[i]["padding"]
             opt = self.helper.getOptimizer(self.hyper_picks[i]["optimizer"], self.hyper_picks[i]["learning_rate"])
-              
-            self.model_picks[i]["decay_sequence"] = self.helper.get_max_decay_sequence(num_layers, 
-                                                                                        start_neurons, 
-                                                                                        self.model_picks[i]["decay_sequence"], 
-                                                                                        self.num_classes)
-            decay_sequence = self.model_picks[i]["decay_sequence"]
+            decay_sequence = None
+            num_layers = None
+            use_layerwise_dropout_batchnorm = None
+            if self.is_dynamic:
+                num_layers = self.hyper_picks[i]["num_layers"]
+                self.model_picks[i]["decay_sequence"] = self.helper.get_max_decay_sequence(num_layers, 
+                                                                                            start_neurons, 
+                                                                                            self.model_picks[i]["decay_sequence"], 
+                                                                                            self.num_classes)
+                decay_sequence = self.model_picks[i]["decay_sequence"]
+                use_layerwise_dropout_batchnorm = self.model_picks[i]["use_layerwise_dropout_batchnorm"]
+                
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
             print(current_picks)
             # Store picked parameters:
@@ -147,18 +157,23 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
             
             # Generate build model args using the picks from above.
             model_args = self.helper.generate_build_model_args(self.model_nr_type, batch_size, dropout_rate, 
-                                                                     activation, output_layer_activation,
-                                                                     l2_r, l1_r, start_neurons, filters, kernel_size, 
-                                                                     padding, num_layers = num_layers, num_classes = self.num_classes,
-                                                                     decay_sequence = decay_sequence)
+                                                               activation, output_layer_activation,
+                                                               l2_r, l1_r, start_neurons, filters, kernel_size, 
+                                                               padding, num_layers = num_layers, num_classes = self.num_classes,
+                                                               decay_sequence = decay_sequence, channels = num_channels,
+                                                               use_layerwise_dropout_batchnorm = use_layerwise_dropout_batchnorm)
             # Build model using args generated above
-            model = DynamicModels(**model_args).model
+            if self.is_dynamic:  
+                model = DynamicModels(**model_args).model
+            else:
+                model = StaticModels(**model_args).model
             
             # Generate generator args using picks.
             gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
                                                      use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
                                                      use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug,
-                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq)
+                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq, 
+                                                     num_channels = num_channels, is_lstm = self.is_lstm)
             
             # Initiate generators using the args
             train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
@@ -189,30 +204,27 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
             loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
                                                                        steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
             # Record metrics for train
-            metrics = []
-            metrics_val = {"val_loss" : loss,
-                            "val_accuracy" : accuracy,
-                            "val_precision": precision,
-                            "val_recall" : recall}
-            metrics.append(metrics_val)
-            current_picks.append(metrics_val)
+            metrics = {}
+            metrics['val'] = {  "val_loss" : loss,
+                                "val_accuracy" : accuracy,
+                                "val_precision": precision,
+                                "val_recall" : recall}
+            current_picks.append(metrics['val'])
             
             # Evaluate the fitted model on the train set
             train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
                                                                                         steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                               batch_size))
-            metrics_train = {"train_loss" : train_loss,
-                             "train_accuracy" : train_accuracy,
-                             "train_precision": train_precision,
-                             "train_recall" : train_recall}
-            metrics.append(metrics_train)
-            current_picks.append(metrics_train)
+            metrics['train'] = { "train_loss" : train_loss,
+                                 "train_accuracy" : train_accuracy,
+                                 "train_precision": train_precision,
+                                 "train_recall" : train_recall}
+            current_picks.append(metrics['train'])
             self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)
         self.print_best_performers(min_loss, max_accuracy, max_precision, max_recall)
         return self.results_df, min_loss, max_accuracy, max_precision, max_recall
-        #return self.results_df
 
     def print_best_performers(self, min_loss, max_accuracy, max_precision, max_recall):
         print("----------------------------------------------------LOSS----------------------------------------------------------")

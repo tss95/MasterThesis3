@@ -155,7 +155,7 @@ class NarrowSearch(GridSearchResultProcessor):
                                                      use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
                                                      use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug,
                                                      use_highpass = self.use_highpass, highpass_freq = self.highpass_freq, 
-                                                     num_channels = num_channels)
+                                                     num_channels = num_channels, is_lstm = self.is_lstm)
             
             # Initiate generators using the args
             train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)

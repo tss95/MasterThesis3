@@ -174,7 +174,7 @@ class HelperFunctions():
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
-                          noiseAug = None, use_highpass = False, highpass_freq = 0.3, num_channels = 3):
+                          noiseAug = None, use_highpass = False, highpass_freq = 0.3, num_channels = 3, is_lstm = False):
         return {    "num_channels" : num_channels,
                     "batch_size" : batch_size,
                     "detrend" : detrend,
@@ -185,7 +185,8 @@ class HelperFunctions():
                     "use_noise_augmentor" : use_noise_augmentor,
                     "noiseAug" : noiseAug,
                     "use_highpass" : use_highpass,
-                    "highpass_freq" : highpass_freq}
+                    "highpass_freq" : highpass_freq,
+                    "is_lstm" : is_lstm}
     
     def generate_fit_args(self, train_ds, val_ds, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping):
         callbacks = []
