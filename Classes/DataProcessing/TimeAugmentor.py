@@ -1,5 +1,5 @@
 import numpy as np
-from keras.utils import np_utils
+from tensorflow.keras import utils
 import math
 import random
 import datetime
@@ -11,41 +11,77 @@ from .LoadData import LoadData
 
 
 class TimeAugmentor():
+
+    """
+    fitted_dict = {-paths-:{'initial_index' : int
+                            'random_start_index' : [int list of length of the largest redundancy index of the path + 1]}}
+    
+    """
+
+
     
     def __init__(self, DataHandler, ds, seed = None):
         self.handler = DataHandler
         self.ds = ds
         self.fitted_dict = {}
         self.seed = seed
-             
+
+    """
     def fit(self):
         time_start = time.time()
         path_red_ds = self.ds[:,[0,2]]
         len_ds = len(path_red_ds)
         _,_,pre_length = self.handler.get_trace_shape_no_cast(self.ds, False)
         post_length = 6000
-        np.random.seed(self.seed)
-        for idx, path_red in enumerate(path_red_ds):
-            path = path_red[0]
-            red = int(path_red[1])
-            self.progress_bar(idx + 1, len_ds)
-            if path in self.fitted_dict:
-                if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
-                    continue
-                else:
-                    random_start_index = np.random.randint(0,4500, red + 1)
-                    self.fitted_dict[path]['random_start_index'] = random_start_index
-            else:
-                random_start_index = np.random.randint(0, 4500, red+1)
+        np.random.seed(0)
+        print("Issues will occur if upsampling of explosions or noise is implemented")
+        explo_ds = self.ds[self.ds[:,1] == "explosion"]
+        earth_ds = self.ds[self.ds[:,1] == "earthquake"]
+        noise_ds = self.ds[self.ds[:,1] == "noise"]
+        max_redundancy = max(earth_ds[:,2])
+        #fitted_dict = dict.fromkeys(set(self.ds[:,0]))
+        fitted_dict = {}
+        if len(explo_ds) > 0:
+            i = 0
+            explo_len = len(set(explo_ds[:,0]))
+            for path in set(explo_ds[:,0]):
+                random_start_index = np.random.randint(0,4500, 1)
                 initial_index, info = self.find_initial_event_index(path)
-                self.fitted_dict[path] = { 'initial_index' : initial_index,
-                                           'random_start_index' : random_start_index}
+                fitted_dict[path] = {'initial_index': initial_index,
+                                     'random_start_index' : random_start_index}
+                self.progress_bar(i + 1, explo_len)
+                i += 1
+        print("Finished explosions")
+        if len(noise_ds) > 0:
+            i = 0
+            noise_len = len(set(noise_ds[:,0]))
+            for path in set(noise_ds[:,0]):
+                random_start_index = np.random.randint(0,4500, 1)
+                initial_index, info = self.find_initial_event_index(path)
+                fitted_dict[path] = {'initial_index': initial_index,
+                                     'random_start_index' : random_start_index}
+                self.progress_bar(i + 1, noise_len)
+                i += 1
+        print("Finished noise")
+        if len(earth_ds) > 0:
+            i = 0
+            earth_len = len(set(earth_ds[:,0]))
+            for path in set(earth_ds[:,0]):
+                random_start_index = np.random.randint(0,4500, max_redundancy)
+                initial_index, info = self.find_initial_event_index(path)
+                fitted_dict[path] = {'initial_index': initial_index,
+                                     'random_start_index' : random_start_index}
+                self.progress_bar(i + 1, earth_len)
+                i += 1
+
+        print("Finished earthquakes")
+        self.fitted_dict = fitted_dict
         time_end = time.time()
         print(f"Fit process completed after {time_end - time_start} seconds. Total datapoints fitted: {len(path_red_ds)}.")
         print(f"Average time per datapoint: {(time_end - time_start) / len(path_red_ds)}")
-              
 
-            
+    """
+
             
     def augment_event(self, path, redundancy_index):
         trace, info = self.handler.path_to_trace(path)
@@ -111,7 +147,10 @@ class TimeAugmentor():
     def path_to_info(self, path):
         with h5py.File(path, 'r') as dp:
             info = np.array(dp.get('event_info'))
-            info = json.loads(str(info))
+            # This is a mess, but for some reason it works with this shitty code.
+            info = str(info)
+            info = info[2:len(info)-1]
+            info = json.loads(info)
         return info
         
     
@@ -120,3 +159,38 @@ class TimeAugmentor():
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
         print('Fitting time augmentor: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')     
+        
+# Old fit implementation. Inconsistency in performance cause of rewrite. This method is more memory efficient, and more robust.
+
+    def fit(self):
+        time_start = time.time()
+        path_red_ds = self.ds[:,[0,2]]
+        len_ds = len(path_red_ds)
+        _,_,pre_length = self.handler.get_trace_shape_no_cast(self.ds, False)
+        post_length = 6000
+        np.random.seed(self.seed)
+        gen = self.np_generator(path_red_ds)
+        for idx in range(len_ds):
+            path_red = next(gen)
+            path = path_red[0]
+            red = int(path_red[1])
+            self.progress_bar(idx + 1, len_ds)
+            if path in self.fitted_dict:
+                if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
+                    continue
+                else:
+                    random_start_index = np.random.randint(0,4500, red + 1)
+                    self.fitted_dict[path]['random_start_index'] = random_start_index
+            else:
+                random_start_index = np.random.randint(0, 4500, red+1)
+                initial_index, info = self.find_initial_event_index(path)
+                self.fitted_dict[path] = { 'initial_index' : initial_index,
+                                           'random_start_index' : random_start_index}
+            idx += 1
+        time_end = time.time()
+        print(f"Fit process completed after {time_end - time_start} seconds. Total datapoints fitted: {len(path_red_ds)}.")
+        print(f"Average time per datapoint: {(time_end - time_start) / len(path_red_ds)}")
+           
+    def np_generator(self, path_red_ds):
+        for row in path_red_ds:
+            yield row

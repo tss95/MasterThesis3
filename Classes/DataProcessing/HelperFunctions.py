@@ -10,30 +10,29 @@ import seaborn as sns
 import os
 import csv
 import pylab as pl
-from keras.callbacks import ModelCheckpoint
+
+import tensorflow as tf
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
-import keras
-from keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
-from keras.layers import Dropout
-from keras.layers.advanced_activations import LeakyReLU
-from keras.losses import categorical_crossentropy
-from keras.models import Sequential
-from keras.utils import Sequence
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.losses import categorical_crossentropy
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import Sequence
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
 
-from keras.utils import np_utils
-from keras.utils.vis_utils import plot_model
+from tensorflow.keras import utils
 from sklearn.model_selection import train_test_split
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import EarlyStopping
-import tensorflow as tf
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping
+
 import datetime
 import re
 from livelossplot import PlotLossesKeras
-modeling_dir = 'C:\Documents\Thesis_ssd\MasterThesis\Classes\Modeling'
+modeling_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0/Classes/Modeling'
 os.chdir(modeling_dir)
-from CustomCallback import CustomCallback
+from Classes.Modeling.CustomCallback import CustomCallback
 
 class HelperFunctions():
     
@@ -124,14 +123,39 @@ class HelperFunctions():
             trace_shape = dp.get('traces').shape
         return num_ds, trace_shape[0], trace_shape[1]
     
+    def generate_inceptionTime_build_args(self, input_shape, nr_classes, optimizer, use_residuals, use_bottleneck, 
+                                          nr_modules, kernel_size, num_filters, bottleneck_size, shortcut_activation, 
+                                          module_activation, module_output_activation, output_activation, reg_shortcut,
+                                          reg_module, l1_r, l2_r):
+        return {'input_shape' : input_shape,
+                    'nr_classes' : nr_classes,
+                    'optimizer' : optimizer,
+                    'use_residuals' : use_residuals,
+                    'use_bottleneck' : use_bottleneck,
+                    'nr_modules' : nr_modules,
+                    'kernel_size' : kernel_size,
+                    'num_filters' : num_filters,
+                    'bottleneck_size' : bottleneck_size,
+                    'shortcut_activation'  : shortcut_activation,
+                    'module_activation' : module_activation,
+                    'module_output_activation' : module_output_activation,
+                    'output_activation' : output_activation,
+                    'reg_shortcut' : reg_shortcut,
+                    'reg_module' : reg_module,
+                    'l1_r' : l1_r,
+                    'l2_r' : l2_r}
+    
     def generate_build_model_args(self, model_nr_type, batch_size, dropout_rate, activation, output_layer_activation, l2_r, l1_r, 
                                   start_neurons, filters, kernel_size, padding, num_layers = 1,
-                                  decay_sequence = [1], use_layerwise_dropout_batchnorm = True, 
+                                  decay_sequence = [1], use_layerwise_dropout_batchnorm = True, is_lstm = False,
                                   num_classes = 3, channels = 3, timesteps = 6000):
         if type(model_nr_type) is str:
+            input_shape = (channels, timesteps)
+            if is_lstm:
+                input_shape = (timesteps, channels)
             return {"model_type" : model_nr_type,
                     "num_layers": num_layers,
-                    "input_shape" : (batch_size, channels, timesteps),
+                    "input_shape" : input_shape,
                     "num_classes" : num_classes,
                     "dropout_rate" : dropout_rate,
                     "activation" : activation,
@@ -188,12 +212,12 @@ class HelperFunctions():
                     "highpass_freq" : highpass_freq,
                     "is_lstm" : is_lstm}
     
-    def generate_fit_args(self, train_ds, val_ds, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping):
+    def generate_fit_args(self, train_ds, val_ds, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
         callbacks = []
         if use_liveplots:
             callbacks.append(PlotLossesKeras())
         if use_tensorboard:
-            log_dir = "tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_dir = "/media/tord/T7/Thesis_ssd/MasterThesis3.0/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
@@ -207,6 +231,10 @@ class HelperFunctions():
                           restore_best_weights = True)
             callbacks.append(earlystop)
         
+        if use_reduced_lr:
+            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50,
+                                                                  min_lr=0.0001))
+        
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                         "epochs" : epoch,
                         "validation_data" : val_gen,
@@ -217,15 +245,15 @@ class HelperFunctions():
                         "callbacks" : callbacks
                        }
     
-    def getOptimizer(self, optimizer, learning_rate):
+    def get_optimizer(self, optimizer, learning_rate):
         if optimizer == "adam":
-            return keras.optimizers.Adam(learning_rate=learning_rate)
+            return tf.keras.optimizers.Adam(learning_rate=learning_rate)
         if optimizer == "rmsprop":
             return tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
         if optimizer == "sgd":
             return tf.keras.optimizers.SGD(learning_rate=learning_rate)
         else:
-            raise Exception(f"{optimizer} not implemented into getOptimizer")    
+            raise Exception(f"{optimizer} not implemented into get_optimizer")    
     
     def plot_event(self, trace, info):
         start_time = info['trace_stats']['starttime']

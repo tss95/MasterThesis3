@@ -4,27 +4,24 @@ import h5py
 import sklearn as sk
 import matplotlib.pyplot as plt
 
-from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 from sklearn.model_selection import train_test_split
 
-import keras
 
-from keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
-from keras.layers import Dropout
-from keras.layers.advanced_activations import LeakyReLU
-from keras.losses import categorical_crossentropy
-from keras.models import Sequential
-from keras.utils import Sequence
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.losses import categorical_crossentropy
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import Sequence
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
-from keras.utils import np_utils
-from keras.utils.vis_utils import plot_model
+from tensorflow.keras import utils
+from tensorflow.keras.utils import plot_model
 from sklearn.model_selection import train_test_split
-from keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.metrics import confusion_matrix
 
-from ..DataProcessing import DataGenerator
 from livelossplot import PlotLossesKeras
 
 import tensorflow as tf
@@ -97,7 +94,7 @@ class DynamicModels():
                                   
     def create_LSTM_model(self):
         self.model = Sequential()
-        self.model.add(InputLayer(batch_input_shape = (self.input_shape[0], self.input_shape[2], self.input_shape[1])))
+        self.model.add(InputLayer(input_shape = self.input_shape))
         for i in range(self.num_layers):
             return_sequences = False
             if i != self.num_layers:
@@ -119,7 +116,7 @@ class DynamicModels():
     
     def create_CNN_model(self):
         self.model = Sequential()
-        self.model.add(InputLayer(batch_input_shape = self.input_shape))
+        self.model.add(InputLayer(input_shape = self.input_shape))
         for i in range(self.num_layers):
             self.model.add(Conv1D(int(self.filters//self.decay_sequence[i]), 
                                   kernel_size = self.kernel_size, 
@@ -141,7 +138,7 @@ class DynamicModels():
     
     def create_DENSE_model(self):
         self.model = Sequential()
-        self.model.add(InputLayer(batch_input_shape = self.input_shape))
+        self.model.add(InputLayer(input_shape = self.input_shape))
         for i in range(self.num_layers):
             self.model.add(Dense(int(self.start_neurons//self.decay_sequence[i]), activation = self.activation,
                                 kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 

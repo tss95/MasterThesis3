@@ -34,7 +34,9 @@ class DataHandler():
         with h5py.File(path, 'r') as dp:
             trace_array = np.array(dp.get('traces'))
             info = np.array(dp.get('event_info'))
-            info = json.loads(str(info))
+            info = str(info)
+            info = info[2:len(info)-1]
+            info = json.loads(info)
         return trace_array, info
     
     def batch_to_trace(self, batch):

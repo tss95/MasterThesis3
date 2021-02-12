@@ -6,20 +6,21 @@ import sklearn as sk
 from sklearn.metrics import classification_report, confusion_matrix
 from keras.callbacks import ModelCheckpoint
 
+import tensorflow as tf
+
 import keras
 from keras.layers.advanced_activations import LeakyReLU
 from keras.losses import categorical_crossentropy
 from keras.models import Sequential
-from tensorflow.keras import regularizers
+from keras import regularizers
 from keras.utils import np_utils
 from keras.callbacks import ModelCheckpoint
-from sklearn.model_selection import ParameterGrid
+
 from sklearn.model_selection import ParameterGrid
 from itertools import chain
 
 
 
-import tensorflow as tf
 
 from .StaticModels import StaticModels
 from .DynamicModels import DynamicModels

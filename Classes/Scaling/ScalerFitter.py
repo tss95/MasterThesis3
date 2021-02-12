@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from obspy import Stream, Trace, UTCDateTime
 import os
 import csv
-from keras.utils import np_utils
+from tensorflow.keras import utils
 import seaborn as sns
 import time
 import tables
@@ -61,7 +61,9 @@ class ScalerFitter():
             if self.use_time_augmentor:
                 trace_array = self.timeAug.augment_event(path, redundancy_index)
             info = np.array(dp.get('event_info'))
-            info = json.loads(str(info))
+            info = str(info)
+            info = info[2:len(info)-1]
+            info = json.loads(info)
         return trace_array, info
 
     def detrend_trace(self, trace):

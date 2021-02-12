@@ -78,7 +78,7 @@ class GridSearchResultProcessor():
         return file_name
     
     def get_results_file_path(self):
-        file_path = f'F:/Thesis_ssd/MasterThesis3.0/GridSearchResults/{self.num_classes}_classes'
+        file_path = f'/media/tord/T7/Thesis_ssd/MasterThesis3.0/GridSearchResults/{self.num_classes}_classes'
         return file_path
     
     def store_params_before_fit(self, current_picks, results_df, file_name):
@@ -153,7 +153,7 @@ class GridSearchResultProcessor():
         return min_loss, max_accuracy, max_precision, max_recall
     
     def get_results_df_by_name(self, file_name, num_classes):
-        file_path = f"F:/Thesis_ssd/MasterThesis3.0/GridSearchResults/{num_classes}_classes"
+        file_path = f"/media/tord/T7/Thesis_ssd/MasterThesis3.0/GridSearchResults/{num_classes}_classes"
         loaded_df = pd.read_csv(file_path+'/'+file_name)
         return loaded_df
     

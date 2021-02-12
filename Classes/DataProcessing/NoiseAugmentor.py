@@ -1,5 +1,5 @@
 import numpy as np
-from keras.utils import np_utils
+from tensorflow.keras import utils
 import random
 
 from .LoadData import LoadData
@@ -19,7 +19,7 @@ class NoiseAugmentor(DataHandler):
         if self.loadData.earth_explo_only or self.loadData.noise_earth_only or self.loadData.noise_not_noise:
             self.noise_ds = self.loadData.noise_ds
         else:
-            self.noise_ds = get_noise(self.ds)
+            self.noise_ds = self.get_noise(self.ds)
             
         self.noise_mean, self.noise_std = self.get_noise_mean_std(self.noise_ds, self.use_scaler, self.scaler)
         
@@ -50,7 +50,7 @@ class NoiseAugmentor(DataHandler):
                 noise_mean += np.mean(X)
                 noise_std += np.std(X)
             elif self.timeAug != None:
-                X = self.batch_to_aug_trace([path, label, redundancy_inted], timeAug)[0][0]
+                X = self.batch_to_aug_trace([path, label, redundancy_index], self.timeAug)[0][0]
                 noise_mean += np.mean(X)
                 noise_std += np.std(X)
             else:
