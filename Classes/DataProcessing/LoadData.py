@@ -97,8 +97,8 @@ class LoadData():
                     self.train = np.hstack((self.train, zero_column))
                 zero_val = np.zeros((len(self.val), 1), dtype = np.int)
                 zero_test = np.zeros((len(self.test), 1), dtype = np.int)
-                self.val = np.hstack((self.val, zero_val), dtype = np.int)
-                self.test = np.hstack((self.test, zero_test), dtype = np.int)
+                self.val = np.hstack((self.val, zero_val))
+                self.test = np.hstack((self.test, zero_test))
                 self.full_ds = np.concatenate((self.train, self.val))
                 self.full_ds = np.concatenate((self.full_ds, self.test))
                 if not self.earth_explo_only:

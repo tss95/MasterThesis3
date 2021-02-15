@@ -22,3 +22,10 @@ class MinMaxScalerFitter(ScalerFitter):
             self.progress_bar(i, num_samples)
             self.scaler.partial_fit(X)
         return self.scaler
+
+    def fit_scaler_ram(self, traces):
+        num_samples = traces.shape[0]
+        for i in range(num_samples):
+            self.scaler.partial_fit(traces[i])
+            self.progress_bar(i + 1, num_samples)
+        return self.scaler
