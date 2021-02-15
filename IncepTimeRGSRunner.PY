@@ -33,7 +33,7 @@ if gpus:
 from sklearn.metrics import confusion_matrix
 
 
-base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0'
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
@@ -107,18 +107,18 @@ hyper_grid = {
     "optimizer" : ["adam", "rmsprop", "sgd"]
     }
 model_grid = {
-    "use_residuals" : [True, False],
-    "use_bottleneck" : [True, False],
-    "nr_modules" : [1, 3, 6, 9, 12],
+    "use_residuals" : [True, True, False],
+    "use_bottleneck" : [True, True, False],
+    "nr_modules" : [1, 3, 6, 9, 12, 15],
     "kernel_size" : [20, 30, 40, 50],
-    "bottleneck_size" : [ 26, 28, 30, 32, 34, 36],
-    "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42],
+    "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42],
+    "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44],
     "shortcut_activation" : ["relu", "sigmoid", "softmax", "tanh"],
     "module_activation" : ["linear", "relu", "sigmoid", "softmax", "tanh"],
     "module_output_activation" : ["relu", "linear", "sigmoid", "softmax", "tanh"],
     "output_activation": ["sigmoid"],
-    "reg_shortcut": [True, False],
-    "reg_module" : [True, False],
+    "reg_shortcut": [True, True, False],
+    "reg_module" : [True, True, False],
     "l1_r" : [0.1, 0.001, 0.0001, 0],
     "l2_r" : [0.1, 0.001, 0.0001, 0]
 }
