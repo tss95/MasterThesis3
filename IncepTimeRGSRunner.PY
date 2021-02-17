@@ -130,7 +130,7 @@ use_scaler = True
 use_noise_augmentor = True
 detrend = False
 use_minmax = False
-use_highpass = False
+use_highpass = True
 highpass_freq = 0.1
 
 n_picks = 100

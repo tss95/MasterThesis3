@@ -18,7 +18,7 @@ from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 
 class RamLoader:
     def __init__(self, loadData, handler, use_time_augmentor = False, use_scaler = False, use_minmax = False, 
-                use_highpass = False, highpass_freq = 0.1, detrend = False):
+                use_highpass = False, highpass_freq = 0.1, detrend = False, load_test_set = False):
         self.loadData = loadData
         self.handler = handler
         self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
@@ -28,6 +28,7 @@ class RamLoader:
         self.use_highpass = use_highpass
         self.highpass_freq = highpass_freq
         self.detrend = detrend
+        self.load_test_set = load_test_set
         self.num_classes = len(set(handler.loadData.label_dict.values()))
 
     
@@ -54,11 +55,13 @@ class RamLoader:
 
     - Initially this class was initiated once for each dataset. Since we are fitting timeAug and scalers
     within this class now, we need to do everything in on initiation of the class
+
+    These solutions should be resolved.
     """
     
     def fit_timeAug(self):
         timeAug = None
-        if self.use_time_augmentor 
+        if self.use_time_augmentor:
             timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
             timeAug.fit()
             print("\n")
@@ -73,6 +76,17 @@ class RamLoader:
                 scaler = StandardScalerFitter(self.train_ds, self.timeAug).fit_scaler_ram(traces)
         print("\n")
         return scaler
+
+    def fit_noiseAug(self, noise_ds, scaler, loadData, timeAug):
+        noiseAug = None
+        use_scaler = False
+        if scaler != None:
+            use_scaler = True
+        if use_noise_augmentor:
+            noiseAug = NoiseAugmentor(noise_ds, use_scaler, scaler, loadData, timeAug)
+        return noiseAug
+            
+
     
     def stage_one_load(self, ds):
         loaded_label = np.empty((len(ds), 1))
@@ -83,26 +97,35 @@ class RamLoader:
             loaded_label[i] = self.handler.label_dict.get(ds[i][1])
             # timeAug, highpass and detrend.
             if (self.use_highpass or self.detrend) or self.use_time_augmentor:
-                if (self.use_highpass or self.detrend) and self.use_time_augmentor
+                if (self.use_highpass or self.detrend) and self.use_time_augmentor:
                     loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
-                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass)
-                if not (self.use_highpass or self.detrend)
+                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass, self.highpass_freq)
+                if not (self.use_highpass or self.detrend):
                     loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
                 if not self.use_time_augmentor:
                     loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
-                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass)
+                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass, self.highpass_freq)
             else:
                 loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
         print("\n")
         return loaded_trace, loaded_label
     
-    def stage_two_load(self, traces):
+    def stage_two_load(self, traces, labels, is_lstm, num_channels):
         num_samples = traces.shape[0]
         if use_scaler:
             for i in range(num_samples):
-                self.progress_bar_2(idx, num_samples)
+                self.progress_bar_2(i+1, num_samples)
                 traces[i] = self.scaler.transform(traces[i])
             print("\n")
+        traces = traces[:][:,0:num_channels]
+        if is_lstm:
+            traces = np.reshape(traces, (traces.shape[0], 
+                                         traces.shape[2], 
+                                         traces.shape[1]))
+        labels = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
+        if self.num_classes == 2:
+            labels = labels[:,1]
+            labels = np.reshape(labels, (labels.shape[0],1))
         return traces
 
 
@@ -117,17 +140,18 @@ class RamLoader:
         # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
         self.scaler = self.fit_scaler(train_trace)
         # Using the fitted scaler, we transform the traces:
-        train_trace = self.stage_two_load(train_trace)
-        val_trace = self.stage_two_load(val_trace)
+        train_trace = self.stage_two_load(train_trace, train_label, is_lstm, num_channels)
+        val_trace = self.stage_two_load(val_trace, val_label, is_lstm, num_channels)
         if load_test_set:
-            test_trace = self.stage_two_load(test_trace)
+            test_trace = self.stage_two_load(test_trace, test_label, is_lstm, num_channels)
+        self.noiseAug = self.fit_noiseAug()
         print("Completed loading to RAM")
-        return loaded_trace, loaded_label
-                
-
-        return loa
+        if load_test_set:
+            return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.timeAug, self.scaler, self.noiseAug
+        return train_trace, train_label, val_trace, val_label, self.timeAug, self.scaler, self.noiseAug
     
-    def detrend_highpass(self, trace, detrend, use_highpass):
+    
+    def detrend_highpass(self, trace, detrend, use_highpass, highpass_freq):
         trace_BHE = Trace(data=trace[0])
         trace_BHN = Trace(data=trace[1])
         trace_BHZ = Trace(data=trace[2])
@@ -152,38 +176,3 @@ class RamLoader:
         print('Stage 2 loading to RAM: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
 
 
-"""
-
-    def load_to_ram(self, ds, is_lstm, num_channels = 3):
-        loaded_label = np.empty((len(ds), 1))
-        loaded_trace = np.empty((self.handler.get_trace_shape_no_cast(ds, self.use_time_augmentor)))
-        print("Starting loading to RAM")
-        if self.timeAug != None and self.scaler != None:
-            for i in range(len(ds)):
-                loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
-                loaded_trace[i] = self.scaler.transform(loaded_trace[i])
-                loaded_label[i] = self.handler.label_dict.get(ds[i][1])
-        elif self.timeAug != None:
-            for i in range(len(ds)):
-                loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
-                loaded_label[i] = self.handler.label_dict.get(ds[i][1])
-        elif self.scaler != None:
-            for i in range(len(ds)):
-                loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
-                loaded_trace[i] = self.scaler.transform(loaded_trace[i])
-                loaded_label[i] = self.handler.label_dict.get(ds[i][1])
-        else:
-            for i in range(len(ds)):
-                loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
-                loaded_label[i] = self.handler.label_dict.get(ds[i][1])
-        
-        loaded_trace = loaded_trace[:][:,0:num_channels]
-        if is_lstm:
-            loaded_trace = np.reshape(loaded_trace, (loaded_trace.shape[0], loaded_trace.shape[2], loaded_trace.shape[1]))
-        loaded_label = utils.to_categorical(loaded_label, self.num_classes, dtype=np.int8)
-        if self.num_classes == 2:
-            loaded_label = loaded_label[:,1]
-            loaded_label = np.reshape(loaded_label, (loaded_label.shape[0],1))
-        print("Completed loading to RAM")
-        return loaded_trace, loaded_label
-"""

@@ -30,7 +30,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 import datetime
 import re
 from livelossplot import PlotLossesKeras
-modeling_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0/Classes/Modeling'
+modeling_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/Classes/Modeling'
 os.chdir(modeling_dir)
 from Classes.Modeling.CustomCallback import CustomCallback
 

@@ -26,15 +26,15 @@ class RamGenerator(DataHandler):
                 if offset + batch_size > num_samples:
                     overflow = offset + batch_size - num_samples
                     
-                    batch_traces[0:batch_size-overflow] = traces[offset:(offset+batch_size)-overflow]
-                    batch_labels[0:batch_size-overflow] = labels[offset:(offset+batch_size)-overflow]
+                    batch_traces[0:batch_size - overflow] = traces[offset:(offset+batch_size) - overflow]
+                    batch_labels[0:batch_size - overflow] = labels[offset:(offset+batch_size) - overflow]
                     
                     i_start = random.randint(0, num_samples-overflow)
-                    batch_traces[batch_size-overflow:batch_size] = traces[i_start:i_start+overflow]
-                    batch_labels[batch_size-overflow:batch_size] = labels[i_start:i_start+overflow]
+                    batch_traces[batch_size - overflow:batch_size] = traces[i_start:i_start + overflow]
+                    batch_labels[batch_size - overflow:batch_size] = labels[i_start:i_start + overflow]
                 else:
                     batch_traces = traces[offset:offset + batch_size]
-                    batch_labels = labels[offset:offset+batch_size]
+                    batch_labels = labels[offset:offset + batch_size]
                 
                 if self.noiseAug != None:
                     batch_traces = self.preprocess_data(batch_traces)

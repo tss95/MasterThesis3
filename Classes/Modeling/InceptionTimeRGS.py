@@ -13,7 +13,7 @@ import tensorflow as tf
 from tensorflow.keras import mixed_precision
 
 import os
-base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0'
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
@@ -97,8 +97,6 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
         self.num_channels = num_channels
-
-        print("Note that highpass and detrend have not been implemented yet in this class.")
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
@@ -121,10 +119,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         self.hyper_picks = self.get_n_params_from_list(self.hyper_params, self.n_picks)
         self.model_picks = self.get_n_params_from_list(self.model_params, self.n_picks)
         
-        self.timeAug, self.scaler, self.noiseAug = self.init_preprocessing(self.use_time_augmentor, 
-                                                                           self.use_scaler, 
-                                                                           self.use_noise_augmentor)
-        print("Finished fitting augmentors and scaler")
+        
         
         # Create name of results file, get initiated results df, either brand new or continue old.
         self.results_file_name = self.get_results_file_name()
@@ -132,9 +127,9 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
         
         # Preprocessing and loading all data to RAM:
-        ramLoader = RamLoader(self.handler, self.timeAug, self.scaler)
-        self.x_train, self.y_train = ramLoader.load_to_ram(self.train_ds, False, self.num_channels)
-        self.x_val, self.y_val = ramLoader.load_to_ram(self.val_ds, False, self.num_channels)
+        ramLoader = RamLoader(self.loadData, self.handler, self.use_time_augmentor, self.use_scaler,
+                              self.use_minmax, self.highpass_freq, self.detrend, False)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, False, self.num_channels)
 
         pp = pprint.PrettyPrinter(indent=4)
         
@@ -243,7 +238,9 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         return self.results_df, min_loss, max_accuracy, max_precision, max_recall
         
 
-
+    # Depreciated: 
+    # Todo: Remove this function when this class works properly.
+    """
     def init_preprocessing(self, use_time_augmentor, use_scaler, use_noise_augmentor):
         timeAug = None
         scaler = None
@@ -259,7 +256,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         if use_noise_augmentor:
             noiseAug = NoiseAugmentor(self.loadData.noise_ds, use_scaler, scaler, self.loadData, timeAug)
         return timeAug, scaler, noiseAug
-
+    """
     def get_n_params_from_list(self, grid, n_picks):
         print(f"Length of grid: {len(grid)}")
         indexes = random.sample(range(0, len(grid)), n_picks)

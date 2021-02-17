@@ -9,8 +9,10 @@ import csv
 import sys
 from sklearn.model_selection import train_test_split
 
-base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0/'
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
 os.chdir(base_dir)
+from GlobalUtils import GlobalUtils
+utils = GlobalUtils()
 
         
         
@@ -34,18 +36,22 @@ class LoadData():
         # If true, then the class distribution will be equal to 1/num_classes.
         self.even_balance = even_balance
         
-        
-        self.csv_folder = os.path.join('/media/tord/T7', 'Thesis_ssd','MasterThesis3.0','csv_folder')
-        self.data_csv_name = 'full_no_test.csv'
+        self.csv_folder = utils.csv_dir
+        #self.csv_folder = os.path.join('/media/tord/T7', 'Thesis_ssd','MasterThesis3.0','csv_folder')
+        #self.data_csv_name = 'full_no_test.csv'
+        self.data_csv_name = utils.data_csv_name
         if load_first_batch:
-            self.data_csv_name = 'full_batch_1.csv'
+            #self.data_csv_name = 'full_batch_1.csv'
+            self.data_csv_name = utils.batch_1_csv_name
             assert not load_everything, "Load everything should be False when using the first batch. A test set has not been generated for this dataset"
         if load_everything:
-            self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
+            #self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
+            self.data_csv_name = utils.no_nan_no_induced_csv_name
             self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
             self.create_label_dict()
         else:
-            self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
+            #self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
+            self.test_csv_name = utils.test_csv_name
             self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
             self.create_label_dict()
             self.load_data()
