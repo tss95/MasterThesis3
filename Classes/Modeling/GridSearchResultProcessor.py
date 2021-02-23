@@ -56,10 +56,12 @@ class GridSearchResultProcessor():
             f.close()
         
     
-    def get_results_file_name(self, narrow = False):
+    def get_results_file_name(self, narrow = False, narrowOpt = False):
         file_name = f"{self.get_results_file_path()}/results_{self.model_nr_type}"
         if narrow:
             file_name = f"{file_name}_NARROW"
+        if narrowOpt:
+            file_name = f"{file_name}_NarrowOpt"
         if self.loadData.earth_explo_only:
             file_name = f"{file_name}_earthExplo"
         if self.loadData.noise_earth_only:
@@ -159,8 +161,42 @@ class GridSearchResultProcessor():
 
         return min_loss, max_accuracy, max_precision, max_recall
     
+    """
+    TODO: The functions below are largely redundant, and should be streamlined in the future
+
+    They are included as is in order to speed up the development of NarrowOptimizer
+    """
+
     def get_results_df_by_name(self, file_name, num_classes):
         file_path = f"{utils.base_dir}/GridSearchResults/{num_classes}_classes"
         loaded_df = pd.read_csv(file_path+'/'+file_name)
         return loaded_df
-    
+
+
+    def clear_nans(self, result_file_name, num_classes):
+        df = self.get_results_df_by_name(result_file_name, num_classes)
+        df_copy = df.copy()
+        no_nans = df_copy.dropna()
+        self.clear_results_df(result_file_name, num_classes)
+        self.save_results_df(no_nans, result_file_name, num_classes)
+
+    def save_results_df(self, results_df, file_name, num_classes):
+        results_df.to_csv(f"{self.get_results_file_path_by_num_classes(num_classes)}/{file_name}", mode = 'w', index=False)
+
+        
+    def clear_results_df(self, file_name, num_classes):
+        path = self.get_results_file_path(num_classes)
+        file = f"{path}/{file_name}"
+        if os.path.isfile(file):
+            f = open(file, "w+")
+            f.close()
+
+    def get_results_file_path(self, num_classes):
+        file_path = f'{utils.base_dir}/GridSearchResults/{num_classes}_classes'
+        return file_path
+
+
+    def get_results_file_path_by_num_classes(self, num_classes):
+        utils = GlobalUtils()
+        file_path = f'{utils.base_dir}/GridSearchResults/{num_classes}_classes'
+        return file_path

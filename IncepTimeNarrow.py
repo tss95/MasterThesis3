@@ -31,7 +31,7 @@ if gpus:
 
 from sklearn.metrics import confusion_matrix
 
-base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0'
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 
 from Classes.DataProcessing.LoadData import LoadData
@@ -76,7 +76,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.4,
+    'subsample_size' : 0.45,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -86,67 +86,58 @@ full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
-if load_args['earth_explo_only']:
-    full_and_noise_ds = np.concatenate((full_ds, noise_ds))
-    timeAug = TimeAugmentor(handler, full_and_noise_ds, seed = load_args['seed'])
-else:
-    timeAug = TimeAugmentor(handler, full_ds, seed = load_args['seed'])
 
-# Printing data stats:
 print(len(train_ds), len(val_ds), len(test_ds))
-print("All data:")
-classes, counts = handler.get_class_distribution_from_ds(full_ds)
-print("Train set:")
 classes, counts = handler.get_class_distribution_from_ds(train_ds)
-print("Validation set:")
 classes, counts = handler.get_class_distribution_from_ds(val_ds)
-print("Test set:")
-classes, counts = handler.get_class_distribution_from_ds(test_ds)
 print("Nr noise samples " + str(len(loadData.noise_ds)))
+print(f"Non noise prop: {len(full_ds[full_ds[:,1] != 'noise'])/len(full_ds)}")
+print(f"Train non noise prop: {len(train_ds[train_ds[:,1] != 'noise'])/len(train_ds)}")
+print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 main_grid = {
-    "batch_size" : [512],
+    "batch_size" : [128],
     "epochs" : [100],
-    "learning_rate" : [0.01],
-    "optimizer" : ["rmsprop"],
+    "learning_rate" : [0.001],
+    "optimizer" : ["adam"],
     "use_residuals" : [True],
-    "use_bottleneck" : [False],
-    "nr_modules" : [1],
-    "kernel_size" : [40],
-    "bottleneck_size" : [26],
-    "num_filters" : [32],
-    "shortcut_activation" : ["tanh"],
-    "module_activation" : ["sigmoid"],
-    "module_output_activation" : ["tanh"],
+    "use_bottleneck" : [True],
+    "nr_modules" : [21],
+    "kernel_size" : [60],
+    "bottleneck_size" : [28],
+    "num_filters" : [38],
+    "shortcut_activation" : ["relu"],
+    "module_activation" : ["tanh"],
+    "module_output_activation" : ["sigmoid"],
     "output_activation": ["sigmoid"],
-    "reg_module" : [False],
-    "reg_shortcut" : [True],
-    "l1_r" : [0.01],
-    "l2_r" : [0.01]
+    "reg_module" : [True],
+    "reg_shortcut" : [False],
+    "l1_r" : [0.0],
+    "l2_r" : [0.0001]
     }
 
 hyper_grid = {
-    "batch_size" : [64, 128, 512, 768, 1024],
-    "epochs" : [100],
-    "learning_rate" : [0.1,0.001, 0.0005],
+    "batch_size" : [64, 256, 512, 768, 1024],
+    "epochs" : [75, 100, 125],
+    "learning_rate" : [0.1, 0.01, 0.0005],
     "optimizer" : ["rmsprop", "sgd"]
     }
 model_grid = {
     "use_residuals" : [False, True],
     "use_bottleneck" : [True, False],
-    "nr_modules" : [3, 6, 9, 14],
-    "kernel_size" : [10, 30, 50],
-    "bottleneck_size" : [22],
-    "num_filters" : [28, 30, 34, 36, 40, 44, 48],
-    "shortcut_activation" : ["relu", "sigmoid"],
-    "module_activation" : ["linear", "relu", "softmax", "tanh"],
-    "module_output_activation" : ["relu", "linear", "sigmoid", "softmax"],
+    "nr_modules" : [15,17,19,23,25],
+    "kernel_size" : [30, 40, 50, 70, 80, 90],
+    "bottleneck_size" : [24, 26, 30, 32, 34],
+    "num_filters" : [30, 34, 36, 40, 42, 44, 46],
+    "shortcut_activation" : ["tanh", "sigmoid", "softmax"],
+    "module_activation" : ["linear", "relu", "softmax", "sigmoid"],
+    "module_output_activation" : ["relu", "linear", "tanh", "softmax"],
     "output_activation": ["sigmoid"],
-    "reg_module" : [True, True],
-    "reg_shortcut" : [False, False],
-    "l1_r" : [0.1, 0.001, 0.0001, 0.0],
-    "l2_r" : [0.1, 0.001, 0.0001, 0.0]
+    "reg_module" : [False, False],
+    "reg_shortcut" : [True, True],
+    "l1_r" : [0.1, 0.001, 0.0001],
+    "l2_r" : [0.1, 0.001, 0.0]
 }
 
 
@@ -155,9 +146,9 @@ num_channels = 3
 use_time_augmentor = True
 use_scaler = True
 use_noise_augmentor = True
-detrend = False
+detrend = True
 use_minmax = False
-use_highpass = False
+use_highpass = True
 highpass_freq = 0.1
 
 use_tensorboard = True
@@ -178,7 +169,8 @@ narrowSearch = NarrowSearchIncepTime(loadData, train_ds, val_ds, detrend,
 def clear_tensorboard_dir():
     import os
     import shutil
-    path = f"{base_dir}/Tensorboard_dir/fit"
+    from GlobalUtils import GlobalUtils
+    path = f"{GlobalUtils().base_dir}/Tensorboard_dir/fit"
     files = os.listdir(path)
     print(files)
     for f in files:

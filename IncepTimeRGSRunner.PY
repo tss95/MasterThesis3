@@ -67,14 +67,14 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.4,
+    'subsample_size' : 0.45,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -84,12 +84,13 @@ full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
+"""
 if load_args['earth_explo_only']:
     full_and_noise_ds = np.concatenate((full_ds, noise_ds))
     timeAug = TimeAugmentor(handler, full_and_noise_ds, seed = load_args['seed'])
 else:
     timeAug = TimeAugmentor(handler, full_ds, seed = load_args['seed'])
-
+"""
 
 print(len(train_ds), len(val_ds), len(test_ds))
 classes, counts = handler.get_class_distribution_from_ds(train_ds)
@@ -101,16 +102,16 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 hyper_grid = {    
-    "batch_size" : [128, 256, 512, 1024],
-    "epochs" : [100, 100, 100, 100],
-    "learning_rate" : [0.1, 0.01, 0.001],
-    "optimizer" : ["adam", "rmsprop", "sgd"]
+    "batch_size" : [128, 256, 512, 512, 1024, 1536],
+    "epochs" : [75, 75, 75, 100, 100, 100, 100],
+    "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001],
+    "optimizer" : ["adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
     }
 model_grid = {
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
-    "nr_modules" : [1, 3, 6, 9, 12, 15],
-    "kernel_size" : [20, 30, 40, 50],
+    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21],
+    "kernel_size" : [20, 30, 40, 50, 60],
     "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42],
     "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44],
     "shortcut_activation" : ["relu", "sigmoid", "softmax", "tanh"],
@@ -119,8 +120,8 @@ model_grid = {
     "output_activation": ["sigmoid"],
     "reg_shortcut": [True, True, False],
     "reg_module" : [True, True, False],
-    "l1_r" : [0.1, 0.001, 0.0001, 0],
-    "l2_r" : [0.1, 0.001, 0.0001, 0]
+    "l1_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0],
+    "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
 }
 
 num_channels = 3
@@ -128,12 +129,12 @@ num_channels = 3
 use_time_augmentor = True
 use_scaler = True
 use_noise_augmentor = True
-detrend = False
+detrend = True
 use_minmax = False
 use_highpass = True
 highpass_freq = 0.1
 
-n_picks = 100
+n_picks = 1000
 
 use_tensorboard = True
 use_liveplots = False

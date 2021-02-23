@@ -31,7 +31,7 @@ import pprint
 import re
 import json
 
-base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0'
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 
 class NarrowSearchIncepTime(GridSearchResultProcessor):
 
@@ -69,7 +69,6 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
         self.start_from_scratch = start_from_scratch
         self.num_channels = num_channels
 
-        print("Note that highpass and detrend have not been implemented yet in this class.")
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
@@ -82,9 +81,23 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
 
 
     def fit(self):
-        self.timeAug, self.scaler, self.noiseAug = self.init_preprocessing(self.use_time_augmentor, 
-                                                                           self.use_scaler, 
-                                                                           self.use_noise_augmentor)
+
+        
+        pp = pprint.PrettyPrinter(indent=4)
+
+        # Preprocessing and loading all data to RAM:
+        ramLoader = RamLoader(self.loadData, 
+                              self.handler, 
+                              use_time_augmentor = self.use_time_augmentor, 
+                              use_noise_augmentor = self.use_noise_augmentor, 
+                              use_scaler = self.use_scaler,
+                              use_minmax = self.use_minmax, 
+                              use_highpass = self.use_highpass, 
+                              highpass_freq = self.highpass_freq, 
+                              detrend = self.detrend, 
+                              load_test_set = False)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
+
         self.results_file_name = self.get_results_file_name(narrow = True)
         self.hyper_picks, self.model_picks = self.create_search_space(self.main_grid, self.hyper_grid, self.model_grid)
         self.results_df = self.initiate_results_df(self.results_file_name, 
@@ -92,12 +105,6 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                                                     self.start_from_scratch, 
                                                     self.hyper_picks[0], 
                                                     self.model_picks[0])
-        pp = pprint.PrettyPrinter(indent=4)
-
-        # Preprocessing and loading all data to RAM:
-        ramLoader = RamLoader(self.handler, self.timeAug, self.scaler)
-        self.x_train, self.y_train = ramLoader.load_to_ram(self.train_ds, False, self.num_channels)
-        self.x_val, self.y_val = ramLoader.load_to_ram(self.val_ds, False, self.num_channels)  
 
         for i in range(len(self.hyper_picks)):
             tf.keras.backend.clear_session()

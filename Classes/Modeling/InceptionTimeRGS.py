@@ -127,9 +127,17 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
         
         # Preprocessing and loading all data to RAM:
-        ramLoader = RamLoader(self.loadData, self.handler, self.use_time_augmentor, self.use_scaler,
-                              self.use_minmax, self.highpass_freq, self.detrend, False)
-        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, False, self.num_channels)
+        ramLoader = RamLoader(self.loadData, 
+                              self.handler, 
+                              use_time_augmentor = self.use_time_augmentor, 
+                              use_noise_augmentor = self.use_noise_augmentor, 
+                              use_scaler = self.use_scaler,
+                              use_minmax = self.use_minmax, 
+                              use_highpass = self.use_highpass, 
+                              highpass_freq = self.highpass_freq, 
+                              detrend = self.detrend, 
+                              load_test_set = False)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
 
         pp = pprint.PrettyPrinter(indent=4)
         
@@ -229,7 +237,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
                 self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
-            except:
+            except Exception as e:
+                print(e)
                 print("Something went wrong while training the model (most likely)")
                 continue
             

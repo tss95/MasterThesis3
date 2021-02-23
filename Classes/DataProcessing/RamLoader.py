@@ -12,17 +12,19 @@ from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
+from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
 from Classes.Scaling.ScalerFitter import ScalerFitter
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 
 class RamLoader:
-    def __init__(self, loadData, handler, use_time_augmentor = False, use_scaler = False, use_minmax = False, 
+    def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, use_scaler = False, use_minmax = False, 
                 use_highpass = False, highpass_freq = 0.1, detrend = False, load_test_set = False):
         self.loadData = loadData
         self.handler = handler
         self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
         self.use_time_augmentor = use_time_augmentor
+        self.use_noise_augmentor = use_noise_augmentor
         self.use_scaler = use_scaler
         self.use_minmax = use_minmax
         self.use_highpass = use_highpass
@@ -62,7 +64,11 @@ class RamLoader:
     def fit_timeAug(self):
         timeAug = None
         if self.use_time_augmentor:
-            timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
+            if self.loadData.earth_explo_only:
+                full_and_noise_ds = np.concatenate((self.loadData.full_ds, self.loadData.noise_ds))
+                timeAug = TimeAugmentor(self.handler, full_and_noise_ds, seed = self.loadData.seed)
+            else:
+                timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
             timeAug.fit()
             print("\n")
         return timeAug
@@ -82,8 +88,8 @@ class RamLoader:
         use_scaler = False
         if scaler != None:
             use_scaler = True
-        if use_noise_augmentor:
-            noiseAug = NoiseAugmentor(noise_ds, use_scaler, scaler, loadData, timeAug)
+        if self.use_noise_augmentor:
+            noiseAug = NoiseAugmentor(noise_ds, self.use_highpass, self.detrend, use_scaler, scaler, loadData, timeAug, self.highpass_freq)
         return noiseAug
             
 
@@ -112,7 +118,7 @@ class RamLoader:
     
     def stage_two_load(self, traces, labels, is_lstm, num_channels):
         num_samples = traces.shape[0]
-        if use_scaler:
+        if self.use_scaler:
             for i in range(num_samples):
                 self.progress_bar_2(i+1, num_samples)
                 traces[i] = self.scaler.transform(traces[i])
@@ -129,24 +135,24 @@ class RamLoader:
         return traces
 
 
-    def load_to_ram(self, is_lstm, load_test_set = False, num_channels = 3):
+    def load_to_ram(self, is_lstm, num_channels = 3):
         # Starting with fitting potential time augmentor
         self.timeAug = self.fit_timeAug()
         # Step one, load traces and apply time augmentation and/or detrend/highpass
         train_trace, train_label = self.stage_one_load(self.train_ds)
         val_trace, val_label = self.stage_one_load(self.val_ds)
-        if load_test_set:
+        if self.load_test_set:
             test_trace, test_label = self.stage_one_load(self.test_ds)
         # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
         self.scaler = self.fit_scaler(train_trace)
         # Using the fitted scaler, we transform the traces:
         train_trace = self.stage_two_load(train_trace, train_label, is_lstm, num_channels)
         val_trace = self.stage_two_load(val_trace, val_label, is_lstm, num_channels)
-        if load_test_set:
+        if self.load_test_set:
             test_trace = self.stage_two_load(test_trace, test_label, is_lstm, num_channels)
-        self.noiseAug = self.fit_noiseAug()
+        self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.scaler, self.loadData, self.timeAug)
         print("Completed loading to RAM")
-        if load_test_set:
+        if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.timeAug, self.scaler, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.timeAug, self.scaler, self.noiseAug
     
@@ -161,6 +167,7 @@ class RamLoader:
         if use_highpass:
             stream.taper(max_percentage=0.05, type='cosine')
             stream.filter('highpass', freq = highpass_freq)
+            #stream.filter('bandpass', freqmin = 3.0, freqmax = 5.0)
         return np.array(stream)
 
     def progress_bar_1(self, current, total, barLength = 40):

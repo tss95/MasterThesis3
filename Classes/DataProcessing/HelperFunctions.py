@@ -30,9 +30,11 @@ from tensorflow.keras.callbacks import EarlyStopping
 import datetime
 import re
 from livelossplot import PlotLossesKeras
-modeling_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/Classes/Modeling'
-os.chdir(modeling_dir)
+base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
+os.chdir(base_dir)
+from GlobalUtils import GlobalUtils
 from Classes.Modeling.CustomCallback import CustomCallback
+utils = GlobalUtils()
 
 class HelperFunctions():
     
@@ -217,7 +219,7 @@ class HelperFunctions():
         if use_liveplots:
             callbacks.append(PlotLossesKeras())
         if use_tensorboard:
-            log_dir = "/media/tord/T7/Thesis_ssd/MasterThesis3.0/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
