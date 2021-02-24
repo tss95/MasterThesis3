@@ -27,6 +27,14 @@ class GridSearchResultProcessor():
         header = np.concatenate((hyper_keys, model_keys, metrics_train_keys, metrics_val_keys))
         results_df = pd.DataFrame(columns = header)
         return results_df
+
+    def create_results_df_opti(self, current_picks):
+        keys = list(current_picks.keys())
+        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall"]
+        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall"]
+        header = np.concatenate((keys, metrics_train_keys, metrics_val_keys))
+        results_df = pd.DataFrame(columns = header)
+        return results_df
     
     def initiate_results_df(self, file_name, num_classes, start_from_scratch, hyper_picks, model_picks):
         if start_from_scratch:
@@ -35,20 +43,32 @@ class GridSearchResultProcessor():
         else:
             if self.does_result_exist(file_name):
                 file_name = file_name.split('/')[-1]
-                results_df = self.get_results_df_by_name(file_name, num_classes)
+                results_df = self.get_results_df_by_name(file_name)
                 return results_df
             else:
                 return self.create_results_df(hyper_picks, model_picks)
+
+    def initiate_results_df_opti(self, file_name, num_classes, start_from_scratch, search_picks):
+        if start_from_scratch:
+            self.clear_results_df(file_name)
+            return self.create_results_df_opti(search_picks)
+        else:
+            if self.does_result_exist(file_name):
+                file_name = file_name.split('/')[-1]
+                results_df = self.get_results_df_by_name(file_name)
+                return results_df
+            else:
+                return self.create_results_df_opti(search_picks)
 
         
     def does_result_exist(self, file_name):
         return isfile(file_name)
         
         
-    
+    """
     def save_results_df(self, results_df, file_name):
         results_df.to_csv(file_name, mode = 'w', index=False)
-    
+    """
     def clear_results_df(self, file_name):
         path = self.get_results_file_path()
         file = f"{path}/{file_name}"
@@ -108,7 +128,22 @@ class GridSearchResultProcessor():
         for idx, column in enumerate(results_df.columns):
             if idx >= len(picks):
                 results_df[column] = results_df[column].astype('float')
-        self.save_results_df(results_df, file_name, self.num_classes)
+        self.save_results_df(results_df, file_name)
+        return results_df
+
+    def store_params_before_fit_opti(self, current_picks, results_df, file_name):
+        picks = []
+        for key in list(current_picks.keys()):
+            picks.append(current_picks[key])
+        nr_fillers = len(results_df.columns) - len(picks)
+        for i in range(nr_fillers):
+            picks.append(np.nan)
+        temp_df = pd.DataFrame(np.array(picks).reshape(1,len(results_df.columns)), columns = results_df.columns)
+        results_df = results_df.append(temp_df, ignore_index = True)
+        for idx, column in enumerate(results_df.columns):
+            if idx >= len(picks):
+                results_df[column] = results_df[column].astype('float')
+        self.save_results_df(results_df, file_name)
         return results_df
 
 
@@ -117,7 +152,7 @@ class GridSearchResultProcessor():
         unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
         for column in unfinished_columns:
             results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics[column.split('_')[0]][column]
-        self.save_results_df(results_df, file_name, self.num_classes)
+        self.save_results_df(results_df, file_name)
         return results_df
 
     
@@ -161,7 +196,7 @@ class GridSearchResultProcessor():
         self.clear_results_df(result_file_name)
         self.save_results_df(no_nans, result_file_name)
 
-    def save_results_df(self, results_df, file_name, ):
+    def save_results_df(self, results_df, file_name):
         results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
 
     def get_results_file_path(self):
