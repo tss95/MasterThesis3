@@ -15,8 +15,9 @@ utils = GlobalUtils()
 
 class GridSearchResultProcessor():
 
-    def __init__(self):
-        pass
+    def __init__(self, num_classes):
+        self.num_classes = num_classes
+        
     
     def create_results_df(self, hyper_picks, model_picks):
         hyper_keys = list(hyper_picks.keys())
@@ -107,7 +108,7 @@ class GridSearchResultProcessor():
         for idx, column in enumerate(results_df.columns):
             if idx >= len(picks):
                 results_df[column] = results_df[column].astype('float')
-        self.save_results_df(results_df, file_name)
+        self.save_results_df(results_df, file_name, self.num_classes)
         return results_df
 
 
@@ -116,29 +117,9 @@ class GridSearchResultProcessor():
         unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
         for column in unfinished_columns:
             results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics[column.split('_')[0]][column]
-        self.save_results_df(results_df, file_name)
+        self.save_results_df(results_df, file_name, self.num_classes)
         return results_df
-        """
-        metrics_train = metrics[1]
-        metrics_val = metrics[0]
-        finished_train = False
-        # Get list of columns containing nan values
-        results_df = results_df.replace('nan', np.nan)
-        unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
-        # Iterate through every unfinished column and change values
-        for idx, column in enumerate(unfinished_columns):
-            print(column)
-            if not finished_train:
-                # Change value at column using the metrics
-                results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics_train[column]
-                if idx == len(metrics_train)-1:
-                    finished_train = True
-            else:
-                # Change value at column using the metrics
-                results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics_val[column]
-        self.save_results_df(results_df, file_name)
-        return results_df
-        """
+
     
     def find_best_performers(self, results_df):
         train_loss_index = results_df.columns.get_loc('train_loss')
@@ -167,36 +148,25 @@ class GridSearchResultProcessor():
     They are included as is in order to speed up the development of NarrowOptimizer
     """
 
-    def get_results_df_by_name(self, file_name, num_classes):
-        file_path = f"{utils.base_dir}/GridSearchResults/{num_classes}_classes"
+    def get_results_df_by_name(self, file_name):
+        file_path = f"{utils.base_dir}/GridSearchResults/{self.num_classes}_classes"
         loaded_df = pd.read_csv(file_path+'/'+file_name)
         return loaded_df
 
 
-    def clear_nans(self, result_file_name, num_classes):
-        df = self.get_results_df_by_name(result_file_name, num_classes)
+    def clear_nans(self, result_file_name):
+        df = self.get_results_df_by_name(result_file_name)
         df_copy = df.copy()
         no_nans = df_copy.dropna()
-        self.clear_results_df(result_file_name, num_classes)
-        self.save_results_df(no_nans, result_file_name, num_classes)
+        self.clear_results_df(result_file_name)
+        self.save_results_df(no_nans, result_file_name)
 
-    def save_results_df(self, results_df, file_name, num_classes):
-        results_df.to_csv(f"{self.get_results_file_path_by_num_classes(num_classes)}/{file_name}", mode = 'w', index=False)
+    def save_results_df(self, results_df, file_name, ):
+        results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
 
-        
-    def clear_results_df(self, file_name, num_classes):
-        path = self.get_results_file_path(num_classes)
-        file = f"{path}/{file_name}"
-        if os.path.isfile(file):
-            f = open(file, "w+")
-            f.close()
-
-    def get_results_file_path(self, num_classes):
-        file_path = f'{utils.base_dir}/GridSearchResults/{num_classes}_classes'
+    def get_results_file_path(self):
+        file_path = f'{utils.base_dir}/GridSearchResults/{self.num_classes}_classes'
         return file_path
 
 
-    def get_results_file_path_by_num_classes(self, num_classes):
-        utils = GlobalUtils()
-        file_path = f'{utils.base_dir}/GridSearchResults/{num_classes}_classes'
-        return file_path
+

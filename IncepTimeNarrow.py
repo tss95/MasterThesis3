@@ -103,7 +103,7 @@ main_grid = {
     "optimizer" : ["adam"],
     "use_residuals" : [True],
     "use_bottleneck" : [True],
-    "nr_modules" : [21],
+    "nr_modules" : [23],
     "kernel_size" : [60],
     "bottleneck_size" : [28],
     "num_filters" : [38],
@@ -126,7 +126,7 @@ hyper_grid = {
 model_grid = {
     "use_residuals" : [False, True],
     "use_bottleneck" : [True, False],
-    "nr_modules" : [15,17,19,23,25],
+    "nr_modules" : [19, 21, 25, 27],
     "kernel_size" : [30, 40, 50, 70, 80, 90],
     "bottleneck_size" : [24, 26, 30, 32, 34],
     "num_filters" : [30, 34, 36, 40, 42, 44, 46],
