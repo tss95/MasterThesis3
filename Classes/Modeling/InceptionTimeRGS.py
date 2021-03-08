@@ -67,7 +67,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
     def __init__(self, loadData, train_ds, val_ds, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
                  use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
                  use_liveplots = False, use_custom_callback = False, use_early_stopping = False,
-                 highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3):
+                 highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3, log_data = True):
         
         self.loadData = loadData
         self.train_ds = train_ds
@@ -100,6 +100,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
+        self.log_data = log_data
 
         if self.loadData.earth_explo_only:
             self.full_ds = np.concatenate((self.loadData.noise_ds, self.loadData.full_ds))
@@ -174,8 +175,9 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
             print(current_picks)
-            # Store picked parameters:
-            self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
+            if self.log_data:
+                # Store picked parameters:
+                self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
             
             # Generate build model args using the picks from above.
             num_ds, channels, timesteps = self.handler.get_trace_shape_no_cast(self.train_ds, self.use_time_augmentor)
@@ -236,7 +238,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                     "train_precision": train_precision,
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
-                self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+                if self.log_data:
+                    self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
             except Exception as e:
                 print(e)
                 print("Something went wrong while training the model (most likely)")

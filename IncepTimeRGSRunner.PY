@@ -67,9 +67,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -102,7 +102,7 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 hyper_grid = {    
-    "batch_size" : [128, 256, 512, 512, 1024, 1536],
+    "batch_size" : [128, 256, 512, 512, 1024],
     "epochs" : [75, 75, 75, 100, 100, 100, 100],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001],
     "optimizer" : ["adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
@@ -110,7 +110,7 @@ hyper_grid = {
 model_grid = {
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
-    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21],
+    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21,24,27],
     "kernel_size" : [20, 30, 40, 50, 60],
     "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42],
     "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44],
@@ -165,6 +165,9 @@ if use_tensorboard:
     #%tensorboard --logdir tensorboard_dir/fit
 
 
-results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
+try:
+    results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
+finally:
+    os.shutdown("shutdown -s")
 
 

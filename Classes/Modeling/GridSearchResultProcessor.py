@@ -62,6 +62,8 @@ class GridSearchResultProcessor():
 
         
     def does_result_exist(self, file_name):
+        if isfile(f"{self.get_results_file_path()}/{file_name}"):
+            return True
         return isfile(file_name)
         
         
@@ -132,19 +134,20 @@ class GridSearchResultProcessor():
         return results_df
 
     def store_params_before_fit_opti(self, current_picks, results_df, file_name):
-        picks = []
-        for key in list(current_picks.keys()):
-            picks.append(current_picks[key])
-        nr_fillers = len(results_df.columns) - len(picks)
-        for i in range(nr_fillers):
-            picks.append(np.nan)
-        temp_df = pd.DataFrame(np.array(picks).reshape(1,len(results_df.columns)), columns = results_df.columns)
-        results_df = results_df.append(temp_df, ignore_index = True)
-        for idx, column in enumerate(results_df.columns):
-            if idx >= len(picks):
-                results_df[column] = results_df[column].astype('float')
+        columns = results_df.columns
+        filled_dict = {}
+        for column in columns:
+            if column not in list(current_picks.keys()):
+                current_picks[column] = np.nan
+            filled_dict[column] = [current_picks[column]]
+        for idx, column in enumerate(columns):
+            assert column == list(filled_dict.keys())[idx], print(f"True order: {columns}. Created order: {list(filled_dict.keys())}")
+        temp = pd.DataFrame.from_dict(filled_dict, orient = "columns")
+        temp = temp.reindex(results_df.columns, axis = 1)
+        results_df = results_df.append(temp, ignore_index = True)
         self.save_results_df(results_df, file_name)
         return results_df
+
 
 
     def store_metrics_after_fit(self, metrics, results_df, file_name):
@@ -197,11 +200,9 @@ class GridSearchResultProcessor():
         self.save_results_df(no_nans, result_file_name)
 
     def save_results_df(self, results_df, file_name):
-        results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
+        results_df.to_csv(file_name, mode = 'w', index=False)
+        #results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
 
-    def get_results_file_path(self):
-        file_path = f'{utils.base_dir}/GridSearchResults/{self.num_classes}_classes'
-        return file_path
 
 
 
