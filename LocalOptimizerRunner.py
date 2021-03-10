@@ -49,9 +49,9 @@ import pprint
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -85,14 +85,17 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 
-result_file_name = 'results_InceptionTime_NARROW_noiseNotNoise_detrend_timeAug_sscale_noiseAug_earlyS_highpass-0.1.csv'
+result_file_name = 'results_InceptionTime_earthExplo_detrend_timeAug_sscale_noiseAug_earlyS_highpass-0.1.csv'
 quick_mode = False
 continue_from_result_file = True
 start_grid = None
 
 
 # The higher this value is, the more focused the best model will be on the initial metric
-metric_gap = 0.15
+metric_gap = 0.6
+
+# If cancelled prior to completion, write the number in which it was cancelled in order to pick up where you left off.
+skip_to_index = 13
 
 # Only False if testing
 log_data = True
@@ -110,6 +113,7 @@ localOpt = LocalOptimizerIncepTime(loadData, detrend, use_scaler, use_time_augme
 #top_10 = narrowOpt.get_best_model(result_file_name, 2, optimize_metric = ['val_accuracy', 'val_f1'], nr_candidates = 10)
 try:
 
-  best_model_dict = localOpt.run(['val_accuracy', 'val_f1'], 10, metric_gap = 0.15, log_data = True)
+  best_model_dict = localOpt.run(['val_accuracy', 'val_f1'], 10, metric_gap = metric_gap, log_data = log_data, skip_to_index = skip_to_index)
 finally:
-  os.shutdown('shutdown -s')
+  #os.shutdown('shutdown -s')
+  print("Im done bitch")

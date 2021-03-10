@@ -219,7 +219,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 model_fit = model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
+                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
                                                                         steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
                 # Record metrics for train
                 metrics = {}
@@ -230,7 +230,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 current_picks.append(metrics['val'])
                 
                 # Evaluate the fitted model on the train set
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x = train_gen,
                                                                                             steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                                 batch_size))
                 metrics['train'] = { "train_loss" : train_loss,

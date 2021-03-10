@@ -81,7 +81,7 @@ class LocalOptimizer(GridSearchResultProcessor):
         self.current_best_model = None
         self.current_best_metrics = None
 
-    def run(self, optimize_metric = ['val_accuracy', 'val_f1'], nr_candidates = 10, metric_gap = 0.1, log_data = True):
+    def run(self, optimize_metric = ['val_accuracy', 'val_f1'], nr_candidates = 10, metric_gap = 0.1, log_data = True, skip_to_index = 0):
         """
         Self explanatory
 
@@ -103,7 +103,7 @@ class LocalOptimizer(GridSearchResultProcessor):
         else:
             if self.continue_from_result_file:
                 print(f"Exhaustive mode, starting of result file: {self.result_file_name}")
-                self.run_exhaustive_mode(optimize_metric, nr_candidates, metric_gap, log_data)
+                self.run_exhaustive_mode(optimize_metric, nr_candidates, metric_gap, log_data, skip_to_index)
             else:
                 raise Exception("Not continuing training from result file is not yet implemented. Suspected to be unused.")
         return
@@ -212,6 +212,8 @@ class LocalOptimizer(GridSearchResultProcessor):
 
     def adapt_best_model_dict(self, best_model_dict):
         print(best_model_dict)
+        if 'num_channels' in best_model_dict:
+            del best_model_dict['num_channels']
         return {key:[value] for (key,value) in best_model_dict.items()}
 
     def create_search_grid(self, main_model_grid):

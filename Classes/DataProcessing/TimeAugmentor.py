@@ -103,22 +103,28 @@ class TimeAugmentor():
     
     def fill_start(self, trace, augmented_trace, random_start_index, initial_index, i_channel):
         if random_start_index < initial_index:
+            # Verified
             augmented_trace[i_channel][0:random_start_index] = trace[i_channel][0:random_start_index]
             return augmented_trace[i_channel]
         else:
+            # Verified
+            # Fill the beginning of the waveform with noise leading up to the event
             augmented_trace[i_channel][0:initial_index] = trace[i_channel][0:initial_index]
             trace_interval_start = trace.shape[1] - (random_start_index - initial_index)
             trace_interval_end = trace.shape[1]
+            # Fill gap between the beginning and the interesting event with slice of the end.
             augmented_trace[i_channel][initial_index:random_start_index] = trace[i_channel][trace_interval_start:trace_interval_end]
             return augmented_trace[i_channel]
 
     def fill_interesting_part(self, trace, augmented_trace, random_start_index, interesting_length, initial_index, i_channel):
+        # Verified
         aug_interval_end = min(random_start_index + interesting_length, augmented_trace.shape[1])
         trace_interval_end = min(initial_index + interesting_length, initial_index + (augmented_trace.shape[1] - random_start_index))
         augmented_trace[i_channel][random_start_index:aug_interval_end] = trace[i_channel][initial_index:trace_interval_end]
         return augmented_trace[i_channel]
         
     def fill_lacking_ends(self, trace, augmented_trace, random_start_index, missing_length, i_channel):
+        # Verified
         fill_interval_start = random_start_index
         fill_interval_end = random_start_index + missing_length
         augmented_trace[i_channel][augmented_trace.shape[1] - missing_length:augmented_trace.shape[1]] = trace[i_channel][fill_interval_start:fill_interval_end]
@@ -179,10 +185,12 @@ class TimeAugmentor():
                 if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
                     continue
                 else:
-                    random_start_index = np.random.randint(0,4500, red + 1)
+                    # This random number interval might be the most important parameter in this entire project.
+                    # This is because the second batch of data all appear to start very close to the 1 minute mark, and have a duration of interest longer than 1 minute.
+                    random_start_index = np.random.randint(0,2000, red + 1)
                     self.fitted_dict[path]['random_start_index'] = random_start_index
             else:
-                random_start_index = np.random.randint(0, 4500, red+1)
+                random_start_index = np.random.randint(0, 2000, red+1)
                 initial_index, info = self.find_initial_event_index(path)
                 self.fitted_dict[path] = { 'initial_index' : initial_index,
                                            'random_start_index' : random_start_index}

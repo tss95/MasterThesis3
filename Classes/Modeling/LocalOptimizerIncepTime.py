@@ -18,6 +18,9 @@ from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.Modeling.LocalOptimizer import LocalOptimizer
 
+import time
+import datetime
+
 class LocalOptimizerIncepTime(LocalOptimizer):
 
     def __init__(self, loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, use_highpass, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
@@ -29,7 +32,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
         self.model_nr_type = "InceptionTime"
         
     
-    def run_exhaustive_mode(self, optimize_metric, nr_candidates, metric_gap, log_data):
+    def run_exhaustive_mode(self, optimize_metric, nr_candidates, metric_gap, log_data, skip_to_index = 0):
         """
         This function starts of by chosing the best model from the current results file, based on the user defined metrics.
 
@@ -73,7 +76,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
         search_space = self.create_search_space(self.adapt_best_model_dict(best_model_dict), search_grid)
         print("Current search space is of length: ", len(search_space))
 
-        assert self.get_results_file_name(narrow = True) != self.result_file_name, f"{self.get_results_file_name(narrow = True)} != {self.result_file_name}"
+        #assert self.get_results_file_name(narrow = True) == self.result_file_name, f"{self.get_results_file_name(narrow = True)} != {self.result_file_name}"
         
         ramLoader = RamLoader(self.loadData, 
                               self.handler, 
@@ -85,7 +88,12 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                               highpass_freq = self.highpass_freq, 
                               detrend = self.detrend, 
                               load_test_set = False)
+
+        self.results_file_name = self.get_results_file_name(narrow = True)
+        start = time.time()
         self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
+        end = time.time()
+        print(f"Fitting augmentors and scaler as well as loading to ram completed after: {datetime.timedelta(seconds=(end-start))}")
         
         self.results_df = self.initiate_results_df_opti(self.result_file_name, 
                                                         self.num_classes, 
@@ -98,6 +106,8 @@ class LocalOptimizerIncepTime(LocalOptimizer):
 
         # Everything prior to the for loop should be general enough to work for any model
         for i in range(num_models):
+            if i < skip_to_index:
+                continue
             # Housekeeping
             tf.keras.backend.clear_session()
             mixed_precision.set_global_policy('mixed_float16')
@@ -163,7 +173,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
+                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
                                                                         steps=self.helper.get_steps_per_epoch(self.loadData.val, batch_size))
                 # Record metrics for train
                 metrics = {}
@@ -174,7 +184,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
                                                                                             steps=self.helper.get_steps_per_epoch(self.loadData.train,
                                                                                                                                 batch_size))
                 metrics['train'] = { "train_loss" : train_loss,
@@ -184,7 +194,8 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 if log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.result_file_name)
 
-            except Exception:
+            except Exception as e:
+                print(e)
                 print("Error (hopefully) occured during training.")
                 continue
         self.run_exhaustive_mode(optimize_metric, nr_candidates, metric_gap, log_data)
@@ -230,7 +241,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
         max_size = 120
         new_kernels = [current - 20, current - 10, current - 2, current + 2, current + 10, current + 20]
         for i, kern in enumerate(new_kernels):
-            new_kernels[i] = min(max(kern, 2), max_size)
+            new_kernels[i] = min(max(kern, 3), max_size)
         return list(set(new_kernels))
 
     def create_bottleneck_size(self, current_nr):

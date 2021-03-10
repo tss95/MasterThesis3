@@ -103,7 +103,7 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 hyper_grid = {    
     "batch_size" : [128, 256, 512, 512, 1024],
-    "epochs" : [75, 75, 75, 100, 100, 100, 100],
+    "epochs" : [50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001],
     "optimizer" : ["adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
     }
@@ -134,7 +134,7 @@ use_minmax = False
 use_highpass = True
 highpass_freq = 0.1
 
-n_picks = 1000
+n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False

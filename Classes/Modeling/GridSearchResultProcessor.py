@@ -53,8 +53,8 @@ class GridSearchResultProcessor():
             self.clear_results_df(file_name)
             return self.create_results_df_opti(search_picks)
         else:
-            if self.does_result_exist(file_name):
-                file_name = file_name.split('/')[-1]
+            if self.does_result_exist(file_name) or self.does_result_exist(f"{self.get_result_file_path()}/{file_name}"):
+                #file_name = file_name.split('/')[-1]
                 results_df = self.get_results_df_by_name(file_name)
                 return results_df
             else:
@@ -80,7 +80,7 @@ class GridSearchResultProcessor():
         
     
     def get_results_file_name(self, narrow = False, narrowOpt = False):
-        file_name = f"{self.get_results_file_path()}/results_{self.model_nr_type}"
+        file_name = f"results_{self.model_nr_type}"
         if narrow:
             file_name = f"{file_name}_NARROW"
         if narrowOpt:
@@ -200,8 +200,10 @@ class GridSearchResultProcessor():
         self.save_results_df(no_nans, result_file_name)
 
     def save_results_df(self, results_df, file_name):
-        results_df.to_csv(file_name, mode = 'w', index=False)
-        #results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
+        #results_df.to_csv(file_name, mode = 'w', index=False)
+        print(f"Saving file. {len(results_df)} rows.")
+        print(f"{file_name} saved to path:   {self.get_results_file_path()}")
+        results_df.to_csv(f"{self.get_results_file_path()}/{file_name}", mode = 'w', index=False)
 
 
 
