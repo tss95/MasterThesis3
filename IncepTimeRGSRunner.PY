@@ -168,6 +168,6 @@ if use_tensorboard:
 try:
     results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
 finally:
-    os.shutdown("shutdown -s")
+    os.system("shutdown now -h")
 
 
