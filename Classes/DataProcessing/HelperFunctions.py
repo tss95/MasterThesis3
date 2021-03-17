@@ -193,10 +193,10 @@ class HelperFunctions():
             loss = "categorical_crossentropy"
             acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
         return {"loss" : loss,
-                      "optimizer" : opt,
-                      "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                   acc,
-                                   tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
+                "optimizer" : opt,
+                "metrics" : [acc,
+                            tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                            tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
@@ -234,7 +234,7 @@ class HelperFunctions():
             callbacks.append(earlystop)
         
         if use_reduced_lr:
-            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=50,
+            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50,
                                                                   min_lr=0.0001))
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
@@ -321,3 +321,9 @@ class HelperFunctions():
             if start_neurons//decay < num_out_neurons:
                 decay_sequence[idx] = decay_sequence[idx-1]
         return decay_sequence[0:num_layers]
+
+    def progress_bar(self, current, total, text, barLength = 40):
+        percent = float(current) * 100 / total
+        arrow   = '-' * int(percent/100 * barLength - 1) + '>'
+        spaces  = ' ' * (barLength - len(arrow))
+        print('%s: [%s%s] %d %%' % (text, arrow, spaces, percent), end='\r')

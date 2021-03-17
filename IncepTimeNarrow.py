@@ -69,9 +69,9 @@ import random
 import pprint
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -97,28 +97,28 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 main_grid = {
-    "batch_size" : [128],
+    "batch_size" : [512],
     "epochs" : [100],
     "learning_rate" : [0.001],
     "optimizer" : ["adam"],
-    "use_residuals" : [True],
+    "use_residuals" : [False],
     "use_bottleneck" : [True],
-    "nr_modules" : [23],
-    "kernel_size" : [60],
-    "bottleneck_size" : [28],
+    "nr_modules" : [3],
+    "kernel_size" : [50],
+    "bottleneck_size" : [30],
     "num_filters" : [38],
     "shortcut_activation" : ["relu"],
-    "module_activation" : ["tanh"],
-    "module_output_activation" : ["sigmoid"],
+    "module_activation" : ["softmax"],
+    "module_output_activation" : ["tanh"],
     "output_activation": ["sigmoid"],
-    "reg_module" : [True],
-    "reg_shortcut" : [False],
-    "l1_r" : [0.0],
-    "l2_r" : [0.0001]
+    "reg_module" : [False],
+    "reg_shortcut" : [True],
+    "l1_r" : [0.1],
+    "l2_r" : [0.1]
     }
 
 hyper_grid = {
-    "batch_size" : [64, 256, 512, 768, 1024],
+    "batch_size" : [64, 128, 256, 768, 1024],
     "epochs" : [75, 100, 125],
     "learning_rate" : [0.1, 0.01, 0.0005],
     "optimizer" : ["rmsprop", "sgd"]
@@ -126,18 +126,18 @@ hyper_grid = {
 model_grid = {
     "use_residuals" : [False, True],
     "use_bottleneck" : [True, False],
-    "nr_modules" : [19, 21, 25, 27],
-    "kernel_size" : [30, 40, 50, 70, 80, 90],
-    "bottleneck_size" : [24, 26, 30, 32, 34],
+    "nr_modules" : [1, 6, 9, 12],
+    "kernel_size" : [30, 40, 60, 70, 80, 90],
+    "bottleneck_size" : [24, 26, 28, 32, 34],
     "num_filters" : [30, 34, 36, 40, 42, 44, 46],
     "shortcut_activation" : ["tanh", "sigmoid", "softmax"],
-    "module_activation" : ["linear", "relu", "softmax", "sigmoid"],
-    "module_output_activation" : ["relu", "linear", "tanh", "softmax"],
+    "module_activation" : ["linear", "relu", "tanh", "sigmoid"],
+    "module_output_activation" : ["relu", "linear", "sigmoid", "softmax"],
     "output_activation": ["sigmoid"],
-    "reg_module" : [False, False],
-    "reg_shortcut" : [True, True],
-    "l1_r" : [0.1, 0.001, 0.0001],
-    "l2_r" : [0.1, 0.001, 0.0]
+    "reg_module" : [True, True],
+    "reg_shortcut" : [False, False],
+    "l1_r" : [0.01, 0.001, 0.0001, 0.0],
+    "l2_r" : [0.01, 0.001, 0.0001, 0.0]
 }
 
 
@@ -146,10 +146,11 @@ num_channels = 3
 use_time_augmentor = True
 use_scaler = True
 use_noise_augmentor = True
-detrend = True
 use_minmax = False
-use_highpass = True
-highpass_freq = 0.1
+filter_name = "bandpass"
+band_min = 2
+band_max = 4
+highpass_freq = 1
 
 use_tensorboard = True
 use_liveplots = False
@@ -158,13 +159,10 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 
-narrowSearch = NarrowSearchIncepTime(loadData, train_ds, val_ds, detrend, 
-                               use_scaler,  use_time_augmentor, use_noise_augmentor, 
-                               use_minmax,use_highpass, main_grid, hyper_grid, model_grid, 
-                               use_tensorboard = use_tensorboard, use_liveplots = use_liveplots, 
-                               use_custom_callback = use_custom_callback, 
-                               use_early_stopping = use_early_stopping, highpass_freq = highpass_freq,
-                               start_from_scratch = start_from_scratch, num_channels = num_channels)
+narrowSearch = NarrowSearchIncepTime(loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
+                                    use_minmax, filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = use_tensorboard, 
+                                    use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, band_min = band_min,
+                                    band_max = band_max, highpass_freq = highpass_freq, start_from_scratch = start_from_scratch, use_reduced_lr = use_reduced_lr, num_channels = num_channels)
 
 def clear_tensorboard_dir():
     import os

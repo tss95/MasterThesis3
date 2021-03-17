@@ -48,23 +48,24 @@ class LocalOptimizer(GridSearchResultProcessor):
     
     """
 
-    def __init__(self, loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, use_highpass,
-                 use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, highpass_freq,
+    def __init__(self, loadData, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, filter_name,
+                 use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, highpass_freq,
                  use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
                  result_file_name = "", start_grid = []):
         
         self.loadData = loadData
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.detrend = detrend
         self.use_scaler = use_scaler
         self.use_time_augmentor = use_time_augmentor
         self.use_noise_augmentor = use_noise_augmentor
         self.use_minmax = use_minmax
-        self.use_highpass = use_highpass
+        self.filter_name = filter_name
         self.use_tensorboard = use_tensorboard
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
         self.use_early_stopping = use_early_stopping
+        self.band_min = band_min
+        self.band_max = band_max
         self.highpass_freq = highpass_freq
         self.use_reduced_lr = use_reduced_lr
         self.num_channels = num_channels

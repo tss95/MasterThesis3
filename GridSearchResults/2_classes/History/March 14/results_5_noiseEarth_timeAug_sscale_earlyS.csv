@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,optimizer,start_neurons,dropout_rate,filters,kernel_size,padding,l2_r,l1_r,activation,output_layer_activation,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+16,35,0.1,adam,softmax,0.1,13,7,0.3,0.01,softmax,same,16,,,,,,,,

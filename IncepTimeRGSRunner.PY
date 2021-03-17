@@ -103,22 +103,22 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 hyper_grid = {    
     "batch_size" : [128, 256, 512, 512, 1024],
-    "epochs" : [50, 50, 50, 50, 50, 50],
+    "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001],
-    "optimizer" : ["adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
+    "optimizer" : ["adam", "adam", "adam", "adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
     }
 model_grid = {
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
-    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21,24,27],
-    "kernel_size" : [20, 30, 40, 50, 60],
-    "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42],
-    "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44],
-    "shortcut_activation" : ["relu", "sigmoid", "softmax", "tanh"],
-    "module_activation" : ["linear", "relu", "sigmoid", "softmax", "tanh"],
-    "module_output_activation" : ["relu", "linear", "sigmoid", "softmax", "tanh"],
+    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33],
+    "kernel_size" : [20, 30, 40, 50, 60, 70],
+    "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52],
+    "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44, 46, 48, 50, 52, 54],
+    "shortcut_activation" : ["relu", "relu", "relu", "relu",  "sigmoid", "softmax", "tanh"],
+    "module_activation" : ["linear", "linear", "linear", "relu", "sigmoid", "softmax", "tanh"],
+    "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "sigmoid", "softmax", "tanh"],
     "output_activation": ["sigmoid"],
-    "reg_shortcut": [True, True, False],
+    "reg_shortcut": [True, False, False],
     "reg_module" : [True, True, False],
     "l1_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0],
     "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
@@ -129,12 +129,13 @@ num_channels = 3
 use_time_augmentor = True
 use_scaler = True
 use_noise_augmentor = True
-detrend = False
 use_minmax = False
-use_highpass = False
+filter_name = "bandpass"
+band_min = 2.0
+band_max = 4.0
 highpass_freq = 0.1
 
-n_picks = 100
+n_picks = 1000
 
 use_tensorboard = True
 use_liveplots = False
@@ -142,14 +143,16 @@ use_custom_callback = False
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
+log_data = True
 
-randomGridSearch = InceptionTimeRGS(loadData, train_ds, val_ds, detrend, use_scaler, use_time_augmentor, 
-                                    use_noise_augmentor, use_minmax, use_highpass, n_picks, hyper_grid = hyper_grid, 
-                                    model_grid = model_grid, use_tensorboard = use_tensorboard,
-                                    use_liveplots = use_liveplots, use_custom_callback = use_custom_callback,
-                                    use_early_stopping = use_early_stopping, highpass_freq = highpass_freq,
-                                    start_from_scratch = start_from_scratch, use_reduced_lr = use_reduced_lr, 
-                                    num_channels = num_channels)
+shutdown = False
+
+randomGridSearch = InceptionTimeRGS(loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
+                                    use_minmax, filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
+                                    use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, 
+                                    use_early_stopping = use_early_stopping, band_min = band_min, band_max = band_max,
+                                    highpass_freq = highpass_freq, start_from_scratch = start_from_scratch, 
+                                    use_reduced_lr = use_reduced_lr, num_channels = num_channels, log_data = log_data)
 
 
 def clear_tensorboard_dir():
@@ -168,6 +171,9 @@ if use_tensorboard:
 try:
     results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
 finally:
-    os.system("shutdown now -h")
+    if shutdown:
+        os.system("shutdown now -h")
+    else:
+        print("Process completed.")
 
 

@@ -91,8 +91,12 @@ class GridSearchResultProcessor():
             file_name = f"{file_name}_noiseEarth"
         if self.loadData.noise_not_noise:
             file_name = f"{file_name}_noiseNotNoise"
-        if self.detrend:
-            file_name = f"{file_name}_detrend"
+        if self.filter_name != None:
+            file_name = f"{file_name}_{self.filter_name}"
+            if self.filter_name == "bandpass":
+                file_name = f"{file_name}-{self.band_min}-{self.band_max}"
+            if self.filter_name == "highpass":
+                file_name = f"{file_name}-{self.highpass_freq}"
         if self.use_time_augmentor:
             file_name = f"{file_name}_timeAug"
         if self.use_scaler:
@@ -104,8 +108,7 @@ class GridSearchResultProcessor():
             file_name = f"{file_name}_noiseAug"
         if self.use_early_stopping:
             file_name = f"{file_name}_earlyS"
-        if self.use_highpass:
-            file_name = f"{file_name}_highpass-{self.highpass_freq}"
+
         file_name = file_name + ".csv"
         return file_name
     

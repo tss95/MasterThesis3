@@ -64,20 +64,32 @@ class DataHandler():
             transformed_X[i] = scaler.transform(batch_X[i])
         return transformed_X
     
-    def detrend_highpass_batch_trace(self, batch_trace, detrend, use_highpass, highpass_freq = 0.1):
-        output = batch_trace
-        for idx, trace in enumerate(batch_trace):
-            trace_BHE = Trace(data=trace[0])
-            trace_BHN = Trace(data=trace[1])
-            trace_BHZ = Trace(data=trace[2])
-            stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
-            if detrend:
-                stream.detrend('demean')
-            if use_highpass:
-                stream.taper(max_percentage=0.05, type='cosine')
-                stream.filter('highpass', freq = highpass_freq)
-            output[idx] = np.array(stream)
-        return output
+    def apply_filter(self, trace, info, filter_name, highpass_freq = 1.0, band_min = 2.0, band_max = 4.0):
+        station = info['trace_stats']['station']
+        channels = info['trace_stats']['channels']
+        sampl_rate = info['trace_stats']['sampling_rate']
+        starttime = info['trace_stats']['starttime']
+        trace_BHE = Trace(data=trace[0], header ={'station' : station,
+                                                  'channel' : channels[0],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
+        trace_BHN = Trace(data=trace[1], header ={'station' : station,
+                                                  'channel' : channels[1],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
+        trace_BHZ = Trace(data=trace[2], header ={'station' : station,
+                                                  'channel' : channels[2],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
+        stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
+        stream.detrend('demean')
+        if filter_name == "highpass":
+            stream.taper(max_percentage=0.05, type='cosine')
+            stream.filter('highpass', freq = highpass_freq)
+        if filter_name == "bandpass":
+            stream.taper(max_percentage=0.05, type='cosine')
+            stream.filter('bandpass', freqmin=band_min, freqmax=band_max)
+        return np.array(stream)
                       
     def convert_to_tensor(self, value, dtype_hint = None, name = None):
         tensor = tf.convert_to_tensor(value, dtype_hint, name)

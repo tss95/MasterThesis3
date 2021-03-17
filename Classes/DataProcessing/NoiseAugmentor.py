@@ -5,27 +5,30 @@ from obspy import Stream, Trace, UTCDateTime
 
 from .LoadData import LoadData
 from .DataHandler import DataHandler
+from .HelperFunctions import HelperFunctions
 
 
 class NoiseAugmentor(DataHandler):
     # TODO: Consider this: https://stackoverflow.com/questions/47324756/attributeerror-module-matplotlib-has-no-attribute-plot
     # How does SNR impact the use of this class???
-    def __init__(self, ds, use_highpass, detrend, use_scaler, scaler, loadData, timeAug, highpass_freq = 0.1):
+    def __init__(self, ds, filter_name, use_scaler, scaler, loadData, timeAug, band_min = 2.0, band_max = 4.0, highpass_freq = 1):
         super().__init__(loadData)
         self.loadData = loadData
         self.ds = ds
-        self.use_highpass = use_highpass
-        self.detrend = detrend
+        self.filter_name = filter_name
         self.use_scaler = use_scaler
         self.scaler = scaler
         self.timeAug = timeAug
+        self.band_min = band_min
+        self.band_max = band_max
         self.highpass_freq = highpass_freq
+        self.helper = HelperFunctions()
         if self.loadData.earth_explo_only or self.loadData.noise_earth_only or self.loadData.noise_not_noise:
             self.noise_ds = self.loadData.noise_ds
         else:
             self.noise_ds = self.get_noise(self.ds)
             
-        self.noise_mean, self.noise_std = self.get_noise_mean_std(self.noise_ds, self.use_highpass, self.detrend, self.highpass_freq)
+        self.noise_mean, self.noise_std = self.get_noise_mean_std(self.noise_ds)
         
     def create_noise(self, mean, std, sample_shape):
         noise = np.random.normal(mean, std, (sample_shape))
@@ -70,7 +73,7 @@ class NoiseAugmentor(DataHandler):
     
     
     
-    def get_noise_mean_std(self, noise_ds, use_highpass, detrend, highpass_freq):
+    def get_noise_mean_std(self, noise_ds):
         noise_mean = 0
         noise_std = 0
         nr_noise = len(noise_ds)
@@ -80,32 +83,17 @@ class NoiseAugmentor(DataHandler):
                 X = self.batch_to_aug_trace(np.array([[path, label, redundancy_index]]), self.timeAug)[0][0]
             else:
                 X = self.path_to_trace(path)[0]
-            if self.use_highpass:
-                X = self.detrend_highpass(X, detrend, use_highpass, highpass_freq)
+            if self.filter_name != None:
+                info = self.path_to_trace(path)[1]
+                X = self.apply_filter(X, info, self.filter_name, highpass_freq = self.highpass_freq, band_min = self.band_min, band_max = self.band_max)
             if self.use_scaler:
                 X = self.scaler.transform(X)
             noise_mean += np.mean(X)
             noise_std += np.std(X)
-            self.progress_bar(idx, nr_noise)
+            self.helper.progress_bar(idx, nr_noise ,"Fitting noise augmentor")
             idx += 1
         noise_mean = noise_mean/nr_noise
         noise_std = noise_std/nr_noise
         return noise_mean, noise_std
 
-    def detrend_highpass(self, trace, detrend, use_highpass, highpass_freq):
-        trace_BHE = Trace(data=trace[0])
-        trace_BHN = Trace(data=trace[1])
-        trace_BHZ = Trace(data=trace[2])
-        stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
-        if detrend:
-            stream.detrend('demean')
-        if use_highpass:
-            stream.taper(max_percentage=0.05, type='cosine')
-            stream.filter('highpass', freq = highpass_freq)
-        return np.array(stream)
-
-    def progress_bar(self, current, total, barLength = 20):
-        percent = float(current) * 100 / total
-        arrow   = '-' * int(percent/100 * barLength - 1) + '>'
-        spaces  = ' ' * (barLength - len(arrow))
-        print('Fitting noise progress: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
+    

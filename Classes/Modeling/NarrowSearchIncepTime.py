@@ -35,10 +35,10 @@ base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 
 class NarrowSearchIncepTime(GridSearchResultProcessor):
 
-    def __init__(self, loadData, train_ds, val_ds, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
-                use_minmax, use_highpass, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
-                use_liveplots = False, use_custom_callback = False, use_early_stopping = False,
-                highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3):
+    def __init__(self, loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
+                use_minmax, filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
+                use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0,
+                band_max = 4.0, highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3):
     
         self.loadData = loadData
         self.train_ds = train_ds
@@ -47,12 +47,11 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
         
         
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.detrend = detrend
         self.use_scaler = use_scaler
         self.use_noise_augmentor = use_noise_augmentor
         self.use_time_augmentor = use_time_augmentor
         self.use_minmax = use_minmax
-        self.use_highpass = use_highpass
+        self.filter_name = filter_name
 
         self.main_grid = main_grid
         self.hyper_grid = hyper_grid
@@ -66,6 +65,8 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
         self.use_reduced_lr = use_reduced_lr
         
         self.highpass_freq = highpass_freq
+        self.band_min = band_min
+        self.band_max = band_max
         self.start_from_scratch = start_from_scratch
         self.num_channels = num_channels
 
@@ -92,9 +93,10 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                               use_noise_augmentor = self.use_noise_augmentor, 
                               use_scaler = self.use_scaler,
                               use_minmax = self.use_minmax, 
-                              use_highpass = self.use_highpass, 
+                              filter_name = self.filter_name, 
+                              band_min = self.band_min,
+                              band_max = self.band_max,
                               highpass_freq = self.highpass_freq, 
-                              detrend = self.detrend, 
                               load_test_set = False)
         self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
 
@@ -107,7 +109,7 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                                                     self.model_picks[0])
 
         for i in range(len(self.hyper_picks)):
-            tf.keras.backend.clear_session()
+           
             mixed_precision.set_global_policy('mixed_float16')
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
             print(f"Model nr {i + 1} of {len(self.hyper_picks)}")   
@@ -177,7 +179,7 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate_generator(generator=val_gen,
+                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
                                                                         steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
                 # Record metrics for train
                 metrics = {}
@@ -189,7 +191,7 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate_generator(generator=train_gen,
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
                                                                                             steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                                 batch_size))
                 metrics['train'] = { "train_loss" : train_loss,
@@ -198,9 +200,12 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
                 self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+                #tf.keras.backend.clear_session()
 
-            except Exception:
+            except Exception as e:
                 print("Error (hopefully) occured during training.")
+                print(e)
+                #tf.keras.backend.clear_session()
                 continue
             
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)

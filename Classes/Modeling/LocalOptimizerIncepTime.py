@@ -23,11 +23,11 @@ import datetime
 
 class LocalOptimizerIncepTime(LocalOptimizer):
 
-    def __init__(self, loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, use_highpass, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
+    def __init__(self, loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, filter_name, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
                 result_file_name = "", start_grid = []):
         super().__init__(loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, 
-                         use_highpass, use_tensorboard, use_liveplots, use_custom_callback, 
-                         use_early_stopping, highpass_freq, use_reduced_lr, num_channels, depth, 
+                         filter_name, use_tensorboard, use_liveplots, use_custom_callback, 
+                         use_early_stopping, band_min, band_max, highpass_freq, use_reduced_lr, num_channels, depth, 
                          quick_mode, continue_from_result_file, result_file_name, start_grid)
         self.model_nr_type = "InceptionTime"
         
@@ -84,9 +84,10 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                               use_noise_augmentor = self.use_noise_augmentor, 
                               use_scaler = self.use_scaler,
                               use_minmax = self.use_minmax, 
-                              use_highpass = self.use_highpass, 
+                              filter_name = self.filter_name, 
+                              band_min = self.band_min,
+                              band_max = self.band_max,
                               highpass_freq = self.highpass_freq, 
-                              detrend = self.detrend, 
                               load_test_set = False)
 
         self.results_file_name = self.get_results_file_name(narrow = True)

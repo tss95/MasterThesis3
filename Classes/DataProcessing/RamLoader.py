@@ -19,7 +19,7 @@ from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 
 class RamLoader:
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, use_scaler = False, use_minmax = False, 
-                use_highpass = False, highpass_freq = 0.1, detrend = False, load_test_set = False):
+                filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False):
         self.loadData = loadData
         self.handler = handler
         self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
@@ -27,9 +27,10 @@ class RamLoader:
         self.use_noise_augmentor = use_noise_augmentor
         self.use_scaler = use_scaler
         self.use_minmax = use_minmax
-        self.use_highpass = use_highpass
+        self.filter_name = filter_name
+        self.band_min = band_min
+        self.band_max = band_max
         self.highpass_freq = highpass_freq
-        self.detrend = detrend
         self.load_test_set = load_test_set
         self.num_classes = len(set(handler.loadData.label_dict.values()))
 
@@ -89,38 +90,63 @@ class RamLoader:
         if scaler != None:
             use_scaler = True
         if self.use_noise_augmentor:
-            noiseAug = NoiseAugmentor(noise_ds, self.use_highpass, self.detrend, use_scaler, scaler, loadData, timeAug, self.highpass_freq)
+            noiseAug = NoiseAugmentor(noise_ds, self.filter_name, use_scaler, scaler, loadData, timeAug, 
+                                      band_min = self.band_min, band_max = self.band_max, 
+                                      highpass_freq = self.highpass_freq)
         return noiseAug
             
-
+    def get_substage(self, substage):
+        if substage == 0:
+            return "training set"
+        if substage == 1:
+            return "validation set"
+        if substage == 2:
+            return "test set"
+        return ""
     
-    def stage_one_load(self, ds):
+    def stage_one_load(self, ds, substage):
         loaded_label = np.empty((len(ds), 1))
         loaded_trace = np.empty((self.handler.get_trace_shape_no_cast(ds, self.use_time_augmentor)))
         num_events = len(ds)
+        bar_text =  self.stage_one_text(substage)
         for i in range(num_events):
-            self.progress_bar_1(i+1, num_events)
+            self.progress_bar(i+1, num_events, bar_text)
             loaded_label[i] = self.handler.label_dict.get(ds[i][1])
             # timeAug, highpass and detrend.
-            if (self.use_highpass or self.detrend) or self.use_time_augmentor:
-                if (self.use_highpass or self.detrend) and self.use_time_augmentor:
+            if self.filter_name != None or self.use_time_augmentor:
+                if self.filter_name != None and self.use_time_augmentor:
                     loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
-                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass, self.highpass_freq)
-                if not (self.use_highpass or self.detrend):
+                    info = self.handler.path_to_trace(ds[i][0])[1]
+                    loaded_trace[i] = self.apply_filter(loaded_trace[i], info, self.filter_name, highpass_freq = self.highpass_freq, band_min = self.band_min, band_max = self.band_max)
+                if self.filter_name == None:
                     loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
                 if not self.use_time_augmentor:
-                    loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
-                    loaded_trace[i] = self.detrend_highpass(loaded_trace[i], self.detrend, self.use_highpass, self.highpass_freq)
+                    loaded_trace[i] = self.handler.path_to_trace(ds[i][0])[0]
+                    info = self.handler.path_to_trace(ds[i][0])[1]
+                    loaded_trace[i] = self.apply_filter(loaded_trace[i], info, self.filter_name, highpass_freq = self.highpass_freq, band_min = self.band_min, band_max = self.band_max)
             else:
-                loaded_trace[i] = self.handler.path_to_trace(ds[i][0])
+                loaded_trace[i] = self.handler.path_to_trace(ds[i][0])[0]
         print("\n")
         return loaded_trace, loaded_label
     
-    def stage_two_load(self, traces, labels, is_lstm, num_channels):
+    def stage_one_text(self, substage):
+        bar_text = f"Stage one loading {self.get_substage(substage)}"
+        if self.filter_name != None or self.use_time_augmentor:
+            bar_text = bar_text + ", "
+            if self.filter_name != None:
+                bar_text += self.filter_name
+            if self.filter_name != None and self.use_time_augmentor:
+                bar_text += " and "
+            if self.use_time_augmentor:
+                bar_text += "timeAug"
+        return bar_text
+    
+    def stage_two_load(self, traces, labels, is_lstm, num_channels, substage):
         num_samples = traces.shape[0]
+        bar_text = self.stage_two_text(substage)
         if self.use_scaler:
             for i in range(num_samples):
-                self.progress_bar_2(i+1, num_samples)
+                self.progress_bar(i+1, num_samples, bar_text)
                 traces[i] = self.scaler.transform(traces[i])
             print("\n")
         traces = traces[:][:,0:num_channels]
@@ -133,23 +159,33 @@ class RamLoader:
             labels = labels[:,1]
             labels = np.reshape(labels, (labels.shape[0],1))
         return traces
+    
+    def stage_two_text(self, substage):
+        bar_text = f"Stage two loading {self.get_substage(substage)}, labels"
+        if self.use_scaler:
+            if self.use_minmax:
+                bar_text = bar_text + " and minmax"
+            else:
+                bar_text = bar_text + " and sscaler"
+        return bar_text
+        
 
 
     def load_to_ram(self, is_lstm, num_channels = 3):
         # Starting with fitting potential time augmentor
         self.timeAug = self.fit_timeAug()
         # Step one, load traces and apply time augmentation and/or detrend/highpass
-        train_trace, train_label = self.stage_one_load(self.train_ds)
-        val_trace, val_label = self.stage_one_load(self.val_ds)
+        train_trace, train_label = self.stage_one_load(self.train_ds, 0)
+        val_trace, val_label = self.stage_one_load(self.val_ds, 1)
         if self.load_test_set:
-            test_trace, test_label = self.stage_one_load(self.test_ds)
+            test_trace, test_label = self.stage_one_load(self.test_ds, 2)
         # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
         self.scaler = self.fit_scaler(train_trace)
         # Using the fitted scaler, we transform the traces:
-        train_trace = self.stage_two_load(train_trace, train_label, is_lstm, num_channels)
-        val_trace = self.stage_two_load(val_trace, val_label, is_lstm, num_channels)
+        train_trace = self.stage_two_load(train_trace, train_label, is_lstm, num_channels, 0)
+        val_trace = self.stage_two_load(val_trace, val_label, is_lstm, num_channels, 1)
         if self.load_test_set:
-            test_trace = self.stage_two_load(test_trace, test_label, is_lstm, num_channels)
+            test_trace = self.stage_two_load(test_trace, test_label, is_lstm, num_channels, 2)
         self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.scaler, self.loadData, self.timeAug)
         print("Completed loading to RAM")
         if self.load_test_set:
@@ -157,29 +193,38 @@ class RamLoader:
         return train_trace, train_label, val_trace, val_label, self.timeAug, self.scaler, self.noiseAug
     
     
-    def detrend_highpass(self, trace, detrend, use_highpass, highpass_freq):
-        trace_BHE = Trace(data=trace[0])
-        trace_BHN = Trace(data=trace[1])
-        trace_BHZ = Trace(data=trace[2])
+    def apply_filter(self, trace, info, filter_name, highpass_freq = 1.0, band_min = 2.0, band_max = 4.0):
+        station = info['trace_stats']['station']
+        channels = info['trace_stats']['channels']
+        sampl_rate = info['trace_stats']['sampling_rate']
+        starttime = info['trace_stats']['starttime']
+        trace_BHE = Trace(data=trace[0], header ={'station' : station,
+                                                  'channel' : channels[0],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
+        trace_BHN = Trace(data=trace[1], header ={'station' : station,
+                                                  'channel' : channels[1],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
+        trace_BHZ = Trace(data=trace[2], header ={'station' : station,
+                                                  'channel' : channels[2],
+                                                  'sampling_rate' : sampl_rate,
+                                                  'starttime' : starttime})
         stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
-        if detrend:
-            stream.detrend('demean')
-        if use_highpass:
+        stream.detrend('demean')
+        if filter_name == "highpass":
             stream.taper(max_percentage=0.05, type='cosine')
             stream.filter('highpass', freq = highpass_freq)
-            #stream.filter('bandpass', freqmin = 3.0, freqmax = 5.0)
+        if filter_name == "bandpass":
+            stream.taper(max_percentage=0.05, type='cosine')
+            stream.filter('bandpass', freqmin=band_min, freqmax=band_max)
         return np.array(stream)
 
-    def progress_bar_1(self, current, total, barLength = 40):
+    def progress_bar(self, current, total, text, barLength = 40):
         percent = float(current) * 100 / total
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
-        print('Stage 1 loading to RAM: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
+        print('%s: [%s%s] %d %%' % (text, arrow, spaces, percent), end='\r')
 
-    def progress_bar_2(self, current, total, barLength = 40):
-        percent = float(current) * 100 / total
-        arrow   = '-' * int(percent/100 * barLength - 1) + '>'
-        spaces  = ' ' * (barLength - len(arrow))
-        print('Stage 2 loading to RAM: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
 
 
