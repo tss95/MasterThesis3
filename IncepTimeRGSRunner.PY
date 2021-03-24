@@ -58,7 +58,6 @@ plt.rcParams["figure.figsize"]= (15,15)
 helper = HelperFunctions()
 
 import sys
-ISCOLAB = 'google.colab' in sys.modules
 
 import random
 import pprint
@@ -74,7 +73,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.45,
+    'subsample_size' : 0.3,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -84,13 +83,7 @@ full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
-"""
-if load_args['earth_explo_only']:
-    full_and_noise_ds = np.concatenate((full_ds, noise_ds))
-    timeAug = TimeAugmentor(handler, full_and_noise_ds, seed = load_args['seed'])
-else:
-    timeAug = TimeAugmentor(handler, full_ds, seed = load_args['seed'])
-"""
+
 
 print(len(train_ds), len(val_ds), len(test_ds))
 classes, counts = handler.get_class_distribution_from_ds(train_ds)
@@ -102,18 +95,18 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 hyper_grid = {    
-    "batch_size" : [128, 256, 512, 512, 1024],
+    "batch_size" : [32, 64, 128, 256, 512, 512],
     "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
-    "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001],
+    "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
     "optimizer" : ["adam", "adam", "adam", "adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
     }
 model_grid = {
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
-    "nr_modules" : [1, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33],
-    "kernel_size" : [20, 30, 40, 50, 60, 70],
-    "bottleneck_size" : [ 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52],
-    "num_filters" : [24, 26, 28, 30, 32, 34, 36, 38, 40 ,42, 44, 46, 48, 50, 52, 54],
+    "nr_modules" : np.concatenate((np.array([1]), np.arange(3, 9, 3))),
+    "kernel_size" : np.arange(20, 80, 10),
+    "bottleneck_size" : np.arange(20, 60, 2),
+    "num_filters" : np.arange(20, 60, 2),
     "shortcut_activation" : ["relu", "relu", "relu", "relu",  "sigmoid", "softmax", "tanh"],
     "module_activation" : ["linear", "linear", "linear", "relu", "sigmoid", "softmax", "tanh"],
     "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "sigmoid", "softmax", "tanh"],
@@ -124,16 +117,15 @@ model_grid = {
     "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
 }
 
-num_channels = 3
+num_channels = 2
 
 use_time_augmentor = True
-use_scaler = True
+scaler_name = "standard"
 use_noise_augmentor = True
-use_minmax = False
-filter_name = "bandpass"
+filter_name = None
 band_min = 2.0
 band_max = 4.0
-highpass_freq = 0.1
+highpass_freq = 15
 
 n_picks = 1000
 
@@ -147,8 +139,8 @@ log_data = True
 
 shutdown = False
 
-randomGridSearch = InceptionTimeRGS(loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
-                                    use_minmax, filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
+randomGridSearch = InceptionTimeRGS(loadData, train_ds, val_ds, scaler_name, use_time_augmentor, use_noise_augmentor,
+                                    filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
                                     use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, 
                                     use_early_stopping = use_early_stopping, band_min = band_min, band_max = band_max,
                                     highpass_freq = highpass_freq, start_from_scratch = start_from_scratch, 

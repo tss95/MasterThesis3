@@ -11,12 +11,12 @@ from .HelperFunctions import HelperFunctions
 class NoiseAugmentor(DataHandler):
     # TODO: Consider this: https://stackoverflow.com/questions/47324756/attributeerror-module-matplotlib-has-no-attribute-plot
     # How does SNR impact the use of this class???
-    def __init__(self, ds, filter_name, use_scaler, scaler, loadData, timeAug, band_min = 2.0, band_max = 4.0, highpass_freq = 1):
+    def __init__(self, ds, filter_name, scaler_name, scaler, loadData, timeAug, band_min = 2.0, band_max = 4.0, highpass_freq = 1):
         super().__init__(loadData)
         self.loadData = loadData
         self.ds = ds
         self.filter_name = filter_name
-        self.use_scaler = use_scaler
+        self.scaler_name = scaler_name
         self.scaler = scaler
         self.timeAug = timeAug
         self.band_min = band_min
@@ -86,8 +86,11 @@ class NoiseAugmentor(DataHandler):
             if self.filter_name != None:
                 info = self.path_to_trace(path)[1]
                 X = self.apply_filter(X, info, self.filter_name, highpass_freq = self.highpass_freq, band_min = self.band_min, band_max = self.band_max)
-            if self.use_scaler:
-                X = self.scaler.transform(X)
+            if self.scaler_name != None:
+                if self.scaler_name != "robust":
+                    X = self.scaler.transform(X)
+                else:
+                    X = self.scaler.fit_transform_trace(X)
             noise_mean += np.mean(X)
             noise_std += np.std(X)
             self.helper.progress_bar(idx, nr_noise ,"Fitting noise augmentor")

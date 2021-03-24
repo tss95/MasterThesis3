@@ -16,17 +16,17 @@ from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
 from Classes.Scaling.ScalerFitter import ScalerFitter
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
+from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
 
 class RamLoader:
-    def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, use_scaler = False, use_minmax = False, 
+    def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
                 filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False):
         self.loadData = loadData
         self.handler = handler
         self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
         self.use_time_augmentor = use_time_augmentor
         self.use_noise_augmentor = use_noise_augmentor
-        self.use_scaler = use_scaler
-        self.use_minmax = use_minmax
+        self.scaler_name = scaler_name
         self.filter_name = filter_name
         self.band_min = band_min
         self.band_max = band_max
@@ -76,21 +76,23 @@ class RamLoader:
     
     def fit_scaler(self, traces):
         scaler = None
-        if self.use_scaler:
-            if self.use_minmax:
+        if self.scaler_name != None:
+            if self.scaler_name == "minmax":
                 scaler = MinMaxScalerFitter(self.train_ds, self.timeAug).fit_scaler_ram(traces)
-            else:
+            elif self.scaler_name == "standard":
                 scaler = StandardScalerFitter(self.train_ds, self.timeAug).fit_scaler_ram(traces)
-        print("\n")
+            elif self.scaler_name == "robust":
+                scaler = RobustScalerFitter(self.train_ds, self.timeAug)
+                print("Fit process of robust scaler skipped as unecessary.")
+            elif self.scaler_name != "minmax" or self.scaler_name != "standard" or self.scaler_name != "robust":
+                raise Exception(f"{self.scaler_name} is not implemented.")
+            print("\n")
         return scaler
 
     def fit_noiseAug(self, noise_ds, scaler, loadData, timeAug):
         noiseAug = None
-        use_scaler = False
-        if scaler != None:
-            use_scaler = True
         if self.use_noise_augmentor:
-            noiseAug = NoiseAugmentor(noise_ds, self.filter_name, use_scaler, scaler, loadData, timeAug, 
+            noiseAug = NoiseAugmentor(noise_ds, self.filter_name, self.scaler_name, scaler, loadData, timeAug, 
                                       band_min = self.band_min, band_max = self.band_max, 
                                       highpass_freq = self.highpass_freq)
         return noiseAug
@@ -141,19 +143,21 @@ class RamLoader:
                 bar_text += "timeAug"
         return bar_text
     
-    def stage_two_load(self, traces, labels, is_lstm, num_channels, substage):
+    def stage_two_load(self, traces, labels, substage):
         num_samples = traces.shape[0]
         bar_text = self.stage_two_text(substage)
-        if self.use_scaler:
-            for i in range(num_samples):
-                self.progress_bar(i+1, num_samples, bar_text)
-                traces[i] = self.scaler.transform(traces[i])
-            print("\n")
-        traces = traces[:][:,0:num_channels]
-        if is_lstm:
-            traces = np.reshape(traces, (traces.shape[0], 
-                                         traces.shape[2], 
-                                         traces.shape[1]))
+        if self.scaler_name != None:
+            if self.scaler_name != "robust":
+                for i in range(num_samples):
+                    self.progress_bar(i+1, num_samples, bar_text)
+                    traces[i] = self.scaler.transform(traces[i])
+                print("\n")
+            else:
+                for i in range(num_samples):
+                    self.progress_bar(i+1, num_samples, bar_text)
+                    traces[i] = self.scaler.fit_transform_trace(traces[i])
+                print("\n")
+
         labels = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
         if self.num_classes == 2:
             labels = labels[:,1]
@@ -162,16 +166,14 @@ class RamLoader:
     
     def stage_two_text(self, substage):
         bar_text = f"Stage two loading {self.get_substage(substage)}, labels"
-        if self.use_scaler:
-            if self.use_minmax:
-                bar_text = bar_text + " and minmax"
-            else:
-                bar_text = bar_text + " and sscaler"
+        if self.scaler_name != None:
+            bar_text = bar_text + f" and {self.scaler_name} scaler"
+
         return bar_text
         
 
 
-    def load_to_ram(self, is_lstm, num_channels = 3):
+    def load_to_ram(self):
         # Starting with fitting potential time augmentor
         self.timeAug = self.fit_timeAug()
         # Step one, load traces and apply time augmentation and/or detrend/highpass
@@ -182,10 +184,10 @@ class RamLoader:
         # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
         self.scaler = self.fit_scaler(train_trace)
         # Using the fitted scaler, we transform the traces:
-        train_trace = self.stage_two_load(train_trace, train_label, is_lstm, num_channels, 0)
-        val_trace = self.stage_two_load(val_trace, val_label, is_lstm, num_channels, 1)
+        train_trace = self.stage_two_load(train_trace, train_label, 0)
+        val_trace = self.stage_two_load(val_trace, val_label, 1)
         if self.load_test_set:
-            test_trace = self.stage_two_load(test_trace, test_label, is_lstm, num_channels, 2)
+            test_trace = self.stage_two_load(test_trace, test_label, 2)
         self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.scaler, self.loadData, self.timeAug)
         print("Completed loading to RAM")
         if self.load_test_set:

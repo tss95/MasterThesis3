@@ -66,9 +66,9 @@ class RandomGridSearch(GridSearchResultProcessor):
     }
     
 
-    def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
-                 use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
-                 use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
+    def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr, use_scaler, use_time_augmentor, use_noise_augmentor,
+                 use_minmax, filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
+                 use_liveplots = True, use_custom_callback = False, use_early_stopping = False, use_reduced_lr = False,  band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, 
                  start_from_scratch = True):
         
         self.loadData = loadData
@@ -76,12 +76,12 @@ class RandomGridSearch(GridSearchResultProcessor):
         self.val_ds = val_ds
         self.test_ds = test_ds
         self.model_nr = model_nr
-        self.detrend = detrend
+
         self.use_scaler = use_scaler
         self.use_noise_augmentor = use_noise_augmentor
         self.use_time_augmentor = use_time_augmentor
         self.use_minmax = use_minmax
-        self.use_highpass = use_highpass
+        self.filter_name = filter_name
         self.n_picks = n_picks
         self.hyper_grid = hyper_grid
         self.model_grid = model_grid
@@ -90,6 +90,10 @@ class RandomGridSearch(GridSearchResultProcessor):
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
         self.use_early_stopping = use_early_stopping
+        self.use_reduced_lr = use_reduced_lr
+
+        self.band_min = band_min
+        self.band_max = band_max
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
         self.helper = HelperFunctions()
@@ -102,19 +106,39 @@ class RandomGridSearch(GridSearchResultProcessor):
             
 
     def fit(self):
-        self.timeAug, self.scaler, self.noiseAug = self.init_preprocessing(self.use_time_augmentor, 
-                                                                           self.use_scaler, 
-                                                                           self.use_noise_augmentor)
+        # Creating grid:
+        self.model_params = ParameterGrid(self.model_grid)
+        self.hyper_params = ParameterGrid(self.hyper_grid)
+        if len(self.model_params) < self.n_picks or len(self.hyper_params) < self.n_picks:
+            self.n_picks = min(len(self.model_params), len(self.hyper_params))
+            print(f"Picks higher than max. Reducing picks to {self.n_picks} picks")
+
+        self.hyper_picks = self.get_n_params_from_list(self.hyper_params, self.n_picks)
+        self.model_picks = self.get_n_params_from_list(self.model_params, self.n_picks)
+        
+        
         
         # Create name of results file, get initiated results df, either brand new or continue old.
         self.results_file_name = self.get_results_file_name()
         
-        
-        self.hyper_picks = self.get_n_params_from_list(list(ParameterGrid(self.hyper_grid)), self.n_picks)
-        self.model_picks = self.get_n_params_from_list(list(ParameterGrid(self.model_grid)), self.n_picks)
         self.results_df = self.initiate_results_df(self.results_file_name, self.num_classes, self.start_from_scratch, self.hyper_picks[0], self.model_picks[0])
+        
+        # Preprocessing and loading all data to RAM:
+        ramLoader = RamLoader(self.loadData, 
+                              self.handler, 
+                              use_time_augmentor = self.use_time_augmentor, 
+                              use_noise_augmentor = self.use_noise_augmentor, 
+                              use_scaler = self.use_scaler,
+                              use_minmax = self.use_minmax, 
+                              filter_name = self.filter_name, 
+                              band_min = self.band_min,
+                              band_max = self.band_max,
+                              highpass_freq = self.highpass_freq, 
+                              load_test_set = False)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
+
         pp = pprint.PrettyPrinter(indent=4)
-        for i in range(self.n_picks):
+        for i in range(self.hyper_picks):
             model_info = {"model_nr" : self.model_nr, "index" : i}
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
             print(current_picks)
@@ -143,16 +167,10 @@ class RandomGridSearch(GridSearchResultProcessor):
             # Build model using args generated above
             model = Models(**build_model_args).model
             
-            # Generate generator args using picks.
-            gen_args = self.helper.generate_gen_args(batch_size, self.detrend, use_scaler = self.use_scaler, scaler = self.scaler,
-                                                     use_time_augmentor = self.use_time_augmentor, timeAug = self.timeAug, 
-                                                     use_noise_augmentor = self.use_noise_augmentor, noiseAug = self.noiseAug,
-                                                     use_highpass = self.use_highpass, highpass_freq = self.highpass_freq)
-            
-            # Initiate generators using the args
-            train_gen = self.dataGen.data_generator(self.train_ds, **gen_args)
-            val_gen = self.dataGen.data_generator(self.val_ds, **gen_args)
-            test_gen = self.dataGen.data_generator(self.test_ds, **gen_args)
+            # Initializing generators:
+            gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
+            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size)
+            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size)
             
             # Generate compiler args using picks
             model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)

@@ -4,10 +4,7 @@ import random
 import os
 import sys
 
-from Classes.DataProcessing.LoadData import LoadData
-from Classes.DataProcessing.HelperFunctions import HelperFunctions
-from Classes.DataProcessing.DataHandler import DataHandler
-
+from .DataHandler import DataHandler
 
 class RamGenerator(DataHandler):
 
@@ -21,7 +18,7 @@ class RamGenerator(DataHandler):
         self.num_classes = len(set(loadData.label_dict.values()))
         self.noiseAug = noiseAug
         
-    def data_generator(self, traces, labels, batch_size):
+    def data_generator(self, traces, labels, batch_size, num_channels = 3, is_lstm = False):
         """
         Creates a generator object which yields two arrays. One array for waveforms, and one array for labels
         """
@@ -38,10 +35,10 @@ class RamGenerator(DataHandler):
                 # when this condition is true, it will be the last iteration of the loop, so at next call the iterator will start at 0 again.
                 if offset + batch_size > num_samples:
                     overflow = offset + batch_size - num_samples
-                    
+
                     batch_traces[0:batch_size - overflow] = traces[offset:(offset+batch_size) - overflow]
                     batch_labels[0:batch_size - overflow] = labels[offset:(offset+batch_size) - overflow]
-                    
+
                     i_start = random.randint(0, num_samples-overflow)
                     batch_traces[batch_size - overflow:batch_size] = traces[i_start:i_start + overflow]
                     batch_labels[batch_size - overflow:batch_size] = labels[i_start:i_start + overflow]
@@ -49,11 +46,15 @@ class RamGenerator(DataHandler):
                 else:
                     batch_traces = traces[offset:offset + batch_size]
                     batch_labels = labels[offset:offset + batch_size]
-                
+
                 # Adds a little noise to each event, as a regulatory measure
                 if self.noiseAug != None:
                     batch_traces = self.preprocess_data(batch_traces)
-                
+
+                batch_traces = batch_traces[:][:,0:num_channels]
+                if is_lstm:
+                    batch_traces = np.reshape(batch_traces, (batch_traces.shape[0], batch_traces.shape[2], batch_traces.shape[1]))
+
                 yield batch_traces, batch_labels
                 
     def preprocess_data(self, traces):

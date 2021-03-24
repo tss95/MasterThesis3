@@ -99,16 +99,13 @@ class GridSearchResultProcessor():
                 file_name = f"{file_name}-{self.highpass_freq}"
         if self.use_time_augmentor:
             file_name = f"{file_name}_timeAug"
-        if self.use_scaler:
-            if self.use_minmax:
-                file_name = f"{file_name}_mmscale"
-            else: 
-                file_name = f"{file_name}_sscale"
+        if self.scaler_name:
+            file_name == file_name + f"{self.scaler_name}"
         if self.use_noise_augmentor:
             file_name = f"{file_name}_noiseAug"
         if self.use_early_stopping:
             file_name = f"{file_name}_earlyS"
-
+        file_name = file_name + f"_numChannels-{self.num_channels}"
         file_name = file_name + ".csv"
         return file_name
     

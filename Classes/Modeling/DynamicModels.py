@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
 
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, BatchNormalization, InputLayer, LSTM
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.models import Sequential
@@ -25,6 +25,7 @@ from sklearn.metrics import confusion_matrix
 from livelossplot import PlotLossesKeras
 
 import tensorflow as tf
+from tensorflow.keras import mixed_precision
 
 class DynamicModels():
     
@@ -65,6 +66,8 @@ class DynamicModels():
         self.kernel_size = kernel_size
         self.padding = padding
         self.use_layerwise_dropout_batchnorm = use_layerwise_dropout_batchnorm
+        tf.config.optimizer.set_jit(True)
+        mixed_precision.set_global_policy('mixed_float16')
         self.load_model()
         
     def load_model(self):
@@ -99,7 +102,11 @@ class DynamicModels():
             return_sequences = False
             if i != self.num_layers:
                 return_sequences = True
-            self.model.add(LSTM(int(self.start_neurons//self.decay_sequence[i]), activation = self.activation,
+            self.model.add(LSTM(int(self.start_neurons//self.decay_sequence[i]), 
+                               activation = self.activation,
+                               recurrent_activation = "sigmoid",
+                               use_bias = True,
+                               recurrent_dropout = 0,
                                return_sequences = return_sequences,
                                kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 
                                bias_regularizer = regularizers.l2(self.l2_r),
@@ -108,31 +115,84 @@ class DynamicModels():
                 self.model.add(Dropout(self.dropout_rate))
                 self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation, dtype = 'float32'))
         
         return self.model
     
     
-    
+    """ 
     def create_CNN_model(self):
         self.model = Sequential()
         self.model.add(InputLayer(input_shape = self.input_shape))
         for i in range(self.num_layers):
             self.model.add(Conv1D(int(self.filters//self.decay_sequence[i]), 
-                                  kernel_size = self.kernel_size, 
+                                  kernel_size = [self.kernel_size], 
                                   padding = self.padding, 
-                                  activation = self.activation,
-                                  kernel_regularizer = regularizers.l1_l2(l1=self.l1_r, l2=self.l2_r), 
-                                  bias_regularizer = regularizers.l2(self.l2_r),
-                                  activity_regularizer = regularizers.l2(self.l2_r*0.1)))
+                                  activation = None,
+                                  kernel_regularizer = regularizers.l1_l2(l1 = self.l1_r, l2 = self.l2_r), 
+                                  bias_regularizer = regularizers.l1_l2(l1 = self.l1_r, l2= self.l2_r)))
+            self.model.add(Dropout(self.dropout_rate))
+            self.model.add(BatchNormalization())
+            self.model.add(MaxPool1D())
+            self.model.add(tf.keras.layers.Activation(self.activation))(self.model)
             if self.use_layerwise_dropout_batchnorm:
-                self.model.add(Dropout(self.dropout_rate))
-                self.model.add(BatchNormalization())
-        self.model.add(BatchNormalization())
+                continue
+                #self.model.add(Dropout(self.dropout_rate))
+                #self.model.add(BatchNormalization())
+        #self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
+        self.model.add(Dense(self.model.output_shape[1]), activation = self.activation)
+        self.model.add(Dense(self.model.output_shape[1]//2, activation = self.activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation, dtype = 'float32'))
          
         return self.model
+
+def build_model(self, input_shape, num_classes, num_modules = 6):
+        input_layer = tf.keras.layers.Input(input_shape)
+
+        x = input_layer
+        input_res = input_layer
+
+        for d in range(self.nr_modules):
+
+            x = self._inception_module(x, self.reg_module, activation = self.module_activation)
+
+            if self.use_residuals and d % 3 == 2:
+                x = self._shortcut_layer(input_res, x, self.reg_shortcut)
+                input_res = x
+
+        gap_layer = tf.keras.layers.GlobalAveragePooling1D()(x)
+        
+        output_layer = tf.keras.layers.Dense(self.output_nr_nodes(num_classes), activation=self.output_activation, dtype = 'float32')(gap_layer)
+        
+        model = tf.keras.models.Model(inputs=input_layer, outputs = output_layer)
+        compile_args = self.helper.generate_model_compile_args(self.optimizer, num_classes)
+        model.compile(**compile_args)
+        return model
+
+    """
+    def create_CNN_model(self):
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+
+        for i in range(self.num_layers):
+            x = Conv1D(int(self.filters//self.decay_sequence[i]), 
+                                  kernel_size = [self.kernel_size], 
+                                  padding = self.padding, 
+                                  activation = None,
+                                  kernel_regularizer = regularizers.l1_l2(l1 = self.l1_r, l2 = self.l2_r), 
+                                  bias_regularizer = regularizers.l1_l2(l1 = self.l1_r, l2= self.l2_r))(x)
+            x = Dropout(self.dropout_rate)(x)
+            x = BatchNormalization()(x)
+            x = MaxPool1D()(x)
+            x = Activation(self.activation)(x)
+        x = Flatten()(x)
+        x = Dense(self.start_neurons, activation = self.activation)(x)
+        x = Dense(self.start_neurons//2, activation = self.activation)(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
+
     
     
     
@@ -148,7 +208,7 @@ class DynamicModels():
                 self.model.add(Dropout(self.dropout_rate))
                 self.model.add(BatchNormalization())
         self.model.add(Flatten())
-        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation))
+        self.model.add(Dense(self.output_nr_nodes(self.num_classes), activation = self.output_layer_activation, dtype = 'float32'))
         
         return self.model
             

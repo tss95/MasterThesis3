@@ -147,7 +147,7 @@ use_time_augmentor = True
 use_scaler = True
 use_noise_augmentor = True
 use_minmax = False
-filter_name = "bandpass"
+filter_name = None
 band_min = 2
 band_max = 4
 highpass_freq = 1
@@ -158,6 +158,8 @@ use_custom_callback = False
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
+
+skip_to_index = 35
 
 narrowSearch = NarrowSearchIncepTime(loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
                                     use_minmax, filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = use_tensorboard, 
@@ -177,4 +179,4 @@ if use_tensorboard:
     clear_tensorboard_dir()
     #%tensorboard --logdir tensorboard_dir/fit
 
-results_df, min_loss, max_accuracy, max_precision, max_recall = narrowSearch.fit()
+results_df, min_loss, max_accuracy, max_precision, max_recall = narrowSearch.fit(skip_to_index = skip_to_index)

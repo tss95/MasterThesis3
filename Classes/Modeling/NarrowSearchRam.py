@@ -35,9 +35,9 @@ base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3.0'
 
 class NarrowSearchRam(GridSearchResultProcessor):
 
-    def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr_type, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
-                 use_minmax, use_highpass, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
-                 use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
+    def __init__(self, loadData, train_ds, val_ds, test_ds, model_nr_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                 filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
+                 use_liveplots = True, use_custom_callback = False, use_early_stopping = False, band_min = 2, band_max = 4, highpass_freq = 5, 
                  start_from_scratch = True, is_lstm = False, num_channels = 3):
         
         self.loadData = loadData
@@ -46,12 +46,10 @@ class NarrowSearchRam(GridSearchResultProcessor):
         self.test_ds = test_ds
         self.model_nr_type = model_nr_type
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.detrend = detrend
-        self.use_scaler = use_scaler
+        self.scaler_name = scaler_name
         self.use_noise_augmentor = use_noise_augmentor
         self.use_time_augmentor = use_time_augmentor
-        self.use_minmax = use_minmax
-        self.use_highpass = use_highpass
+        self.filter_name = filter_name
         self.main_grid = main_grid
         self.main_grid["num_channels"] = [num_channels]
         self.hyper_grid = hyper_grid
@@ -61,6 +59,8 @@ class NarrowSearchRam(GridSearchResultProcessor):
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
         self.use_early_stopping = use_early_stopping
+        self.band_min = band_min
+        self.band_max = band_max
         self.highpass_freq = highpass_freq
         self.start_from_scratch = start_from_scratch
         self.is_lstm = is_lstm
@@ -77,11 +77,13 @@ class NarrowSearchRam(GridSearchResultProcessor):
             self.full_ds = np.concatenate((self.loadData.noise_ds, self.loadData.full_ds))
         else:
             self.full_ds = self.loadData.full_ds
+        raise Exception("Needs to be updated to work")
 
         
 
 
     def fit(self):
+        # TODO: Update this for the new implementations.
         self.timeAug, self.scaler, self.noiseAug = self.init_preprocessing(self.use_time_augmentor, 
                                                                             self.use_scaler, 
                                                                             self.use_noise_augmentor)

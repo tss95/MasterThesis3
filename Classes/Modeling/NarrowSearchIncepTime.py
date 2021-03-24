@@ -35,8 +35,8 @@ base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 
 class NarrowSearchIncepTime(GridSearchResultProcessor):
 
-    def __init__(self, loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
-                use_minmax, filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
+    def __init__(self, loadData, train_ds, val_ds, scaler_name, use_time_augmentor, use_noise_augmentor,
+                filter_name, main_grid, hyper_grid, model_grid, use_tensorboard = False, 
                 use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0,
                 band_max = 4.0, highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3):
     
@@ -47,10 +47,9 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
         
         
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.use_scaler = use_scaler
+        self.scaler_name = scaler_name
         self.use_noise_augmentor = use_noise_augmentor
         self.use_time_augmentor = use_time_augmentor
-        self.use_minmax = use_minmax
         self.filter_name = filter_name
 
         self.main_grid = main_grid
@@ -81,7 +80,7 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
 
 
 
-    def fit(self):
+    def fit(self, skip_to_index = 0):
 
         
         pp = pprint.PrettyPrinter(indent=4)
@@ -91,8 +90,7 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                               self.handler, 
                               use_time_augmentor = self.use_time_augmentor, 
                               use_noise_augmentor = self.use_noise_augmentor, 
-                              use_scaler = self.use_scaler,
-                              use_minmax = self.use_minmax, 
+                              scaler_name = self.scaler_name, 
                               filter_name = self.filter_name, 
                               band_min = self.band_min,
                               band_max = self.band_max,
@@ -109,6 +107,8 @@ class NarrowSearchIncepTime(GridSearchResultProcessor):
                                                     self.model_picks[0])
 
         for i in range(len(self.hyper_picks)):
+            if i < skip_to_index:
+                continue
            
             mixed_precision.set_global_policy('mixed_float16')
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}

@@ -252,6 +252,7 @@ class LoadData():
                     mapped_ds[repeating_indexes[current_index]][1] = label
                     mapped_ds[repeating_indexes[current_index]][2] = current_index
                     current_index += 1
+        print("\n")
         return mapped_ds
 
     def progress_bar(self, current, total, barLength = 40):

@@ -48,22 +48,22 @@ class LocalOptimizer(GridSearchResultProcessor):
     
     """
 
-    def __init__(self, loadData, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, filter_name,
-                 use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, highpass_freq,
-                 use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
-                 result_file_name = "", start_grid = []):
+    def __init__(self, loadData, scaler_name, use_time_augmentor, use_noise_augmentor, filter_name,
+                 use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, 
+                 highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, 
+                 continue_from_result_file = False, result_file_name = "", start_grid = []):
         
         self.loadData = loadData
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.use_scaler = use_scaler
+        self.scaler_name = scaler_name
         self.use_time_augmentor = use_time_augmentor
         self.use_noise_augmentor = use_noise_augmentor
-        self.use_minmax = use_minmax
         self.filter_name = filter_name
         self.use_tensorboard = use_tensorboard
         self.use_liveplots = use_liveplots
         self.use_custom_callback = use_custom_callback
         self.use_early_stopping = use_early_stopping
+        
         self.band_min = band_min
         self.band_max = band_max
         self.highpass_freq = highpass_freq
@@ -146,6 +146,7 @@ class LocalOptimizer(GridSearchResultProcessor):
             return best_initial_candidates.head(1)
         else:
             best_initial_candidates = sorted_df.copy().head(nr_candidates)
+            print(best_initial_candidates)
             # Attempt to only select models which have the best f1 score, and first part of the sort conditions
             # This is due to (likely) bug that has some models perform really well in one metric, but terrible in other metrics. The working assumption is that models with high f1, are good.
             # TODO: Consider just switching the optimizer metrics here. Without the current BUG with strange training metrics (and inconsistent metrics wrt. the confusion matrix) this is a good opportunity to optimize with two metrics.
@@ -155,7 +156,9 @@ class LocalOptimizer(GridSearchResultProcessor):
             best_secondary_sorted_by_conditions = self.sort_df(reduced_sorted_by_f1, optimize_metric)
             # At this point we should have filtered out bad outlier models, and be left with good candidates. 
             # We now select the best model according to the sort condidtions.
+            
             best_model = best_secondary_sorted_by_conditions.head(1)
+            print(best_model)
 
             return best_model
 

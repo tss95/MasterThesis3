@@ -84,6 +84,17 @@ class HelperFunctions():
                 class_array[idx][class_dict.get(label)] = 1
         return class_array
                                 
+    def predict_model(model, x_test, y_test, class_dict):
+        num_predictions = len(y_test)
+        #true_labels_str = np.empty(())
+        
+    
+    def get_key(val, dict):
+        for key, value in dict.items():
+            if val == value:
+                return key
+        raise Exception(f"Key, value({val}) pair does not exist.")
+
 
     def convert_to_class(self, predictions):
         
@@ -226,24 +237,27 @@ class HelperFunctions():
             custom_callback = CustomCallback(data_gen)
             callbacks.append(custom_callback)
         if use_early_stopping:
-            earlystop = EarlyStopping(monitor = 'val_loss',
+            earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
                           min_delta = 0,
-                          patience = 3,
+                          patience = 5,
                           verbose = 1,
                           restore_best_weights = True)
             callbacks.append(earlystop)
         
         if use_reduced_lr:
-            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50,
-                                                                  min_lr=0.0001))
+            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
+                                                                  factor=0.5, patience=3,
+                                                                  min_lr=0.00005, 
+                                                                  verbose = 1))
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                         "epochs" : epoch,
                         "validation_data" : val_gen,
                         "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                         "verbose" : 1,
-                        "use_multiprocessing" : False, 
-                        "workers" : 1,
+                        "max_queue_size" : 10,
+                        "use_multiprocessing" : True, 
+                        "workers" : 4,
                         "callbacks" : callbacks
                        }
     
@@ -285,7 +299,7 @@ class HelperFunctions():
                 'sampling_rate': sampl_rate,
                 'starttime': start_time})
         stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
-        stream.plot()
+        stream.plot(number_of_ticks = 8)
 
     def get_n_points_with_highest_training_loss(self, train_ds, n, full_logs):
         train_ds_dict = {}

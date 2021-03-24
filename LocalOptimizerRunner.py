@@ -71,11 +71,11 @@ handler = DataHandler(loadData)
 num_channels = 3
 
 use_time_augmentor = True
-use_scaler = True
+scaler_name = "standard"
 use_noise_augmentor = True
-detrend = True
-use_minmax = False
-use_highpass = True
+filter_name = None
+band_min = 2
+band_max = 4
 highpass_freq = 0.1
 
 use_tensorboard = True
@@ -85,17 +85,20 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 
-result_file_name = 'results_InceptionTime_earthExplo_detrend_timeAug_sscale_noiseAug_earlyS_highpass-0.1.csv'
+result_file_name = 'results_InceptionTime_earthExplo_timeAug_sscale_noiseAug_earlyS.csv'
 quick_mode = False
 continue_from_result_file = True
 start_grid = None
 
 
 # The higher this value is, the more focused the best model will be on the initial metric
-metric_gap = 0.6
+metric_gap = 0.4
+
+# Number of models to consider:
+nr_candidates = 20
 
 # If cancelled prior to completion, write the number in which it was cancelled in order to pick up where you left off.
-skip_to_index = 13
+skip_to_index = 0
 
 # Only False if testing
 log_data = True
@@ -105,15 +108,34 @@ depth = 5
 
 
 
-localOpt = LocalOptimizerIncepTime(loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, 
-                            use_highpass, use_tensorboard, use_liveplots, use_custom_callback, 
-                            use_early_stopping, highpass_freq, use_reduced_lr, num_channels, depth, 
-                            quick_mode, continue_from_result_file, result_file_name, start_grid)
+narrowOpt = LocalOptimizerIncepTime(loadData = loadData, 
+                                    scaler_name = scaler_name, 
+                                    use_time_augmentor = use_time_augmentor, 
+                                    use_noise_augmentor = use_noise_augmentor, 
+                                    filter_name = filter_name,
+                                    use_tensorboard = use_tensorboard, 
+                                    use_liveplots = use_liveplots, 
+                                    use_custom_callback = use_custom_callback, 
+                                    use_early_stopping = use_early_stopping, 
+                                    band_min = band_min, 
+                                    band_max = band_max, 
+                                    highpass_freq = highpass_freq, 
+                                    use_reduced_lr = use_reduced_lr, 
+                                    num_channels = num_channels, 
+                                    depth = depth, 
+                                    quick_mode = quick_mode, 
+                                    continue_from_result_file = continue_from_result_file, 
+                                    result_file_name = result_file_name, 
+                                    start_grid = start_grid)
 
 #top_10 = narrowOpt.get_best_model(result_file_name, 2, optimize_metric = ['val_accuracy', 'val_f1'], nr_candidates = 10)
 try:
 
-  best_model_dict = localOpt.run(['val_accuracy', 'val_f1'], 10, metric_gap = metric_gap, log_data = log_data, skip_to_index = skip_to_index)
+  narrowOpt.run(['val_accuracy', 'val_f1'], 
+                nr_candidates = nr_candidates, 
+                metric_gap = metric_gap, 
+                log_data = log_data, 
+                skip_to_index = skip_to_index)
 finally:
   #os.shutdown('shutdown -s')
   print("Im done bitch")

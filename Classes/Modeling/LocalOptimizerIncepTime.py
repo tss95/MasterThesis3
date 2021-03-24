@@ -23,12 +23,14 @@ import datetime
 
 class LocalOptimizerIncepTime(LocalOptimizer):
 
-    def __init__(self, loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, filter_name, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, continue_from_result_file = False, 
-                result_file_name = "", start_grid = []):
-        super().__init__(loadData, detrend, use_scaler, use_time_augmentor, use_noise_augmentor, use_minmax, 
-                         filter_name, use_tensorboard, use_liveplots, use_custom_callback, 
-                         use_early_stopping, band_min, band_max, highpass_freq, use_reduced_lr, num_channels, depth, 
-                         quick_mode, continue_from_result_file, result_file_name, start_grid)
+    def __init__(self, loadData, scaler_name, use_time_augmentor, use_noise_augmentor, filter_name,
+                 use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, 
+                 highpass_freq, use_reduced_lr, num_channels, depth, quick_mode = False, 
+                 continue_from_result_file = False, result_file_name = "", start_grid = []):
+        super().__init__(loadData, scaler_name, use_time_augmentor, use_noise_augmentor, filter_name,
+                        use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, band_min, band_max, 
+                        highpass_freq, use_reduced_lr, num_channels, depth, quick_mode, 
+                        continue_from_result_file, result_file_name, start_grid)
         self.model_nr_type = "InceptionTime"
         
     
@@ -82,8 +84,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                               self.handler, 
                               use_time_augmentor = self.use_time_augmentor, 
                               use_noise_augmentor = self.use_noise_augmentor, 
-                              use_scaler = self.use_scaler,
-                              use_minmax = self.use_minmax, 
+                              scaler_name = self.scaler_name,
                               filter_name = self.filter_name, 
                               band_min = self.band_min,
                               band_max = self.band_max,
@@ -92,7 +93,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
 
         self.results_file_name = self.get_results_file_name(narrow = True)
         start = time.time()
-        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram()
         end = time.time()
         print(f"Fitting augmentors and scaler as well as loading to ram completed after: {datetime.timedelta(seconds=(end-start))}")
         
@@ -144,7 +145,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
             
             # Generate build model args using the picks from above.
             _, channels, timesteps = self.handler.get_trace_shape_no_cast(self.loadData.train, self.use_time_augmentor)
-            input_shape = (channels, timesteps)
+            input_shape = (self.num_channels, timesteps)
 
             model_args = self.helper.generate_inceptionTime_build_args(input_shape, self.num_classes, opt,
                                                                       use_residuals, use_bottleneck, nr_modules,
@@ -158,8 +159,8 @@ class LocalOptimizerIncepTime(LocalOptimizer):
 
             # Initializing generators:
             gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size)
-            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size)
+            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size, self.num_channels)
+            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size, self.num_channels)
 
             # Generate fit args using picks.
             fit_args = self.helper.generate_fit_args(self.loadData.train, self.loadData.val, batch_size, 

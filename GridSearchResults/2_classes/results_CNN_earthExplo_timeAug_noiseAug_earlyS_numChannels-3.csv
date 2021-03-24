@@ -1,0 +1,3 @@
+optimizer,num_layers,learning_rate,epochs,batch_size,use_layerwise_dropout_batchnorm,start_neurons,padding,output_layer_activation,l2_r,l1_r,kernel_size,filters,dropout_rate,decay_sequence,activation,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+rmsprop,5,0.001,50,128,False,380,same,sigmoid,0.1,0.1,73,24,0.001,"[1, 2, 4, 4, 2]",relu,,,,,,,,
+rmsprop,6,0.01,50,256,False,300,same,sigmoid,0.0001,0.2,35,34,0.001,"[1, 4, 8, 8, 4, 1]",relu,,,,,,,,

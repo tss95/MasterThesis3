@@ -70,7 +70,7 @@ class RandomGridSearchDynamicRam(GridSearchResultProcessor):
     }
     
 
-    def __init__(self, loadData, train_ds, val_ds, test_ds, model_type, detrend, use_scaler, use_time_augmentor, use_noise_augmentor,
+    def __init__(self, loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                  use_minmax, use_highpass, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
                  use_liveplots = True, use_custom_callback = False, use_early_stopping = False, highpass_freq = 0.1, 
                  start_from_scratch = True, is_lstm = False, num_channels = 3):
