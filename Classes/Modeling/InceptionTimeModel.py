@@ -35,6 +35,9 @@ class InceptionTimeModel:
         self.reg_shortcut = reg_shortcut
         self.reg_module = reg_module
 
+        tf.config.optimizer.set_jit(True)
+        mixed_precision.set_global_policy('mixed_float16')
+
         self.helper = HelperFunctions()
         
 
@@ -69,7 +72,7 @@ class InceptionTimeModel:
 
         gap_layer = tf.keras.layers.GlobalAveragePooling1D()(x)
         
-        output_layer = tf.keras.layers.Dense(self.output_nr_nodes(num_classes), activation=self.output_activation)(gap_layer)
+        output_layer = tf.keras.layers.Dense(self.output_nr_nodes(num_classes), activation=self.output_activation, dtype = 'float32')(gap_layer)
         
         model = tf.keras.models.Model(inputs=input_layer, outputs = output_layer)
         compile_args = self.helper.generate_model_compile_args(self.optimizer, num_classes)

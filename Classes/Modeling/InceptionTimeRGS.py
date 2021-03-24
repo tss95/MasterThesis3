@@ -64,8 +64,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
     }
     
 
-    def __init__(self, loadData, train_ds, val_ds, use_scaler, use_time_augmentor, use_noise_augmentor,
-                 use_minmax, filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
+    def __init__(self, loadData, train_ds, val_ds, scaler_name, use_time_augmentor, use_noise_augmentor,
+                 filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = False, 
                  use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0, band_max = 4.0,
                  highpass_freq = 0.1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3, log_data = True):
         
@@ -76,10 +76,9 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         
         
         self.num_classes = len(set(self.loadData.label_dict.values()))
-        self.use_scaler = use_scaler
+        self.scaler_name = scaler_name
         self.use_noise_augmentor = use_noise_augmentor
         self.use_time_augmentor = use_time_augmentor
-        self.use_minmax = use_minmax
         self.filter_name = filter_name
         
         self.n_picks = n_picks
@@ -108,6 +107,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         else:
             self.full_ds = self.loadData.full_ds
 
+        print("Initialized num channels: " + str(self.num_channels))
+
 
     
     def fit(self):
@@ -133,21 +134,22 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                               self.handler, 
                               use_time_augmentor = self.use_time_augmentor, 
                               use_noise_augmentor = self.use_noise_augmentor, 
-                              use_scaler = self.use_scaler,
-                              use_minmax = self.use_minmax, 
+                              scaler_name = self.scaler_name,
                               filter_name = self.filter_name, 
                               band_min = self.band_min,
                               band_max = self.band_max,
                               highpass_freq = self.highpass_freq, 
                               load_test_set = False)
-        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram(False, self.num_channels)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram()
 
         pp = pprint.PrettyPrinter(indent=4)
         
 
         for i in range(len(self.hyper_picks)):
             tf.keras.backend.clear_session()
+            tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
+            
             model_info = {"model_nr_type" : self.model_nr_type, "index" : i}
             print(f"Model nr {i + 1} of {len(self.hyper_picks)}")   
             print(i+1)
@@ -183,7 +185,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             
             # Generate build model args using the picks from above.
             num_ds, channels, timesteps = self.handler.get_trace_shape_no_cast(self.train_ds, self.use_time_augmentor)
-            input_shape = (channels, timesteps)
+            input_shape = (timesteps, self.num_channels)
+
             
             compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)
             
@@ -193,14 +196,18 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                                                       shortcut_activation, module_activation,
                                                                       module_output_activation, output_activation,
                                                                       reg_shortcut, reg_module, l1_r, l2_r)
+
+            print("Build args input shape: " + str(model_args['input_shape']))
             # Build model using args generated above
             inceptionTime = InceptionTimeModel(**model_args)
             model = inceptionTime.build_model(input_shape, self.num_classes)
 
+            print(model.summary())
+
             # Initializing generators:
             gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size)
-            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size)
+            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size, num_channels = self.num_channels, is_lstm = True)
+            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size, num_channels = self.num_channels, is_lstm = True)
 
             
             print("Starting: ")
@@ -252,25 +259,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         return self.results_df, min_loss, max_accuracy, max_precision, max_recall
         
 
-    # Depreciated: 
-    # Todo: Remove this function when this class works properly.
-    """
-    def init_preprocessing(self, use_time_augmentor, use_scaler, use_noise_augmentor):
-        timeAug = None
-        scaler = None
-        noiseAug = None
-        if use_time_augmentor:
-            timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
-            timeAug.fit()
-        if use_scaler:
-            if self.use_minmax:
-                scaler = MinMaxScalerFitter(self.train_ds, timeAug).fit_scaler(detrend = self.detrend)
-            else:
-                scaler = StandardScalerFitter(self.train_ds, timeAug).fit_scaler(detrend = self.detrend)
-        if use_noise_augmentor:
-            noiseAug = NoiseAugmentor(self.loadData.noise_ds, use_scaler, scaler, self.loadData, timeAug)
-        return timeAug, scaler, noiseAug
-    """
+    
     def get_n_params_from_list(self, grid, n_picks):
         print(f"Length of grid: {len(grid)}")
         indexes = random.sample(range(0, len(grid)), n_picks)
