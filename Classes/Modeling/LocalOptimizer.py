@@ -277,6 +277,29 @@ class LocalOptimizer(GridSearchResultProcessor):
 
     def create_output_activation(self, current):
         return [current]
+    
+    def create_kernel_and_filter_params(self, current):
+        max_size = 120
+        new_kernels = [current - 10, current - 5, current - 2, current + 2, current + 5, current + 10]
+        for i, kern in enumerate(new_kernels):
+            new_kernels[i] = min(max(kern, 3), max_size)
+        return list(set(new_kernels))
+
+    def create_filter_size_params(self, current):
+        max_size = 100
+        min_size = 6
+        new_filter_size = [current - 10, current -5, current -2, current + 2, current + 5, current + 10]
+        for idx, size in enumerate(new_filter_size):
+            size = min(max(size, min_size), max_size)
+        return list(set(new_filter_size))
+
+    def create_num_filter_params(self, current):
+        max_num = 80
+        min_num = 6
+        new_num_filter = [current - 10, current -5, current -2, current + 2, current + 5, current + 10]
+        for idx, num in enumerate(new_num_filter):
+            num = min(max(num, min_num), max_num)
+        return list(set(new_num_filter))
 
     def get_metrics(self, model, optimize_metric):
         print(model)

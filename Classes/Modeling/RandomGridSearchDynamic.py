@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import h5py
+import gc
 
 import sklearn as sk
 
@@ -11,6 +12,7 @@ from sklearn.model_selection import ParameterGrid
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
+from tensorflow.keras.utils import GeneratorEnqueuer
 
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
@@ -21,7 +23,6 @@ from Classes.Modeling.StaticModels import StaticModels
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.DataProcessing.RamGenerator import RamGenerator
 from Classes.DataProcessing.RamLoader import RamLoader
 from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
 from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
@@ -29,6 +30,8 @@ from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from .GridSearchResultProcessor import GridSearchResultProcessor
+from Classes.DataProcessing.ts_RamGenerator import data_generator
+
 
 import sys
 
@@ -41,7 +44,8 @@ import json
 class RandomGridSearchDynamic(GridSearchResultProcessor):
     hyper_grid = {
             "num_layers" : [2,3,4,5,6], 
-            "batch_size" : [8, 16, 32, 64, 128, 256],
+            # so"batch_size" : [8, 16, 32, 64, 128, 256],
+            "batch_size" : [256, 512],
             "epochs" : [50, 65, 70, 75, 80],
             "learning_rate" : [0.1, 0.01, 0.001, 0.0001, 0.00001],
             "optimizer" : ["adam", "rmsprop", "sgd"]
@@ -139,6 +143,7 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
         pp = pprint.PrettyPrinter(indent=4)
         
         for i in range(len(self.hyper_picks)):
+            gc.collect()
             tf.keras.backend.clear_session()
             tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
@@ -174,13 +179,13 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
             
             
             current_picks = [model_info, self.hyper_picks[i], self.model_picks[i]]
-            print(current_picks)
+            pp.pprint(current_picks)
             # Store picked parameters:
             if self.log_data:
                 self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
 
             _, _, timesteps = self.x_train.shape
-            
+
             # Generate build model args using the picks from above.
             model_args = self.helper.generate_build_model_args(self.model_nr_type, batch_size, dropout_rate, 
                                                                activation, output_layer_activation,
@@ -201,10 +206,14 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
                 model = StaticModels(**model_args).model
             
             # Initializing generators:
-            gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size, num_channels = num_channels, is_lstm  = self.is_lstm)
-            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size, num_channels = num_channels, is_lstm  = self.is_lstm)
-            
+            #gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
+            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            train_enq.start(workers = 12, max_queue_size = 15)
+            val_enq.start(workers = 12, max_queue_size = 15)
+            train_gen = train_enq.get()
+            val_gen = train_enq.get()
+
             # Generate compiler args using picks
             model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)
             # Compile model using generated args
@@ -225,7 +234,7 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
                                                      use_reduced_lr = self.use_reduced_lr)
             try:
                 # Fit the model using the generated args
-                model_fit = model.fit(train_gen, **fit_args)
+                model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
                 loss, accuracy, precision, recall = model.evaluate(x=val_gen,
@@ -242,16 +251,25 @@ class RandomGridSearchDynamic(GridSearchResultProcessor):
                 train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
                                                                                            steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                                 batch_size))
+                train_enq.stop()
+                val_enq.stop()
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
+                
+                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, plot = False, run_evaluate = False)
+                
                 if self.log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+                gc.collect()
+                tf.keras.backend.clear_session()
+                #del model, train_gen, val_gen, train_enq, val_enq
             except Exception as e:
                 print(e)
                 print("Something went wrong while training the model (most likely)")
+
                 continue
 
         min_loss, max_accuracy, max_precision, max_recall = self.find_best_performers(self.results_df)

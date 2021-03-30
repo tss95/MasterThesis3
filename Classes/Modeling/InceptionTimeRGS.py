@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import h5py
+import gc
 
 import sklearn as sk
 
@@ -11,6 +12,7 @@ from sklearn.model_selection import ParameterGrid
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
+from tensorflow.keras.utils import GeneratorEnqueuer
 
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
@@ -20,14 +22,13 @@ from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.DataProcessing.RamGenerator import RamGenerator
 from Classes.DataProcessing.RamLoader import RamLoader
 from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
 from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
-from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from .GridSearchResultProcessor import GridSearchResultProcessor
+from Classes.DataProcessing.ts_RamGenerator import data_generator
 
 import sys
 
@@ -107,7 +108,6 @@ class InceptionTimeRGS(GridSearchResultProcessor):
         else:
             self.full_ds = self.loadData.full_ds
 
-        print("Initialized num channels: " + str(self.num_channels))
 
 
     
@@ -184,7 +184,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 self.results_df = self.store_params_before_fit(current_picks, self.results_df, self.results_file_name)
             
             # Generate build model args using the picks from above.
-            num_ds, channels, timesteps = self.handler.get_trace_shape_no_cast(self.train_ds, self.use_time_augmentor)
+            _, _, timesteps = self.handler.get_trace_shape_no_cast(self.train_ds, self.use_time_augmentor)
             input_shape = (timesteps, self.num_channels)
 
             
@@ -197,7 +197,6 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                                                       module_output_activation, output_activation,
                                                                       reg_shortcut, reg_module, l1_r, l2_r)
 
-            print("Build args input shape: " + str(model_args['input_shape']))
             # Build model using args generated above
             inceptionTime = InceptionTimeModel(**model_args)
             model = inceptionTime.build_model(input_shape, self.num_classes)
@@ -205,12 +204,14 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             print(model.summary())
 
             # Initializing generators:
-            gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size, num_channels = self.num_channels, is_lstm = True)
-            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size, num_channels = self.num_channels, is_lstm = True)
-
+            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            train_enq.start(workers = 12, max_queue_size = 15)
+            val_enq.start(workers = 12, max_queue_size = 15)
+            train_gen = train_enq.get()
+            val_gen = train_enq.get()
             
-            print("Starting: ")
+
             pp.pprint(self.hyper_picks[i])
             print("---------------------------------------------------------------------------------")
             pp.pprint(self.model_picks[i])
@@ -225,11 +226,12 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                                     use_reduced_lr = self.use_reduced_lr)
             try:
                 # Fit the model using the generated args
-                model_fit = model.fit(train_gen, **fit_args)
+                model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
                 loss, accuracy, precision, recall = model.evaluate(x=val_gen,
                                                                         steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
+                val_enq.stop()
                 # Record metrics for train
                 metrics = {}
                 metrics['val'] = {  "val_loss" : loss,
@@ -242,6 +244,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x = train_gen,
                                                                                             steps=self.helper.get_steps_per_epoch(self.train_ds,
                                                                                                                                 batch_size))
+                train_enq.stop()
+                
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,
@@ -249,6 +253,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 current_picks.append(metrics['train'])
                 if self.log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+                gc.collect()
+                tf.keras.backend.clear_session()
             except Exception as e:
                 print(e)
                 print("Something went wrong while training the model (most likely)")

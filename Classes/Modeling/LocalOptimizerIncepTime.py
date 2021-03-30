@@ -2,17 +2,20 @@
 import sys
 import pandas as pd
 import pprint
+import gc
 
 from sklearn.model_selection import ParameterGrid
 from itertools import chain
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
+from tensorflow.keras.utils import GeneratorEnqueuer
 
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 
 from Classes.DataProcessing.RamLoader import RamLoader
+from Classes.DataProcessing.ts_RamGenerator import data_generator
 from Classes.DataProcessing.RamGenerator import RamGenerator
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
@@ -111,7 +114,9 @@ class LocalOptimizerIncepTime(LocalOptimizer):
             if i < skip_to_index:
                 continue
             # Housekeeping
+            gc.collect()
             tf.keras.backend.clear_session()
+            tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
 
             print(f"Model nr {i + 1} of {len(search_space)}")
@@ -144,8 +149,8 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 self.results_df = self.store_params_before_fit_opti(search_space[i], self.results_df, self.result_file_name)
             
             # Generate build model args using the picks from above.
-            _, channels, timesteps = self.handler.get_trace_shape_no_cast(self.loadData.train, self.use_time_augmentor)
-            input_shape = (self.num_channels, timesteps)
+            _, _, timesteps = self.handler.get_trace_shape_no_cast(self.loadData.train, self.use_time_augmentor)
+            input_shape = (timesteps, self.num_channels)
 
             model_args = self.helper.generate_inceptionTime_build_args(input_shape, self.num_classes, opt,
                                                                       use_residuals, use_bottleneck, nr_modules,
@@ -158,9 +163,12 @@ class LocalOptimizerIncepTime(LocalOptimizer):
             model = inceptionTime.build_model(input_shape, self.num_classes)
 
             # Initializing generators:
-            gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_gen = gen.data_generator(self.x_train, self.y_train, batch_size, self.num_channels)
-            val_gen = gen.data_generator(self.x_val, self.y_val, batch_size, self.num_channels)
+            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            train_enq.start(workers = 12, max_queue_size = 15)
+            val_enq.start(workers = 12, max_queue_size = 15)
+            train_gen = train_enq.get()
+            val_gen = train_enq.get()
 
             # Generate fit args using picks.
             fit_args = self.helper.generate_fit_args(self.loadData.train, self.loadData.val, batch_size, 
@@ -195,7 +203,8 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                                     "train_recall" : train_recall}
                 if log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.result_file_name)
-
+                gc.collect()
+                tf.keras.backend.clear_session()
             except Exception as e:
                 print(e)
                 print("Error (hopefully) occured during training.")
@@ -239,12 +248,7 @@ class LocalOptimizerIncepTime(LocalOptimizer):
             new_nr_modules[i] = min(max(new_nr_modules[i], 1), max_modules)
         return list(set(new_nr_modules))
     
-    def create_kernel_and_filter_params(self, current):
-        max_size = 120
-        new_kernels = [current - 20, current - 10, current - 2, current + 2, current + 10, current + 20]
-        for i, kern in enumerate(new_kernels):
-            new_kernels[i] = min(max(kern, 3), max_size)
-        return list(set(new_kernels))
+    
 
     def create_bottleneck_size(self, current_nr):
         max_nr = 100

@@ -38,36 +38,66 @@ utils = GlobalUtils()
 
 class HelperFunctions():
     
-    def plot_confusion_matrix(self, predicted_classes, true_classes, class_dict, labels):
-        cm = confusion_matrix(true_classes.argmax(axis=1), predicted_classes.argmax(axis=1))
+    def predict_model(self, model, x_test, y_test, class_dict):
+        num_predictions = len(y_test)
+        #true_labels_str = np.empty(())
+        predictions = model.predict(x_test)
+        predictions = self.convert_to_class(predictions)
+        predictions = predictions[:num_predictions]
+        return predictions
+        
+    
+    def convert_to_class(self, predictions):
+        if predictions.shape[1] == 1:
+            predictions = np.rint(predictions)
+            return predictions
+        raise Exception("More than two classes has not been implemented")
+        
+
+    def evaluate_model(self, model, x_test, y_test, label_dict, plot = True, run_evaluate = False):
+        print(x_test.shape)
+        x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
+        print(x_test.shape)
+        if run_evaluate:
+            loss, accuracy, precision, recall = model.evaluate(x = x_test, y = y_test)
+        
+        predictions = self.predict_model(model, x_test, y_test, label_dict)
+        predictions = np.reshape(predictions, (predictions.shape[0]))
+        y_test = np.reshape(y_test, (y_test.shape[0]))
+        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=2)
+        class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
+        if plot:
+            self.plot_confusion_matrix(conf, label_dict)
+        print(conf)
+        print(class_report)
+        
+        
+        return conf, class_report
+
+    def plot_confusion_matrix(self, conf, label_dict):
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        cax = ax.matshow(cm)
+        cax = ax.matshow(conf)
+        labels = list(self.handle_non_noise_dict(label_dict))
         plt.title('Confusion matrix of the classifier')
         fig.colorbar(cax)
         ax.set_xticklabels([''] + labels)
         ax.set_yticklabels([''] + labels)
         plt.xlabel('Predicted')
         plt.ylabel('True')
+        print(conf.shape)
+        for i in range(conf.shape[0]):
+            for j in range(conf.shape[1]):
+                text = ax.text(j, i, int(conf[i, j]), ha="center", va="center", color="r")
+        
         plt.show()
-        print(cm)
-        return
-    
-    def evaluate_model(self, model, gen, test_ds, batch_size, class_dict):
-        steps = len(test_ds)/batch_size
-        model.evaluate_generator(gen, steps, verbose = 1)
-        predictions = model.predict_generator(gen, steps)
-        predicted_classes = self.convert_to_class(predictions)[0:len(test_ds)]
-        true_classes = self.get_class_array(test_ds, class_dict)
-        labels = list(class_dict.keys())[0:true_classes.shape[1]]
-        if len(list(class_dict.keys())) != len(set(class_dict.values())):
-            labels = [list(class_dict.keys())[0], "Non-noise"][0:true_classes.shape[1]]
         
-        self.plot_confusion_matrix(predicted_classes, true_classes, class_dict, labels)
-        print(classification_report(true_classes, predicted_classes, labels=[predictions.shape[1]], 
-                              target_names=labels, sample_weight=None, digits=3, output_dict=False, 
-                              zero_division='warn'))
         
+    def handle_non_noise_dict(self, label_dict):
+        if len(list(set(label_dict.values()))) == 2 and len(list(label_dict.keys())) == 3:
+            label_dict = {'noise' : 0, 'not_noise' : 1}
+        return label_dict
+            
     def get_steps_per_epoch(self, gen_set, batch_size):
         return int(len(gen_set)/batch_size)
     
@@ -83,18 +113,6 @@ class HelperFunctions():
                 label = path_and_label[1]
                 class_array[idx][class_dict.get(label)] = 1
         return class_array
-                                
-    def predict_model(model, x_test, y_test, class_dict):
-        num_predictions = len(y_test)
-        #true_labels_str = np.empty(())
-        
-    
-    def get_key(val, dict):
-        for key, value in dict.items():
-            if val == value:
-                return key
-        raise Exception(f"Key, value({val}) pair does not exist.")
-
 
     def convert_to_class(self, predictions):
         
@@ -166,6 +184,9 @@ class HelperFunctions():
             input_shape = (channels, timesteps)
             if is_lstm:
                 input_shape = (timesteps, channels)
+            if type(decay_sequence) is not list:
+                print(decay_sequence)
+                decay_sequence = json.loads(decay_sequence)
             return {"model_type" : model_nr_type,
                     "num_layers": num_layers,
                     "input_shape" : input_shape,
@@ -234,7 +255,7 @@ class HelperFunctions():
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
-            custom_callback = CustomCallback(data_gen)
+            custom_callback = CustomCallback()
             callbacks.append(custom_callback)
         if use_early_stopping:
             earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
@@ -256,8 +277,8 @@ class HelperFunctions():
                         "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                         "verbose" : 1,
                         "max_queue_size" : 10,
-                        "use_multiprocessing" : True, 
-                        "workers" : 4,
+                        "use_multiprocessing" : False, 
+                        "workers" : 1,
                         "callbacks" : callbacks
                        }
     
@@ -335,6 +356,9 @@ class HelperFunctions():
             if start_neurons//decay < num_out_neurons:
                 decay_sequence[idx] = decay_sequence[idx-1]
         return decay_sequence[0:num_layers]
+
+        
+
 
     def progress_bar(self, current, total, text, barLength = 40):
         percent = float(current) * 100 / total

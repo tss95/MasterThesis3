@@ -66,14 +66,14 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.3,
+    'subsample_size' : 0.25,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -104,20 +104,20 @@ model_grid = {
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
     "nr_modules" : np.concatenate((np.array([1]), np.arange(3, 9, 3))),
-    "kernel_size" : np.arange(20, 80, 10),
-    "bottleneck_size" : np.arange(20, 60, 2),
-    "num_filters" : np.arange(20, 60, 2),
+    "kernel_size" : np.arange(30, 60, 2),
+    "bottleneck_size" : np.arange(30, 50, 2),
+    "num_filters" : np.arange(20, 40, 2),
     "shortcut_activation" : ["relu", "relu", "relu", "relu",  "sigmoid", "softmax", "tanh"],
     "module_activation" : ["linear", "linear", "linear", "relu", "sigmoid", "softmax", "tanh"],
     "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "sigmoid", "softmax", "tanh"],
     "output_activation": ["sigmoid"],
     "reg_shortcut": [True, False, False],
-    "reg_module" : [True, True, False],
+    "reg_module" : [True, False, False],
     "l1_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0],
     "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
 }
 
-num_channels = 2
+num_channels = 3
 
 use_time_augmentor = True
 scaler_name = "standard"
@@ -127,7 +127,7 @@ band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 1000
+n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False

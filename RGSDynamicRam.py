@@ -61,6 +61,7 @@ helper = HelperFunctions()
 import sys
 
 import random
+import gc
 import pprint
 
 mixed_precision.set_global_policy('mixed_float16')
@@ -77,7 +78,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.30,
+    'subsample_size' : 0.25,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -103,24 +104,25 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 #- Consider editing the decay_sequences.
 
 hyper_grid = {
-        "num_layers" : [1, 2, 3, 4, 5, 6],
-        "batch_size" : [64, 128, 256, 512, 512, 1024],
+        #num_layers" : [1, 2, 3, 4, 5, 6],
+        "num_layers" : [1, 2, 3, 4, 5],
+        "batch_size" : [64, 128, 256],
         "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
-        "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
+        "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001, 0.0001, 0.0001],
         "optimizer" : ["sgd", "sgd", "sgd", "sgd", "rmsprop", "adam", "rmsprop", "sgd"]
     }
 model_grid = {
     #"start_neurons" : [20, 25, 30, 35],
-    "start_neurons" : np.arange(100, 500, 20),
+    "start_neurons" : np.arange(100, 300, 10),
     "use_layerwise_dropout_batchnorm" : [False, True],
     "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,0.5,0.25,0.25,0.5,1], [1,1,1,1,1,1]],
-    "dropout_rate" : [0.5, 0.4, 0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "filters" : np.arange(10, 100, 2),
+    "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
+    "filters" : np.arange(10, 80, 2),
     "kernel_size" : np.arange(2, 100, 2),
     "padding" : ["same"],
     "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
     "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
-    "activation" : ["tanh", "relu", "relu", "sigmoid", "softmax"],
+    "activation" : ["tanh", "tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
     "output_layer_activation" : ["sigmoid"]
 }
 
@@ -128,7 +130,7 @@ model_grid = {
 
 model_type = "CNN"
 is_lstm = True
-num_channels = 2
+num_channels = 2    
 
 use_time_augmentor = True
 scaler_name = "standard"
@@ -138,40 +140,46 @@ band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 100
+n_picks = 750
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = False
+use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = False
+log_data = True
 
 shutdown = False
 
-randomGridSearch = RandomGridSearchDynamic(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                 filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
-                 use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                 use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                 start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
 def clear_tensorboard_dir():
-    import os
-    import shutil
-    path = f"{base_dir}/Tensorboard_dir/fit"
-    files = os.listdir(path)
-    print(files)
-    for f in files:
-        shutil.rmtree(os.path.join(path,f))
+        import os
+        import shutil
+        path = f"{base_dir}/Tensorboard_dir/fit"
+        files = os.listdir(path)
+        print(files)
+        for f in files:
+            shutil.rmtree(os.path.join(path,f))
 if use_tensorboard:
     clear_tensorboard_dir()
 
+
 try:
+    randomGridSearch = RandomGridSearchDynamic(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                                                filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
+                                                use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
+                                                use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                                                start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
     results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
+
+except Exception as e:
+    print(e)
+
 finally:
     if shutdown:
         os.system("shutdown now -h")
     else:
         print("Process completed.")
+            
 
 

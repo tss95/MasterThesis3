@@ -176,7 +176,7 @@ def build_model(self, input_shape, num_classes, num_modules = 6):
         x = input_layer
 
         for i in range(self.num_layers):
-            x = Conv1D(int(self.filters//self.decay_sequence[i]), 
+            x = Conv1D(int(self.filters//int(self.decay_sequence[i])), 
                                   kernel_size = [self.kernel_size], 
                                   padding = self.padding, 
                                   activation = None,

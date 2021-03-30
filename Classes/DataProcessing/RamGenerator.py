@@ -3,10 +3,25 @@ import random
 
 import os
 import sys
+import threading
 
 from .DataHandler import DataHandler
 
 class RamGenerator(DataHandler):
+
+
+    class threadsafe_iter:
+
+        def __init__(self, it):
+            self.it = it
+            self.lock = threading.Lock()
+
+        def __iter__(self):
+            return self
+
+        def next(self):
+            with self.lock:
+                return self.it.next()
 
     """
     After further inspection in RamGeneratorDevelop.ipynb, this class behaves as expected.
@@ -17,7 +32,15 @@ class RamGenerator(DataHandler):
         self.handler = handler
         self.num_classes = len(set(loadData.label_dict.values()))
         self.noiseAug = noiseAug
+
+    def threadsafe_generator(f):
+        """A decorator that takes a generator function and makes it thread-safe.
+        """
+        def g(*a, **kw):
+            return threadsafe_iter(f(*a, **kw))
+        return g
         
+    @threadsafe_generator
     def data_generator(self, traces, labels, batch_size, num_channels = 3, is_lstm = False):
         """
         Creates a generator object which yields two arrays. One array for waveforms, and one array for labels
