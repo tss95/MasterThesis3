@@ -206,8 +206,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             # Initializing generators:
             train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
             val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
-            train_enq.start(workers = 12, max_queue_size = 15)
-            val_enq.start(workers = 12, max_queue_size = 15)
+            train_enq.start(workers = 16, max_queue_size = 15)
+            val_enq.start(workers = 16, max_queue_size = 15)
             train_gen = train_enq.get()
             val_gen = train_enq.get()
             
@@ -229,9 +229,11 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
-                                                                        steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
-                val_enq.stop()
+                #loss, accuracy, precision, recall = model.evaluate(x=val_gen,
+                #                                                        steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
+                #
+                loss, accuracy, precision, recall = model.evaluate(x=np.reshape(self.x_val,(self.x_val.shape[0], self.x_val.shape[2], self.x_val.shape[1])), y= self.y_val)
+                
                 # Record metrics for train
                 metrics = {}
                 metrics['val'] = {  "val_loss" : loss,
@@ -241,20 +243,30 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 current_picks.append(metrics['val'])
                 
                 # Evaluate the fitted model on the train set
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x = train_gen,
-                                                                                            steps=self.helper.get_steps_per_epoch(self.train_ds,
-                                                                                                                                batch_size))
-                train_enq.stop()
+                #train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x = train_gen,
+                #                                                                            steps=self.helper.get_steps_per_epoch(self.train_ds, batch_size))
+                # 
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)
+                
                 
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
+
+                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, plot = False, run_evaluate = False)
+                train_enq.stop()
+                val_enq.stop()
+                gc.collect()
+                
+                tf.keras.backend.clear_session()
+                tf.compat.v1.reset_default_graph()
+                del model, train_gen, val_gen, train_enq, val_enq
+
                 if self.log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
-                gc.collect()
-                tf.keras.backend.clear_session()
+
             except Exception as e:
                 print(e)
                 print("Something went wrong while training the model (most likely)")

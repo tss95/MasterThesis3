@@ -48,19 +48,10 @@ def data_generator(traces, labels, batch_size, loadData, handler, noiseAug, num_
             # to fill an entire batch.
             # when this condition is true, it will be the last iteration of the loop, 
             # so at next call the iterator will start at 0 again.
-            if offset + batch_size > num_samples:
-                overflow = offset + batch_size - num_samples
-
-                batch_traces[0:batch_size - overflow] = traces[offset:(offset+batch_size) - overflow]
-                batch_labels[0:batch_size - overflow] = labels[offset:(offset+batch_size) - overflow]
-
-                i_start = random.randint(0, num_samples-overflow)
-                batch_traces[batch_size - overflow:batch_size] = traces[i_start:i_start + overflow]
-                batch_labels[batch_size - overflow:batch_size] = labels[i_start:i_start + overflow]
-            # Regular trucking along here
-            else:
-                batch_traces = traces[offset:offset + batch_size]
-                batch_labels = labels[offset:offset + batch_size]
+            
+            
+            batch_traces = traces[offset:offset + batch_size]
+            batch_labels = labels[offset:offset + batch_size]
 
             # Adds a little noise to each event, as a regulatory measure
             if noiseAug != None:
@@ -74,3 +65,19 @@ def data_generator(traces, labels, batch_size, loadData, handler, noiseAug, num_
 
 def preprocess_data(traces, noiseAug):
     return noiseAug.batch_augment_noise(traces, 0, noiseAug.noise_std/10)
+
+
+"""
+if offset + batch_size > num_samples:
+    overflow = offset + batch_size - num_samples
+
+    batch_traces[0:batch_size - overflow] = traces[offset:(offset+batch_size) - overflow]
+    batch_labels[0:batch_size - overflow] = labels[offset:(offset+batch_size) - overflow]
+
+    i_start = random.randint(0, num_samples-overflow)
+    batch_traces[batch_size - overflow:batch_size] = traces[i_start:i_start + overflow]
+    batch_labels[batch_size - overflow:batch_size] = labels[i_start:i_start + overflow]
+    print("FUCK FUCK FUCK")
+# Regular trucking along here
+#else:
+"""

@@ -56,7 +56,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.05,
+    'subsample_size' : 0.25,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -104,7 +104,7 @@ nr_candidates = 10
 skip_to_index = 0
 
 # Only False if testing
-log_data = False
+log_data = True
 
 # Not used:
 depth = 5

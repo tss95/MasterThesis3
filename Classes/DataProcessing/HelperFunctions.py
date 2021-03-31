@@ -55,13 +55,10 @@ class HelperFunctions():
         
 
     def evaluate_model(self, model, x_test, y_test, label_dict, plot = True, run_evaluate = False):
-        print(x_test.shape)
         x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
-        print(x_test.shape)
         if run_evaluate:
             loss, accuracy, precision, recall = model.evaluate(x = x_test, y = y_test)
-        
-        predictions = self.predict_model(model, x_test, y_test, label_dict)
+        predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
         predictions = np.reshape(predictions, (predictions.shape[0]))
         y_test = np.reshape(y_test, (y_test.shape[0]))
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=2)
@@ -99,7 +96,7 @@ class HelperFunctions():
         return label_dict
             
     def get_steps_per_epoch(self, gen_set, batch_size):
-        return int(len(gen_set)/batch_size)
+        return int(np.floor(len(gen_set)/batch_size))
     
     def get_class_array(self, ds, class_dict):
         if len(list(class_dict.keys())) > len(set(class_dict.values())):

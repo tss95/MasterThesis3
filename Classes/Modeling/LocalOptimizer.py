@@ -219,12 +219,7 @@ class LocalOptimizer(GridSearchResultProcessor):
         if 'num_channels' in best_model_dict:
             del best_model_dict['num_channels']
         return {key:[value] for (key,value) in best_model_dict.items()}
-
-    def create_search_grid(self, main_model_grid):
-        # Handle hyperparameters that are the same for all models
-        param_grid = main_model_grid.copy()
-        scaler = range(-4, 4, 2)
-    
+   
     
     def create_batch_params(self, batch_center):
         max_batch_size = 4096
@@ -252,11 +247,13 @@ class LocalOptimizer(GridSearchResultProcessor):
         del options[options.index(current_optimizer)]
         return options
 
-    def create_activation_params(self, current_activation, include_linear):
+    def create_activation_params(self, current_activation, include_linear, cnn_mode = False):
         if include_linear:
             options = ["linear", "relu", "softmax", "tanh", "sigmoid"]
         else: 
             options = ["relu", "softmax", "tanh", "sigmoid"]
+        if cnn_mode:
+            return ["relu", "tanh"]
         del options[options.index(current_activation)]
         return options
 

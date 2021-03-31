@@ -183,8 +183,10 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
-                                                                        steps=self.helper.get_steps_per_epoch(self.loadData.val, batch_size))
+                #loss, accuracy, precision, recall = model.evaluate(x=val_gen,
+                #                                                        steps=self.helper.get_steps_per_epoch(self.loadData.val, batch_size))
+                
+                loss, accuracy, precision, recall = model.evaluate(x=np.reshape(self.x_val,(self.x_val.shape[0], self.x_val.shape[2], self.x_val.shape[1])), y= self.y_val)
                 # Record metrics for train
                 metrics = {}
                 metrics['val'] = {  "val_loss" : loss,
@@ -194,17 +196,25 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
-                                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train,
-                                                                                                                                batch_size))
+                #train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
+                #                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train,
+                # 
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)                                                                                                                batch_size))
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,
                                     "train_recall" : train_recall}
+                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, plot = False, run_evaluate = False)
+                train_enq.stop()
+                val_enq.stop()
+                gc.collect()
+                
+                tf.keras.backend.clear_session()
+                tf.compat.v1.reset_default_graph()
+                del model, train_gen, val_gen, train_enq, val_enq
                 if log_data:
                     self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.result_file_name)
-                gc.collect()
-                tf.keras.backend.clear_session()
+
             except Exception as e:
                 print(e)
                 print("Error (hopefully) occured during training.")

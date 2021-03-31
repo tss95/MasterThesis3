@@ -49,6 +49,9 @@ class LocalOptimizerDynamic(LocalOptimizer):
         self.is_dynamic = False
         if type(self.model_nr_type) == str:
             self.is_dynamic = True
+        self.cnn_mode = False
+        if self.model_nr_type == "CNN":
+            self.cnn_mode = True
 
     
     def run_exhaustive_mode(self, optimize_metric, nr_candidates, metric_gap, log_data, skip_to_index = 0):
@@ -146,7 +149,7 @@ class LocalOptimizerDynamic(LocalOptimizer):
 
             if log_data:
 
-                self.results_df = self.store_params_before_fit(search_space[i], self.results_df, self.result_file_name)
+                self.results_df = self.store_params_before_fit_opti(search_space[i], self.results_df, self.result_file_name)
             
             # Generate build model args using the picks from above.
             _, _, timesteps = self.handler.get_trace_shape_no_cast(self.loadData.train, self.use_time_augmentor)
@@ -179,8 +182,8 @@ class LocalOptimizerDynamic(LocalOptimizer):
             # Initializing generators:
             train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, search_space[i]['batch_size'], self.loadData, self.handler, self.noiseAug, num_channels = self.num_channels, is_lstm  = True), use_multiprocessing = False)
             val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val, search_space[i]['batch_size'], self.loadData, self.handler, self.noiseAug, num_channels = self.num_channels, is_lstm  = True), use_multiprocessing = False)
-            train_enq.start(workers = 12, max_queue_size = 15)
-            val_enq.start(workers = 12, max_queue_size = 15)
+            train_enq.start(workers = 16, max_queue_size = 15)
+            val_enq.start(workers = 16, max_queue_size = 15)
             train_gen = train_enq.get()
             val_gen = train_enq.get()
 
@@ -203,9 +206,7 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
-                                                                        steps=self.helper.get_steps_per_epoch(self.loadData.val, 
-                                                                                                                search_space[i]['batch_size']))
+                loss, accuracy, precision, recall = model.evaluate(x=np.reshape(self.x_val,(self.x_val.shape[0], self.x_val.shape[2], self.x_val.shape[1])), y= self.y_val)
                 # Record metrics for train
                 metrics = {}
                 metrics['val'] = {  "val_loss" : loss,
@@ -215,9 +216,7 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
-                                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train,
-                                                                                                                                search_space[i]['batch_size']))
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,
@@ -226,8 +225,6 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, plot = False, run_evaluate = False)
                 train_enq.stop()
                 val_enq.stop()
-                train_gen.stop()
-                val_gen.stop()
                 gc.collect()
                 
                 tf.keras.backend.clear_session()
@@ -263,7 +260,7 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 'epochs' : self.create_epochs_params(main_grid['epochs']),
                 'learning_rate' : self.create_learning_rate_params(main_grid['learning_rate']),
                 'optimizer' : self.create_optimizer_params(main_grid['optimizer']),
-                'activation' : self.create_activation_params(main_grid['activation'], include_linear = False),
+                'activation' : self.create_activation_params(main_grid['activation'], include_linear = False, cnn_mode = self.cnn_mode),
                 'dropout_rate' : self. create_dropout_params(main_grid['dropout_rate']),
                 'kernel_size' : self.create_filter_size_params(main_grid['kernel_size']),
                 'l1_r' : self.create_reg_params(main_grid['l1_r']),
