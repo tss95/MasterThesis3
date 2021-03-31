@@ -125,7 +125,7 @@ class GridSearchResultProcessor():
         nr_fillers = len(results_df.columns) - len(picks)
         for i in range(nr_fillers):
             picks.append(np.nan)
-        temp_df = pd.DataFrame(np.array(picks).reshape(1,len(results_df.columns)), columns = results_df.columns)
+        temp_df = pd.DataFrame(np.array(picks, dtype = object).reshape(1,len(results_df.columns)), columns = results_df.columns)
         results_df = results_df.append(temp_df, ignore_index = True)
         for idx, column in enumerate(results_df.columns):
             if idx >= len(picks):

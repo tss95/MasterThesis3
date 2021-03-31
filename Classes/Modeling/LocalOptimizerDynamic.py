@@ -206,7 +206,8 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 model.fit(train_gen, **fit_args)
                 
                 # Evaluate the fitted model on the validation set
-                loss, accuracy, precision, recall = model.evaluate(x=np.reshape(self.x_val,(self.x_val.shape[0], self.x_val.shape[2], self.x_val.shape[1])), y= self.y_val)
+                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
+                                                                   steps=self.helper.get_steps_per_epoch(self.loadData.val, batch_size))
                 # Record metrics for train
                 metrics = {}
                 metrics['val'] = {  "val_loss" : loss,
@@ -216,7 +217,8 @@ class LocalOptimizerDynamic(LocalOptimizer):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
+                                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train, batch_size))
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,

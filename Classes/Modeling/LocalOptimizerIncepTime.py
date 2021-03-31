@@ -196,10 +196,10 @@ class LocalOptimizerIncepTime(LocalOptimizer):
                 
                 # Evaluate the fitted model on the train set
                 # Likely very redundant
-                #train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
-                #                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train,
-                # 
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)                                                                                                                batch_size))
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
+                                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train, batch_size))
+                 
+            
                 metrics['train'] = { "train_loss" : train_loss,
                                     "train_accuracy" : train_accuracy,
                                     "train_precision": train_precision,

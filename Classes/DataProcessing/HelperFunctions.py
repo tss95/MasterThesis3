@@ -43,7 +43,7 @@ class HelperFunctions():
         #true_labels_str = np.empty(())
         predictions = model.predict(x_test)
         predictions = self.convert_to_class(predictions)
-        predictions = predictions[:num_predictions]
+        predictions = predictions
         return predictions
         
     
@@ -54,14 +54,18 @@ class HelperFunctions():
         raise Exception("More than two classes has not been implemented")
         
 
-    def evaluate_model(self, model, x_test, y_test, label_dict, plot = True, run_evaluate = False):
+    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, plot = True, run_evaluate = False):
+        x_test = x_test[:][:,:num_channels]
         x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
         if run_evaluate:
             loss, accuracy, precision, recall = model.evaluate(x = x_test, y = y_test)
         predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
         predictions = np.reshape(predictions, (predictions.shape[0]))
         y_test = np.reshape(y_test, (y_test.shape[0]))
-        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=2)
+        y_test = y_test[:len(predictions)]
+        print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
+        num_classes = len(set(label_dict.keys()))
+        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
         if plot:
             self.plot_confusion_matrix(conf, label_dict)
@@ -183,7 +187,7 @@ class HelperFunctions():
                 input_shape = (timesteps, channels)
             if type(decay_sequence) is not list:
                 print(decay_sequence)
-                decay_sequence = json.loads(decay_sequence)
+                #decay_sequence = json.loads(decay_sequence)
             return {"model_type" : model_nr_type,
                     "num_layers": num_layers,
                     "input_shape" : input_shape,

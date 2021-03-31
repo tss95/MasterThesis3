@@ -204,8 +204,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             print(model.summary())
 
             # Initializing generators:
-            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
-            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = self.num_channels, is_lstm  = True), use_multiprocessing = False)
+            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = self.num_channels, is_lstm  = True), use_multiprocessing = False)
             train_enq.start(workers = 16, max_queue_size = 15)
             val_enq.start(workers = 16, max_queue_size = 15)
             train_gen = train_enq.get()
@@ -232,7 +232,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 #loss, accuracy, precision, recall = model.evaluate(x=val_gen,
                 #                                                        steps=self.helper.get_steps_per_epoch(self.val_ds, batch_size))
                 #
-                loss, accuracy, precision, recall = model.evaluate(x=np.reshape(self.x_val,(self.x_val.shape[0], self.x_val.shape[2], self.x_val.shape[1])), y= self.y_val)
+                loss, accuracy, precision, recall = model.evaluate(x=val_gen,
+                                                                   steps=self.helper.get_steps_per_epoch(self.loadData.val, batch_size))
                 
                 # Record metrics for train
                 metrics = {}
@@ -246,7 +247,8 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                 #train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x = train_gen,
                 #                                                                            steps=self.helper.get_steps_per_epoch(self.train_ds, batch_size))
                 # 
-                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=np.reshape(self.x_train,(self.x_train.shape[0], self.x_train.shape[2], self.x_train.shape[1])), y = self.y_train)
+                train_loss, train_accuracy, train_precision, train_recall = model.evaluate(x=train_gen,
+                                                                                            steps=self.helper.get_steps_per_epoch(self.loadData.train, batch_size))
                 
                 
                 metrics['train'] = { "train_loss" : train_loss,
@@ -255,7 +257,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
                                     "train_recall" : train_recall}
                 current_picks.append(metrics['train'])
 
-                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, plot = False, run_evaluate = False)
+                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
                 train_enq.stop()
                 val_enq.stop()
                 gc.collect()

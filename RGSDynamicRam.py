@@ -2,10 +2,6 @@ import numpy as np
 import os
 import sys
 import pandas as pd
-
-import sklearn as sk
-import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 
 import pylab as pl
@@ -38,24 +34,11 @@ os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
-from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
-from Classes.DataProcessing.RamLoader import RamLoader
-from Classes.DataProcessing.RamGenerator import RamGenerator
-from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
-from Classes.Modeling.InceptionTimeRGS import InceptionTimeRGS
-from Classes.Modeling.CustomCallback import CustomCallback
-from Classes.Modeling.ResultFitter import ResultFitter
-from Classes.Scaling.ScalerFitter import ScalerFitter
-from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
-from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from Classes.Modeling.RandomGridSearchDynamic import RandomGridSearchDynamic
 import json
 #from Classes import Tf_shutup
 #Tf_shutup.Tf_shutup()
 
-
-plt.rcParams["figure.figsize"]= (15,15)
 helper = HelperFunctions()
 
 import sys
@@ -115,14 +98,15 @@ model_grid = {
     #"start_neurons" : [20, 25, 30, 35],
     "start_neurons" : np.arange(100, 300, 10),
     "use_layerwise_dropout_batchnorm" : [False, True],
-    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,0.5,0.25,0.25,0.5,1], [1,1,1,1,1,1]],
+    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
     "filters" : np.arange(10, 80, 2),
-    "kernel_size" : np.arange(2, 100, 2),
+    "kernel_size" : np.arange(3, 100, 3),
     "padding" : ["same"],
     "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
     "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
-    "activation" : ["tanh", "tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
+    "activation" : ["tanh", "relu"],
+    #"activation" : ["tanh", "tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
     "output_layer_activation" : ["sigmoid"]
 }
 
@@ -140,7 +124,7 @@ band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 750
+n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False
@@ -173,7 +157,7 @@ try:
     results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
 
 except Exception as e:
-    print(e)
+    print(str(e))
 
 finally:
     if shutdown:

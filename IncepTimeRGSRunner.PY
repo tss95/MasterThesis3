@@ -66,9 +66,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -95,7 +95,7 @@ print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
 
 
 hyper_grid = {    
-    "batch_size" : [32, 64, 128, 256, 512, 512],
+    "batch_size" : [64, 128, 256],
     "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
     "optimizer" : ["adam", "adam", "adam", "adam", "rmsprop", "sgd", "adam", "rmsprop", "sgd"]
@@ -107,9 +107,9 @@ model_grid = {
     "kernel_size" : np.arange(30, 60, 2),
     "bottleneck_size" : np.arange(30, 50, 2),
     "num_filters" : np.arange(20, 40, 2),
-    "shortcut_activation" : ["relu", "relu", "relu", "relu",  "sigmoid", "softmax", "tanh"],
-    "module_activation" : ["linear", "linear", "linear", "relu", "sigmoid", "softmax", "tanh"],
-    "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "sigmoid", "softmax", "tanh"],
+    "shortcut_activation" : ["relu", "relu", "relu", "relu", "tanh"],
+    "module_activation" : ["linear", "linear", "linear", "relu", "tanh"],
+    "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "tanh"],
     "output_activation": ["sigmoid"],
     "reg_shortcut": [True, False, False],
     "reg_module" : [True, False, False],
@@ -117,7 +117,7 @@ model_grid = {
     "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
 }
 
-num_channels = 3
+num_channels = 2
 
 use_time_augmentor = True
 scaler_name = "standard"
@@ -131,7 +131,7 @@ n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = False
+use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
