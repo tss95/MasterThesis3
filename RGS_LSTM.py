@@ -34,7 +34,7 @@ os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.Modeling.RandomGridSearchDynamic import RandomGridSearchDynamic
+from Classes.Modeling.RGS import RGS
 import json
 #from Classes import Tf_shutup
 #Tf_shutup.Tf_shutup()
@@ -50,13 +50,10 @@ import pprint
 mixed_precision.set_global_policy('mixed_float16')
 
 
-
-
-
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -71,38 +68,26 @@ full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
-# Printing data stats:
-print(len(train_ds), len(val_ds), len(test_ds))
-classes, counts = handler.get_class_distribution_from_ds(train_ds)
-classes, counts = handler.get_class_distribution_from_ds(val_ds)
-print("Nr noise samples " + str(len(loadData.noise_ds)))
-print(f"Non noise prop: {len(full_ds[full_ds[:,1] != 'noise'])/len(full_ds)}")
-print(f"Train non noise prop: {len(train_ds[train_ds[:,1] != 'noise'])/len(train_ds)}")
-print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
-
 
 #- Consider editing the decay_sequences.
 
 hyper_grid = {
-    "num_layers" : [1, 2, 3, 4, 5],
-    "batch_size" : [64, 128, 256],
-    "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
-    "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001, 0.0001, 0.0001],
-    "optimizer" : ["sgd", "sgd", "sgd", "sgd", "rmsprop", "adam", "rmsprop", "sgd"],
-    "units" : np.arange(20, 100, 10),
-    "use_layerwise_dropout_batchnorm" : [False, True],
-    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
-    "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
-    "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
-    "activation" : ["tanh", "relu"],
-    #"activation" : ["tanh", "tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
-    "output_layer_activation" : ["sigmoid"]
-}
+        "batch_size" : [64, 128, 256],
+        "epochs" : [50],
+        "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
+        "optimizer" : ["sgd", "sgd", "adam", "rmsprop"],
+        "num_layers" : [1, 2, 3, 4, 5],
+        "units" : np.arange(100, 300, 10),
+        "use_layerwise_dropout_batchnorm" : [False, True],
+        "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
+        "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
+        "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
+        "activation" : ["tanh"],
+        "output_layer_activation" : ["sigmoid"]
+    }
 
 
-
-model_type = "Dense"
+model_type = "LSTM"
 is_lstm = True
 num_channels = 2    
 
@@ -122,7 +107,7 @@ use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = True
+log_data = False
 
 shutdown = False
 
@@ -139,11 +124,11 @@ if use_tensorboard:
 
 
 try:
-    randomGridSearch = RandomGridSearchDynamic(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                                                filter_name, n_picks, hyper_grid=hyper_grid, model_grid=model_grid, use_tensorboard = use_tensorboard, 
-                                                use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                                                use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                                                start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+    randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                            filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
+                            use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
+                            use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
     results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
 
 except Exception as e:

@@ -91,6 +91,11 @@ class RGS(GridSearchResultProcessor):
         # Create name of results file, get initiated results df, either brand new or continue old.
         self.results_file_name = self.get_results_file_name()
         print(self.results_file_name)
+        if self.start_from_scratch:
+            confirmation = input("Are you sure you want to erase the results file? Y/N \n").upper()
+            if confirmation != "Y":
+                print("Terminating process.")
+                return
         self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
         print(self.results_df)
         # Preprocessing and loading all data to RAM:
@@ -214,7 +219,7 @@ class RGS(GridSearchResultProcessor):
                                     "train_recall" : train_eval["recall"]}
                 
                 
-                _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
+                conf, _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
                 train_enq.stop()
                 val_enq.stop()
                 gc.collect()
@@ -224,7 +229,7 @@ class RGS(GridSearchResultProcessor):
                 del model, train_gen, val_gen, train_enq, val_enq
                 
                 if self.log_data:
-                    self.results_df = self.store_metrics_after_fit(metrics, self.results_df, self.results_file_name)
+                    self.results_df = self.store_metrics_after_fit(metrics, conf, self.results_df, self.results_file_name)
 
             except Exception as e:
                 print(str(e))

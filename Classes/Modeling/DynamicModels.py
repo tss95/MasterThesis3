@@ -9,8 +9,8 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
 
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, BatchNormalization, InputLayer, LSTM
-from tensorflow.compat.v1.keras.layers import CuDNNLSTM
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, BatchNormalization, InputLayer, LSTM, CuDNNLSTM
+#from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.models import Sequential
@@ -88,7 +88,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
-        output_layer_acitvation = p['output_layer_activation']
+        output_layer_activation = p['output_layer_activation']
 
         input_layer = tf.keras.layers.Input(self.input_shape)
         x = input_layer
@@ -104,10 +104,10 @@ class DynamicModels():
                      kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
                      bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
             if use_layerwise_dropout_batchnorm:
-                x = BatchNormaliztion()(x)
+                x = BatchNormalization()(x)
                 x = Dropout(dropout_rate)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
-        model = tf.train.Model(inputs = input_layer, outputs = output_layer)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model
 
 
@@ -143,7 +143,7 @@ class DynamicModels():
             if use_layerwise_dropout_batchnorm:
                 x = BatchNormalization()(x)
             x = Activation(cnn_activation)(x)
-            if use_layerwise_batchnorm:
+            if use_layerwise_dropout_batchnorm:
                 x = Dropout(dropout_rate)(x)
             x = MaxPool1D()(x)
         x = Flatten()(x)

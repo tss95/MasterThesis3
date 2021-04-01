@@ -1,0 +1,4 @@
+use_layerwise_dropout_batchnorm,units,output_layer_activation,optimizer,num_layers,learning_rate,l2_r,l1_r,epochs,dropout_rate,decay_sequence,batch_size,activation,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+False,170,sigmoid,sgd,3,0.0001,0.3,0.001,1,0.1,"[1, 1, 1]",64,sigmoid,266.967285156,0.510089993477,0.0,0.0,266.972595215,0.521158874035,0.0,0.0,"[[1567    0]
+ [1558    0]]"
+False,210,sigmoid,sgd,1,0.01,0.2,0.3,1,0.2,[1],128,relu,,,,,,,,,

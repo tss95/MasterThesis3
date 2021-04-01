@@ -32,7 +32,8 @@ class GridSearchResultProcessor():
         keys = list(current_picks.keys())
         metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall"]
         metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall"]
-        header = np.concatenate((keys, metrics_train_keys, metrics_val_keys))
+        confusion_matrix_key = ["confusion_matrix"]
+        header = np.concatenate((keys, metrics_train_keys, metrics_val_keys, confusion_matrix_key))
         results_df = pd.DataFrame(columns = header)
         return results_df
     
@@ -150,11 +151,14 @@ class GridSearchResultProcessor():
 
 
 
-    def store_metrics_after_fit(self, metrics, results_df, file_name):
+    def store_metrics_after_fit(self, metrics, confusion_matrix, results_df, file_name):
         results_df = results_df.replace('nan', np.nan)
         unfinished_columns = results_df.columns[results_df.isna().any()].tolist()
         for column in unfinished_columns:
-            results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics[column.split('_')[0]][column]
+            if column == "confusion_matrix":
+                results_df.iloc[-1, results_df.columns.get_loc(column)] = str(np.array(confusion_matrix))
+            else:
+                results_df.iloc[-1, results_df.columns.get_loc(column)] = metrics[column.split('_')[0]][column]
         self.save_results_df(results_df, file_name)
         return results_df
 

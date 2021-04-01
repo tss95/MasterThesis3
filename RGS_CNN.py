@@ -71,17 +71,6 @@ full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
-# Printing data stats:
-print(len(train_ds), len(val_ds), len(test_ds))
-classes, counts = handler.get_class_distribution_from_ds(train_ds)
-classes, counts = handler.get_class_distribution_from_ds(val_ds)
-print("Nr noise samples " + str(len(loadData.noise_ds)))
-print(f"Non noise prop: {len(full_ds[full_ds[:,1] != 'noise'])/len(full_ds)}")
-print(f"Train non noise prop: {len(train_ds[train_ds[:,1] != 'noise'])/len(train_ds)}")
-print(f"Val non noise prop: {len(val_ds[val_ds[:,1] != 'noise'])/len(val_ds)}")
-
-
-
 #- Consider editing the decay_sequences.
 
 hyper_grid = {
@@ -90,8 +79,8 @@ hyper_grid = {
     "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001, 0.0001, 0.0001],
     "optimizer" : ["sgd", "sgd", "sgd", "sgd", "rmsprop", "adam", "rmsprop", "sgd"],
-    "num_filters" : np.arange(10, 80, 2),
-    "filter_size" : np.arange(3, 100, 3),
+    "num_filters" : np.arange(50, 150, 2),
+    "filter_size" : np.arange(12, 150, 3),
     "cnn_activation" : ["tanh", "relu"],
     "dense_activation" : ["softmax", "sigmoid", "relu", "tanh"],
     "padding" : ["same"],
@@ -125,7 +114,7 @@ use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
-start_from_scratch = True
+start_from_scratch = False
 use_reduced_lr = True
 log_data = True
 
