@@ -64,6 +64,9 @@ class LoadData():
 
             if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
                 raise Exception("Invalid load data arguments.")
+        print("\n")
+        self.print_data_info()
+
 
     def load_data(self):
         if not self.use_true_test_set:
@@ -260,3 +263,37 @@ class LoadData():
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
         print('Mapping redundancy: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
+
+    def print_data_info(self):
+        if self.earth_explo_only:
+            print("Loaded explosion and earthquake dataset:")
+        if self.noise_not_noise:
+            print("Loaded noise non-noise dataset.")
+        if self.even_balance:
+            print("Evenly balanced among classes in the train set.")
+        if self.balance_non_train_set:
+            print("As well as non train sets.")
+        print("Distribution (Label: (counts, proportion)) of")
+        print("Full ds:")
+        labels, counts = np.unique(self.full_ds[:,1], return_counts = True)
+        print(self.generate_dist_string_EE(labels, counts))
+        print("Train ds:")
+        labels, counts = np.unique(self.train[:,1], return_counts = True)
+        print(self.generate_dist_string_EE(labels, counts))
+        print("Val ds:")
+        labels, counts = np.unique(self.val[:,1], return_counts = True)
+        print(self.generate_dist_string_EE(labels, counts))
+        print("Test ds:")
+        labels, counts = np.unique(self.test[:,1], return_counts = True)
+        print(self.generate_dist_string_EE(labels, counts))
+
+        
+        
+    def generate_dist_string_EE(self, labels, counts):
+        string = ""
+        for i in range(len(labels)):
+            string += f"{labels[i]}: ({counts[i]}, {np.round(counts[i]/np.sum(counts), decimals = 4)})  "
+            if i != len(labels) - 1:
+                string += "|  "
+        return string
+            

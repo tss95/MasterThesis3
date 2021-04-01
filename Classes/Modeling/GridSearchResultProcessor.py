@@ -53,7 +53,7 @@ class GridSearchResultProcessor():
             self.clear_results_df(file_name)
             return self.create_results_df_opti(search_picks)
         else:
-            if self.does_result_exist(file_name) or self.does_result_exist(f"{self.get_result_file_path()}/{file_name}"):
+            if self.does_result_exist(file_name) or self.does_result_exist(f"{self.get_results_file_path()}/{file_name}"):
                 #file_name = file_name.split('/')[-1]
                 results_df = self.get_results_df_by_name(file_name)
                 return results_df

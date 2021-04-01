@@ -64,7 +64,7 @@ class HelperFunctions():
         y_test = np.reshape(y_test, (y_test.shape[0]))
         y_test = y_test[:len(predictions)]
         print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
-        num_classes = len(set(label_dict.keys()))
+        num_classes = len(set(label_dict.values()))
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
         if plot:
@@ -348,13 +348,16 @@ class HelperFunctions():
 
         return sorted_train_ds_list[0:n]
     
-    def get_max_decay_sequence(self, num_layers, start_neurons, attempted_decay_sequence, num_classes):
+    def get_max_decay_sequence(self, num_layers, units_or_num_filters, attempted_decay_sequence, num_classes):
+        """
+        TODO: Does not handle situations where the decay sequence causes the number of units or num filters to grow each layer.
+        """
         decay_sequence = attempted_decay_sequence
         num_out_neurons = num_classes
         if num_classes == 2:
             num_out_neurons = 1
         for idx, decay in enumerate(attempted_decay_sequence):
-            if start_neurons//decay < num_out_neurons:
+            if units_or_num_filters//decay < num_out_neurons:
                 decay_sequence[idx] = decay_sequence[idx-1]
         return decay_sequence[0:num_layers]
 

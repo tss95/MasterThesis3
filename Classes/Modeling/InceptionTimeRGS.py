@@ -200,6 +200,7 @@ class InceptionTimeRGS(GridSearchResultProcessor):
             # Build model using args generated above
             inceptionTime = InceptionTimeModel(**model_args)
             model = inceptionTime.build_model(input_shape, self.num_classes)
+            model.compile(**compile_args)
 
             print(model.summary())
 
