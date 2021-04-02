@@ -54,51 +54,71 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.25,
+    'subsample_size' : 0.2,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
 }
 loadData = LoadData(**load_args)
-full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
+train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
 #- Consider editing the decay_sequences.
 
+"""
 hyper_grid = {
     "num_layers" : [1, 2, 3, 4, 5],
     "batch_size" : [64, 128, 256],
     "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001, 0.0001, 0.0001],
     "optimizer" : ["sgd", "sgd", "sgd", "sgd", "rmsprop", "adam", "rmsprop", "sgd"],
-    "num_filters" : np.arange(50, 150, 2),
-    "filter_size" : np.arange(12, 150, 3),
+    "num_filters" : np.arange(50, 100, 2),
+    "filter_size" : np.arange(50, 130, 3),
     "cnn_activation" : ["tanh", "relu"],
     "dense_activation" : ["softmax", "sigmoid", "relu", "tanh"],
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [False, True],
     "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
-    "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001],
+    "l2_r" : [0.01, 0.001, 0.0001],
+    "l1_r" : [0.1, 0.01, 0.001, 0.0001],
     "first_dense_units" : np.arange(150,300),
     "second_dense_units" : np.arange(75,300),
     "output_layer_activation" : ["sigmoid"]
 }
-
-
+"""
+# Near the parameters of the old best performer
+hyper_grid = {
+    "num_layers" : [1, 2],
+    "batch_size" : [64, 128, 256],
+    "epochs" : [75],
+    "learning_rate" : [0.05, 0.25, 0.01, 0.005],
+    "optimizer" : ["sgd"],
+    "num_filters" : np.arange(60, 80, 2),
+    "filter_size" : np.arange(40, 60, 2),
+    "cnn_activation" : ["tanh", "relu"],
+    "dense_activation" : ["relu", "tanh"],
+    "padding" : ["same"],
+    "use_layerwise_dropout_batchnorm" : [False],
+    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+    "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
+    "l2_r" : [0.1, 0.01],
+    "l1_r" : [0.01, 0.001, 0.0001],
+    "first_dense_units" : np.arange(250,300, 2),
+    "output_layer_activation" : ["sigmoid"]
+}
 
 model_type = "CNN"
 is_lstm = True
-num_channels = 2    
+num_channels = 3
 
 use_time_augmentor = True
 scaler_name = "standard"
@@ -108,7 +128,7 @@ band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 100
+n_picks = 300
 
 use_tensorboard = True
 use_liveplots = False

@@ -2,12 +2,13 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras import utils
 from obspy import Stream, Trace, UTCDateTime
+import time
 
 import os
 import sys
 classes_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(classes_dir)
-from Classes.DataProcessing.LoadData import LoadData
+#from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.DataGenerator import DataGenerator
@@ -20,10 +21,11 @@ from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
 
 class RamLoader:
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
-                filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False):
+                filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False, meier_load = False):
         self.loadData = loadData
         self.handler = handler
-        self.full_ds, self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
+        self.train_ds, self.val_ds, self.test_ds = self.loadData.get_datasets()
+        self.noise_ds = self.loadData.noise_ds
         self.use_time_augmentor = use_time_augmentor
         self.use_noise_augmentor = use_noise_augmentor
         self.scaler_name = scaler_name
@@ -33,6 +35,7 @@ class RamLoader:
         self.highpass_freq = highpass_freq
         self.load_test_set = load_test_set
         self.num_classes = len(set(handler.loadData.label_dict.values()))
+        self.meier_load = meier_load
 
     
 
@@ -62,27 +65,27 @@ class RamLoader:
     These solutions should be resolved.
     """
     
-    def fit_timeAug(self):
+    def fit_timeAug(self, ds, dataset_name):
         timeAug = None
         if self.use_time_augmentor:
-            if self.loadData.earth_explo_only:
-                full_and_noise_ds = np.concatenate((self.loadData.full_ds, self.loadData.noise_ds))
-                timeAug = TimeAugmentor(self.handler, full_and_noise_ds, seed = self.loadData.seed)
-            else:
-                timeAug = TimeAugmentor(self.handler, self.full_ds, seed = self.loadData.seed)
+            timeAug = TimeAugmentor(self.handler, ds, dataset_name = dataset_name, seed = self.loadData.seed)
             timeAug.fit()
             print("\n")
         return timeAug
     
-    def fit_scaler(self, traces):
+    def fit_scaler(self, traces, timeAug):
         scaler = None
         if self.scaler_name != None:
             if self.scaler_name == "minmax":
-                scaler = MinMaxScalerFitter(self.train_ds, self.timeAug).fit_scaler_ram(traces)
+                scaler = MinMaxScalerFitter(self.train_ds, timeAug)
+                scaler.fit_scaler_ram(traces)
+                scaler = scaler.scaler
             elif self.scaler_name == "standard":
-                scaler = StandardScalerFitter(self.train_ds, self.timeAug).fit_scaler_ram(traces)
+                scaler = StandardScalerFitter(self.train_ds, timeAug)
+                scaler.fit_scaler_ram(traces)
+                scaler = scaler.scaler
             elif self.scaler_name == "robust":
-                scaler = RobustScalerFitter(self.train_ds, self.timeAug)
+                scaler = RobustScalerFitter(self.train_ds, timeAug)
                 print("Fit process of robust scaler skipped as unecessary.")
             elif self.scaler_name != "minmax" or self.scaler_name != "standard" or self.scaler_name != "robust":
                 raise Exception(f"{self.scaler_name} is not implemented.")
@@ -104,9 +107,11 @@ class RamLoader:
             return "validation set"
         if substage == 2:
             return "test set"
+        if substage == 3:
+            return "noise set"
         return ""
     
-    def stage_one_load(self, ds, substage):
+    def stage_one_load(self, ds, timeAug, substage):
         loaded_label = np.empty((len(ds), 1))
         loaded_trace = np.empty((self.handler.get_trace_shape_no_cast(ds, self.use_time_augmentor)))
         num_events = len(ds)
@@ -117,11 +122,11 @@ class RamLoader:
             # timeAug, highpass and detrend.
             if self.filter_name != None or self.use_time_augmentor:
                 if self.filter_name != None and self.use_time_augmentor:
-                    loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
+                    loaded_trace[i] = timeAug.augment_event(ds[i][0], ds[i][2])
                     info = self.handler.path_to_trace(ds[i][0])[1]
                     loaded_trace[i] = self.apply_filter(loaded_trace[i], info, self.filter_name, highpass_freq = self.highpass_freq, band_min = self.band_min, band_max = self.band_max)
                 if self.filter_name == None:
-                    loaded_trace[i] = self.timeAug.augment_event(ds[i][0], ds[i][2])
+                    loaded_trace[i] = timeAug.augment_event(ds[i][0], ds[i][2])
                 if not self.use_time_augmentor:
                     loaded_trace[i] = self.handler.path_to_trace(ds[i][0])[0]
                     info = self.handler.path_to_trace(ds[i][0])[1]
@@ -143,7 +148,7 @@ class RamLoader:
                 bar_text += "timeAug"
         return bar_text
     
-    def stage_two_load(self, traces, labels, substage):
+    def stage_two_load(self, traces, labels, substage, meier_load):
         num_samples = traces.shape[0]
         bar_text = self.stage_two_text(substage)
         if self.scaler_name != None:
@@ -159,10 +164,10 @@ class RamLoader:
                 print("\n")
 
         labels = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
-        if self.num_classes == 2:
+        if self.num_classes == 2 and not meier_load:
             labels = labels[:,1]
             labels = np.reshape(labels, (labels.shape[0],1))
-        return traces
+        return traces, labels
     
     def stage_two_text(self, substage):
         bar_text = f"Stage two loading {self.get_substage(substage)}, labels"
@@ -174,25 +179,51 @@ class RamLoader:
 
 
     def load_to_ram(self):
+        start = time.time()
         # Starting with fitting potential time augmentor
-        self.timeAug = self.fit_timeAug()
+        self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
+        self.val_timeAug = self.fit_timeAug(self.val_ds, "validation")
+        if self.load_test_set:
+            self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
+        if self.loadData.earth_explo_only:
+            self.noise_timeAug = self.fit_timeAug(self.noise_ds, "noise set")
+            
         # Step one, load traces and apply time augmentation and/or detrend/highpass
-        train_trace, train_label = self.stage_one_load(self.train_ds, 0)
-        val_trace, val_label = self.stage_one_load(self.val_ds, 1)
+        train_trace, train_label = self.stage_one_load(self.train_ds, self.train_timeAug, 0)
+        val_trace, val_label = self.stage_one_load(self.val_ds, self.val_timeAug, 1)
         if self.load_test_set:
-            test_trace, test_label = self.stage_one_load(self.test_ds, 2)
+            test_trace, test_label = self.stage_one_load(self.test_ds, self.test_timeAug, 2)
+        
+        
         # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
-        self.scaler = self.fit_scaler(train_trace)
+        self.scaler = self.fit_scaler(train_trace, self.train_timeAug)
+        
+        # When using noise augmentor and earth_explo_only, a scaler for the noise data needs to be fitted.
+        # This is temporarily memory expensive with the current solution.
+        if self.use_noise_augmentor and self.loadData.earth_explo_only:
+            noise_trace, _ = self.stage_one_load(self.noise_ds, self.noise_timeAug, 3)
+            self.noise_scaler = self.fit_scaler(noise_trace, self.noise_timeAug)
+            del noise_trace
+            
+        
         # Using the fitted scaler, we transform the traces:
-        train_trace = self.stage_two_load(train_trace, train_label, 0)
-        val_trace = self.stage_two_load(val_trace, val_label, 1)
+        train_trace, train_label = self.stage_two_load(train_trace, train_label, 0, self.meier_load)
+        val_trace, val_label = self.stage_two_load(val_trace, val_label, 1, self.meier_load)
         if self.load_test_set:
-            test_trace = self.stage_two_load(test_trace, test_label, 2)
-        self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.scaler, self.loadData, self.timeAug)
+            test_trace = self.stage_two_load(test_trace, test_label, 2, self.meier_load)
+        
+        if self.use_noise_augmentor:
+            if self.loadData.earth_explo_only:
+                self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.noise_scaler, self.loadData, self.noise_timeAug)
+            else:
+                self.noiseAug = self.fit_noiseAug(self.loadData.noise_ds, self.scaler, self.loadData, self.train_timeAug)
+        print("\n")
         print("Completed loading to RAM")
+        end = time.time()
+        print(f"Process took {int((end-start))} seconds.")
         if self.load_test_set:
-            return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.timeAug, self.scaler, self.noiseAug
-        return train_trace, train_label, val_trace, val_label, self.timeAug, self.scaler, self.noiseAug
+            return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
+        return train_trace, train_label, val_trace, val_label, self.noiseAug
     
     
     def apply_filter(self, trace, info, filter_name, highpass_freq = 1.0, band_min = 2.0, band_max = 4.0):

@@ -9,8 +9,8 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
 
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, BatchNormalization, InputLayer, LSTM, CuDNNLSTM
-#from tensorflow.compat.v1.keras.layers import CuDNNLSTM
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, LSTM
+from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.models import Sequential
@@ -67,6 +67,10 @@ class DynamicModels():
             self.model = self.create_DENSE_model(**p)
         if self.model_type == "InceptionTime":
             self.model = self.create_InceptionTime_model(**p)
+        if self.model_type == "Meier_CNN":
+            self.model = self.create_Meier_CNN_model(**p)
+        if self.model_type == "Modified_Meier_CNN":
+            self.model = self.create_modified_Meier_CNN_model(**p) 
         self.model.summary()
         
     
@@ -95,14 +99,12 @@ class DynamicModels():
 
         for i in range(num_layers):
             return_sequences = False
-            if i != num_layers:
+            if i != num_layers - 1:
                 return_sequences = True
             x = CuDNNLSTM(units//decay_sequence[i], 
-                     use_bias = True,
-                     recurrent_dropout = 0,
-                     return_sequences = return_sequences,
-                     kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
-                     bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
+                        return_sequences = return_sequences,
+                        kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
+                        bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
             if use_layerwise_dropout_batchnorm:
                 x = BatchNormalization()(x)
                 x = Dropout(dropout_rate)(x)
@@ -126,7 +128,7 @@ class DynamicModels():
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
         first_dense_units = p['first_dense_units']
-        second_dense_units = p['second_dense_units']
+        #second_dense_units = p['second_dense_units']
         output_layer_activation = p['output_layer_activation']
 
 
@@ -148,7 +150,7 @@ class DynamicModels():
             x = MaxPool1D()(x)
         x = Flatten()(x)
         x = Dense(first_dense_units, activation = dense_activation)(x)
-        x = Dense(second_dense_units, activation = dense_activation)(x)
+        #x = Dense(second_dense_units, activation = dense_activation)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model
@@ -184,6 +186,87 @@ class DynamicModels():
     
     def create_InceptionTime_model(self, **p):
         return InceptionTimeModel(self.input_shape, self.num_classes, **p).model
+
+    def create_Meier_CNN_model(self, **p):
+
+        use_maxpool = p['use_maxpool']
+        use_averagepool = p['use_averagepool']
+        use_batchnorm = p['use_batchnorm']
+
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+
+        x = Conv1D(32, kernel_size = 16)(x)
+        if use_maxpool:
+            x = MaxPool1D()(x)
+        if use_averagepool:
+            x = AveragePooling1D()(x)
+        if use_batchnorm:
+            x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        
+        x = Conv1D(64, kernel_size = 16)(x)
+        if use_maxpool:
+            x = MaxPool1D()(x)
+        if use_averagepool:
+            x = AveragePooling1D()(x)
+        if use_batchnorm:
+            x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Conv1D(128, kernel_size = 16)(x)
+        if use_maxpool:
+            x = MaxPool1D()(x)
+        if use_averagepool:
+            x = AveragePooling1D()(x)
+        if use_batchnorm:
+            x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+
+        x = Dense(80, activation = 'relu')(x)
+        x = Dense(80, activation = 'relu')(x)
+
+        output_layer = Dense(2, activation = 'softmax', dtype = 'float32')(x)
+
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+
+        loss = "categorical_crossentropy"
+        acc = tf.metrics.CategoricalAccuracy(name="categorical_accuracy")
+
+        compile_args = {
+            "loss" : loss,
+            "optimizer" : tf.keras.optimizer.Adam(learning_rate=0.001),
+            "metrics" : [acc,
+                        tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                        tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
+        model.compile(**compile_args)
+        return model
+
+    def create_modified_Meier_CNN_model(self, **p):
+        output_layer_activation = p["output_layer_activation"]
+
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+
+        x = Conv1D(32, kernel_size = 16)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = MaxPool1D()(x)
+        x = Conv1D(64, kernel_size = 16)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = MaxPool1D()(x)
+        x = Conv1D(128, kernel_size = 16)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = MaxPool1D()(x)
+
+        x = Dense(80, activation = 'relu')(x)
+        x = Dense(80, activation = 'relu')(x)
+
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
 
 
             

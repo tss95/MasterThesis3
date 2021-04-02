@@ -109,7 +109,7 @@ class RGS(GridSearchResultProcessor):
                               band_max = self.band_max,
                               highpass_freq = self.highpass_freq, 
                               load_test_set = False)
-        self.x_train, self.y_train, self.x_val, self.y_val, self.timeAug, self.scaler, self.noiseAug = ramLoader.load_to_ram()
+        self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = ramLoader.load_to_ram()
 
         
         
@@ -140,7 +140,7 @@ class RGS(GridSearchResultProcessor):
                                                                                 self.p[i]["decay_sequence"], 
                                                                                 self.num_classes)
    
-            if "first_dense_units" in self.p[i]:
+            if "first_dense_units" in self.p[i] and "second_dense_units" in self.p[i]:
                 if self.p[i]["first_dense_units"] < self.p[i]["second_dense_units"]:
                     self.p[i]["second_dense_units"] = self.p[i]["first_dense_units"]
             
@@ -161,8 +161,8 @@ class RGS(GridSearchResultProcessor):
             
             # Initializing generators:
             #gen = RamGenerator(self.loadData, self.handler, self.noiseAug)
-            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
-            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.loadData, self.handler, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            train_enq = GeneratorEnqueuer(data_generator(self.x_train, self.y_train, batch_size, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
+            val_enq = GeneratorEnqueuer(data_generator(self.x_val, self.y_val,batch_size, self.noiseAug, num_channels = num_channels, is_lstm  = self.is_lstm), use_multiprocessing = False)
             train_enq.start(workers = 16, max_queue_size = 15)
             val_enq.start(workers = 16, max_queue_size = 15)
             train_gen = train_enq.get()

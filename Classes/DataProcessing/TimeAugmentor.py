@@ -20,9 +20,10 @@ class TimeAugmentor():
 
 
     
-    def __init__(self, DataHandler, ds, seed = None):
+    def __init__(self, DataHandler, ds, dataset_name, seed = None):
         self.handler = DataHandler
         self.ds = ds
+        self.dataset_name = dataset_name
         self.fitted_dict = {}
         self.seed = seed
 
@@ -160,11 +161,11 @@ class TimeAugmentor():
         return info
         
     
-    def progress_bar(self, current, total, barLength = 20):
+    def progress_bar(self, current, total, text, barLength = 40):
         percent = float(current) * 100 / total
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
-        print('Fitting time augmentor: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')     
+        print('%s: [%s%s] %d %%' % (text, arrow, spaces, percent), end='\r')  
         
 # Old fit implementation. Inconsistency in performance cause of rewrite. This method is more memory efficient, and more robust.
 
@@ -180,7 +181,7 @@ class TimeAugmentor():
             path_red = next(gen)
             path = path_red[0]
             red = int(path_red[1])
-            self.progress_bar(idx + 1, len_ds)
+            self.progress_bar(idx + 1, len_ds, f"Fitting {self.dataset_name} time augmentor")
             if path in self.fitted_dict:
                 if red + 1 <= len(self.fitted_dict[path]['random_start_index']):
                     continue
@@ -196,6 +197,7 @@ class TimeAugmentor():
                                            'random_start_index' : random_start_index}
             idx += 1
         time_end = time.time()
+        print("\n")
         print(f"Fit process completed after {time_end - time_start} seconds. Total datapoints fitted: {len(path_red_ds)}.")
         print(f"Average time per datapoint: {(time_end - time_start) / len(path_red_ds)}")
            

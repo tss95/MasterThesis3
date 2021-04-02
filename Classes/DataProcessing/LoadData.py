@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
 os.chdir(base_dir)
 from GlobalUtils import GlobalUtils
-utils = GlobalUtils()
+glob_utils = GlobalUtils()
 
         
         
@@ -36,26 +36,26 @@ class LoadData():
         # If true, then the class distribution will be equal to 1/num_classes.
         self.even_balance = even_balance
         
-        self.csv_folder = utils.csv_dir
+        self.csv_folder = glob_utils.csv_dir
         #self.csv_folder = os.path.join('/media/tord/T7', 'Thesis_ssd','MasterThesis3.0','csv_folder')
         #self.data_csv_name = 'full_no_test.csv'
-        self.data_csv_name = utils.data_csv_name
+        self.data_csv_name = glob_utils.data_csv_name
         if load_first_batch:
             #self.data_csv_name = 'full_batch_1.csv'
             self.data_csv_name = utils.batch_1_csv_name
             assert not load_everything, "Load everything should be False when using the first batch. A test set has not been generated for this dataset"
         if load_everything:
             #self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
-            self.data_csv_name = utils.no_nan_no_induced_csv_name
+            print("Loading all of second batch. Including the test data.")
+            self.data_csv_name = glob_utils.no_nan_no_induced_csv_name
             self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
             self.create_label_dict()
         else:
-            #self.test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
-            self.test_csv_name = utils.test_csv_name
             self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
             self.create_label_dict()
             self.load_data()
             if self.use_true_test_set:
+                self.test_csv_name = glob_utils.test_csv_name
                 self.true_test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
                 print("WARNING!")
                 print("You are using the true test set.")
@@ -66,81 +66,136 @@ class LoadData():
                 raise Exception("Invalid load data arguments.")
         print("\n")
         self.print_data_info()
+        
+    """
+    Todo:
+     - Want timeAug to fit to each data set, not the entire thing. Should speed things up.
+         - Therefore, want to map redundancy to each set, seperately.
+     - Want to split so that events in training is not in validation/test
 
+    """
 
     def load_data(self):
         if not self.use_true_test_set:
-            if self.balance_non_train_set:
-                self.full_ds = self.balance_ds(self.full_ds, self.downsample, self.upsample, frac_diff = self.frac_diff)
-                if self.even_balance:
-                    self.full_ds = self.even_label_occurances(self.full_ds)
-                self.full_ds = self.full_ds[np.random.choice(self.full_ds.shape[0], int(len(self.full_ds)*self.subsample_size), replace = False)]
-                self.refine_full_ds()
-                self.train, val_test = train_test_split(self.full_ds, test_size = 0.25, random_state = self.seed)
-                self.val, self.test = train_test_split(val_test, test_size = 0.4, random_state = self.seed)
-                if not self.earth_explo_only:
-                    self.noise_ds = self.train[self.train[:,1] == "noise"]
-            else:
-                
-                self.full_ds = self.balance_ds(self.full_ds, False, False, frac_diff = self.frac_diff)
-                self.full_ds = self.full_ds[np.random.choice(self.full_ds.shape[0], int(len(self.full_ds)*self.subsample_size), replace = False)]
-                if self.earth_explo_only or self.noise_earth_only:
-                    if self.earth_explo_only:
-                        self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
-                        self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "noise"])
-                        # The noise needs to be reduced in order to work properly in noise augmentor
-                        self.noise_ds, _ = train_test_split(self.noise_ds, test_size = 0.25, random_state = self.seed)
-                        zero_column = np.zeros((len(self.noise_ds), 1), dtype = np.int8)
-                        self.noise_ds = np.hstack((self.noise_ds, zero_column))
-                    else:
-                        self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
-                self.train, val_test = train_test_split(self.full_ds, test_size = 0.25, random_state = self.seed)
-                self.val, self.test = train_test_split(val_test, test_size = 0.4, random_state = self.seed)
-                self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
-                if self.even_balance:
-                    self.train = self.even_label_occurances(self.train)
-                if self.upsample:
-                    self.train = self.map_redundancy(self.train)
-                else:
-                    zero_column = np.zeros((len(self.train), 1), dtype = np.int)
-                    self.train = np.hstack((self.train, zero_column))
-                zero_val = np.zeros((len(self.val), 1), dtype = np.int)
-                zero_test = np.zeros((len(self.test), 1), dtype = np.int)
-                self.val = np.hstack((self.val, zero_val))
-                self.test = np.hstack((self.test, zero_test))
-                self.full_ds = np.concatenate((self.train, self.val))
-                self.full_ds = np.concatenate((self.full_ds, self.test))
-                if not self.earth_explo_only:
-                    self.noise_ds = self.train[self.train[:,1] == "noise"]
-                
-        else:
-            print("Write this code when you are ready to use the test set.")
-            raise Exception("The code has not yet been written for the true test set.")
-            
-                
-    
-                
-    
-    def refine_full_ds(self):
-        # Method which removes undesired classes from the dataset. 
-        # If noise is removed, a seperate dataset will be created for use in NoiseAugmentation
-        # Method also calls for map redundancy, or performs equivalent action for formatting consistancy if unecessary.
-        if self.earth_explo_only or self.noise_earth_only:
+            if self.noise_not_noise:
+                self.load_noise_not_noise()
             if self.earth_explo_only:
-                self.noise_ds = np.array(self.full_ds[self.full_ds[:,1] == "noise"])
-                self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "noise"])
-                zero_column = np.zeros((len(self.noise_ds), 1), dtype = np.int8)
-                self.noise_ds = np.hstack((self.noise_ds, zero_column))
+                self.load_earth_explo_only()
             if self.noise_earth_only:
-                self.full_ds = np.array(self.full_ds[self.full_ds[:,1] != "explosion"])
-        if self.earth_explo_only and self.noise_earth_only:
-            raise Exception("Cannot have both earth_explo_only = True and noise_earth_only = True")
-        # Only need to map redundency if upsampling, as upsampling is the cause of redundancy
-        if self.upsample:
-            self.full_ds = self.map_redundancy(self.full_ds)
+                raise Exception("Not implemented noise earth only. Seems unecessary")
         else:
-            zero_column = np.zeros((len(self.full_ds), 1), dtype = np.int8)
-            self.full_ds = np.hstack((self.full_ds, zero_column))
+            raise Exception("Not allowed to use true test set yet. Needs implementation")
+        
+    def load_noise_not_noise(self):
+        noise = self.full_ds[self.full_ds[:,1] == "noise"]
+        explosions = self.full_ds[self.full_ds[:,1] == "explosion"]
+        earthquakes = self.full_ds[self.full_ds[:,1] == "earthquake"]
+        
+        # Unique noise split
+        train_noise, val_test_noise = train_test_split(noise, test_size = 0.2, random_state = self.seed)
+        val_noise, test_noise = train_test_split(val_test_noise, test_size = 0.4, random_state = self.seed)
+        
+        #Unique explosion split
+        train_explosions, val_test_explosions = train_test_split(explosions, test_size = 0.2, random_state = self.seed)
+        val_explosions, test_explosions = train_test_split(val_test_explosions, test_size = 0.4, random_state = self.seed)
+        
+        #Unique earthquake split
+        train_earthquakes, val_test_earthquakes = train_test_split(earthquakes, test_size = 0.2, random_state = self.seed)
+        val_earthquakes, test_earthquakes = train_test_split(val_test_earthquakes, test_size = 0.4, random_state = self.seed)
+        
+        # Combining so that events are not duplicated in the splits
+        self.train = np.concatenate((train_noise, train_explosions, train_earthquakes))
+        self.val = np.concatenate((val_noise, val_explosions, val_earthquakes))
+        self.test = np.concatenate((test_noise, test_explosions, test_earthquakes))
+        
+        # Combining so that events are not duplicated in the splits
+        self.train = np.concatenate((train_noise, train_explosions, train_earthquakes))
+        self.val = np.concatenate((val_noise, val_explosions, val_earthquakes))
+        self.test = np.concatenate((test_noise, test_explosions, test_earthquakes))
+        # Up and down sampling 
+        self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        if self.balance_non_train_set:
+            self.val = self.balance_ds(self.val, self.downsample, self.upsample, frac_diff = self.frac_diff)
+            self.test = self.balance_ds(self.test, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        else:
+            # Shuffles the data if not
+            self.val = self.balance_ds(self.val, False, False, frac_diff = self.frac_diff)
+            self.test = self.balance_ds(self.test, False, False, frac_diff = self.frac_diff)
+
+        if self.even_balance:
+            self.train = self.even_label_occurances(self.train)
+            if self.balance_non_train_set:
+                self.val = self.even_label_occurances(self.val)
+                self.test = self.even_label_occurances(self.test)
+
+        self.train = self.train[np.random.choice(self.train.shape[0], int(len(self.train)*self.subsample_size), replace = False)]
+        self.val = self.val[np.random.choice(self.val.shape[0], int(len(self.val)*self.subsample_size), replace = False)]
+        self.test = self.test[np.random.choice(self.test.shape[0], int(len(self.test)*self.subsample_size), replace = False)]
+
+        # Mapping redundnad samples for time augmentor
+        self.train = self.map_redundancy(self.train, "train")
+        self.val = self.map_redundancy(self.val, "validation")
+        self.test = self.map_redundancy(self.test, "test")
+        self.full_ds = np.concatenate((self.train, self.val, self.test))
+        
+        self.noise_ds = self.train[self.train[:,1] == "noise"]
+
+            
+    def load_earth_explo_only(self):
+        noise = self.full_ds[self.full_ds[:,1] == "noise"]
+        explosions = self.full_ds[self.full_ds[:,1] == "explosion"]
+        earthquakes = self.full_ds[self.full_ds[:,1] == "earthquake"]
+        
+        # Unique noise split
+        train_noise, val_test_noise = train_test_split(noise, test_size = 0.2, random_state = self.seed)
+        val_noise, test_noise = train_test_split(val_test_noise, test_size = 0.4, random_state = self.seed)
+        
+        #Unique explosion split
+        train_explosions, val_test_explosions = train_test_split(explosions, test_size = 0.2, random_state = self.seed)
+        val_explosions, test_explosions = train_test_split(val_test_explosions, test_size = 0.4, random_state = self.seed)
+        
+        #Unique earthquake split
+        train_earthquakes, val_test_earthquakes = train_test_split(earthquakes, test_size = 0.2, random_state = self.seed)
+        val_earthquakes, test_earthquakes = train_test_split(val_test_earthquakes, test_size = 0.4, random_state = self.seed)
+        
+        # Combining so that events are not duplicated in the splits
+        self.train = np.concatenate((train_explosions, train_earthquakes))
+        self.val = np.concatenate((val_explosions, val_earthquakes))
+        self.test = np.concatenate((test_explosions, test_earthquakes))
+        
+        # Up and down sampling 
+        self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        if self.balance_non_train_set:
+            self.val = self.balance_ds(self.val, self.downsample, self.upsample, frac_diff = self.frac_diff)
+            self.test = self.balance_ds(self.test, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        else:
+            # Shuffles the data if not
+            self.val = self.balance_ds(self.val, False, False, frac_diff = self.frac_diff)
+            self.test = self.balance_ds(self.test, False, False, frac_diff = self.frac_diff)
+
+        if self.even_balance:
+            self.train = self.even_label_occurances(self.train)
+            if self.balance_non_train_set:
+                self.val = self.even_label_occurances(self.val)
+                self.test = self.even_label_occurances(self.test)
+
+        self.train = self.train[np.random.choice(self.train.shape[0], int(len(self.train)*self.subsample_size), replace = False)]
+        self.val = self.val[np.random.choice(self.val.shape[0], int(len(self.val)*self.subsample_size), replace = False)]
+        self.test = self.test[np.random.choice(self.test.shape[0], int(len(self.test)*self.subsample_size), replace = False)]
+
+        # Mapping redundnad samples for time augmentor
+        self.train = self.map_redundancy(self.train, "train")
+        self.val = self.map_redundancy(self.val, "validation")
+        self.test = self.map_redundancy(self.test, "test")
+        self.full_ds = np.concatenate((self.train, self.val, self.test))
+        
+        # Create noise_ds. 
+        # Create zero redundancy column
+        train_noise = train_noise[np.random.choice(train_noise.shape[0], int(len(train_noise)*self.subsample_size), replace = False)]
+        zero_column = np.zeros((len(train_noise), 1), dtype = np.int)
+        self.noise_ds = np.hstack((train_noise, zero_column))
+    
+                
     
     def create_label_dict(self):
         # Method which produces the dictionary for labels. This is used in order to disguise labels during training.
@@ -154,7 +209,7 @@ class LoadData():
             self.label_dict = {'earthquake' : 0, 'noise' : 1, 'explosion' : 2, 'induced' : 3}
     
     def get_datasets(self):
-        return self.full_ds, self.train, self.val, self.test  
+        return self.train, self.val, self.test  
         
     def csv_to_numpy(self, data_csv, csv_folder):
         with open(csv_folder + '/' + data_csv) as file:
@@ -216,6 +271,8 @@ class LoadData():
         num_classes = len(set(self.label_dict.values()))
         print(num_classes, len(set(self.label_dict.keys())))
         if num_classes != len(set(self.label_dict.keys())):
+            print("Balancing due to disguised labels.")
+            print("This functions barely works, and is a piece of shit that should not be trusted. Only works because noise has id: 0")
             ids = self.label_dict.values()
             most_occuring_id = max(ids)
             least_occuring_id = min(ids)
@@ -234,7 +291,7 @@ class LoadData():
     def get_label_dict(self):
         return self.label_dict
     
-    def map_redundancy(self, ds):
+    def map_redundancy(self, ds, set_name):
         # Creates a redundancy index which distinguishes events which are sampled multiple times.
         # Primarily used in timeAugmentation in order to create unique augmentations of otherwise identical events.
         # This only works if we are upsampling EARTHQUAKES (NOTHING ELSE)!
@@ -244,7 +301,7 @@ class LoadData():
         unique_earth_paths = set(earth_ds[:,0])
         nr_unique_earth_paths = len(unique_earth_paths)
         for idx, path in enumerate(unique_earth_paths):
-            self.progress_bar(idx + 1, nr_unique_earth_paths)
+            self.progress_bar(idx + 1, nr_unique_earth_paths, f"Mapping {set_name} redundancy: ")
             nr_repeats = len(earth_ds[earth_ds[:,0] == path])
             label = earth_ds[earth_ds[:,0] == path][0][1]
             repeating_indexes = np.where(ds[ds[:,0] == path][:,0][0] == ds[:,0])[0]
@@ -258,11 +315,11 @@ class LoadData():
         print("\n")
         return mapped_ds
 
-    def progress_bar(self, current, total, barLength = 40):
+    def progress_bar(self, current, total, text, barLength = 40):
         percent = float(current) * 100 / total
         arrow   = '-' * int(percent/100 * barLength - 1) + '>'
         spaces  = ' ' * (barLength - len(arrow))
-        print('Mapping redundancy: [%s%s] %d %%' % (arrow, spaces, percent), end='\r')
+        print('%s: [%s%s] %d %%' % (text, arrow, spaces, percent), end='\r')
 
     def print_data_info(self):
         if self.earth_explo_only:
@@ -274,9 +331,6 @@ class LoadData():
         if self.balance_non_train_set:
             print("As well as non train sets.")
         print("Distribution (Label: (counts, proportion)) of")
-        print("Full ds:")
-        labels, counts = np.unique(self.full_ds[:,1], return_counts = True)
-        print(self.generate_dist_string_EE(labels, counts))
         print("Train ds:")
         labels, counts = np.unique(self.train[:,1], return_counts = True)
         print(self.generate_dist_string_EE(labels, counts))
