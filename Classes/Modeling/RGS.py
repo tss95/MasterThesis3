@@ -188,7 +188,7 @@ class RGS(GridSearchResultProcessor):
             try:
                 print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.val, batch_size)*batch_size}/{len(self.loadData.val)} validation points")
                 print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, batch_size)*batch_size}/{len(self.loadData.train)} training points")
-                
+                print("---------------------------------------------------------------------------------")
                 
                 # Fit the model using the generated args
                 model.fit(train_gen, **fit_args)

@@ -54,9 +54,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -97,17 +97,17 @@ hyper_grid = {
 """
 # Near the parameters of the old best performer
 hyper_grid = {
-    "num_layers" : [1, 2],
+    "num_layers" : [1, 2, 3, 4, 5],
     "batch_size" : [64, 128, 256],
     "epochs" : [75],
-    "learning_rate" : [0.05, 0.25, 0.01, 0.005],
+    "learning_rate" : [0.05, 0.025, 0.01, 0.005],
     "optimizer" : ["sgd"],
     "num_filters" : np.arange(60, 80, 2),
     "filter_size" : np.arange(40, 60, 2),
     "cnn_activation" : ["tanh", "relu"],
     "dense_activation" : ["relu", "tanh"],
     "padding" : ["same"],
-    "use_layerwise_dropout_batchnorm" : [False],
+    "use_layerwise_dropout_batchnorm" : [True, False],
     "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
     "l2_r" : [0.1, 0.01],
@@ -116,7 +116,7 @@ hyper_grid = {
     "output_layer_activation" : ["sigmoid"]
 }
 
-model_type = "CNN"
+model_type = "CNN_short"
 is_lstm = True
 num_channels = 3
 
