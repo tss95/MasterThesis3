@@ -54,15 +54,21 @@ class HelperFunctions():
         raise Exception("More than two classes has not been implemented")
         
 
-    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, plot = True, run_evaluate = False):
+    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, plot = True, run_evaluate = False, meier_version = False):
         x_test = x_test[:][:,:num_channels]
         x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
         if run_evaluate:
-            loss, accuracy, precision, recall = model.evaluate(x = x_test, y = y_test)
+            model.evaluate(x = x_test, y = y_test)
         predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
-        predictions = np.reshape(predictions, (predictions.shape[0]))
-        y_test = np.reshape(y_test, (y_test.shape[0]))
-        y_test = y_test[:len(predictions)]
+        if not meier_version:
+            
+            predictions = np.reshape(predictions, (predictions.shape[0]))
+            y_test = np.reshape(y_test, (y_test.shape[0]))
+            y_test = y_test[:len(predictions)]
+            
+        else:
+            predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
+            y_test = y_test[:len(predictions)][:,1]
         print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
         num_classes = len(set(label_dict.values()))
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
@@ -247,7 +253,7 @@ class HelperFunctions():
                     "highpass_freq" : highpass_freq,
                     "is_lstm" : is_lstm}
     
-    def generate_fit_args(self, train_ds, val_ds, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
+    def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
         callbacks = []
         if use_liveplots:
             callbacks.append(PlotLossesKeras())
@@ -259,18 +265,31 @@ class HelperFunctions():
             custom_callback = CustomCallback()
             callbacks.append(custom_callback)
         if use_early_stopping:
-            earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
-                          min_delta = 0,
-                          patience = 5,
-                          verbose = 1,
-                          restore_best_weights = True)
-            callbacks.append(earlystop)
-        
+            if loadData.balance_non_train_set:
+                earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
+                            min_delta = 0,
+                            patience = 5,
+                            verbose = 1,
+                            restore_best_weights = True)
+                callbacks.append(earlystop)
+            else: 
+                earlystop = EarlyStopping(monitor = 'val_precision',
+                            min_delta = 0,
+                            patience = 5,
+                            verbose = 1,
+                            restore_best_weights = True)
+                callbacks.append(earlystop)
         if use_reduced_lr:
-            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
-                                                                  factor=0.5, patience=3,
-                                                                  min_lr=0.00005, 
-                                                                  verbose = 1))
+            if loadData.balance_non_train_set:
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
+                                                                    factor=0.5, patience=3,
+                                                                    min_lr=0.00005, 
+                                                                    verbose = 1))
+            else:
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
+                                                                      factor=0.5, patience=3,
+                                                                      min_lr=0.00005, 
+                                                                      verbose = 1))                                                
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                         "epochs" : epoch,

@@ -237,7 +237,7 @@ class DynamicModels():
         input_layer = tf.keras.layers.Input(self.input_shape)
         x = input_layer
 
-        x = Conv1D(32, kernel_size = 16)(x)
+        x = Conv1D(32, kernel_size = 16, padding = "same")(x)
         if use_maxpool:
             x = MaxPool1D()(x)
         if use_averagepool:
@@ -246,7 +246,7 @@ class DynamicModels():
             x = BatchNormalization()(x)
         x = Activation('relu')(x)
         
-        x = Conv1D(64, kernel_size = 16)(x)
+        x = Conv1D(64, kernel_size = 16, padding = "same")(x)
         if use_maxpool:
             x = MaxPool1D()(x)
         if use_averagepool:
@@ -254,7 +254,8 @@ class DynamicModels():
         if use_batchnorm:
             x = BatchNormalization()(x)
         x = Activation('relu')(x)
-        x = Conv1D(128, kernel_size = 16)(x)
+
+        x = Conv1D(128, kernel_size = 16, padding = "same")(x)
         if use_maxpool:
             x = MaxPool1D()(x)
         if use_averagepool:
@@ -262,6 +263,8 @@ class DynamicModels():
         if use_batchnorm:
             x = BatchNormalization()(x)
         x = Activation('relu')(x)
+
+        x = Flatten()(x)
 
         x = Dense(80, activation = 'relu')(x)
         x = Dense(80, activation = 'relu')(x)
@@ -275,7 +278,7 @@ class DynamicModels():
 
         compile_args = {
             "loss" : loss,
-            "optimizer" : tf.keras.optimizer.Adam(learning_rate=0.001),
+            "optimizer" : tf.keras.optimizers.Adam(learning_rate=0.001),
             "metrics" : [acc,
                         tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
                         tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
