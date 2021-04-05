@@ -65,13 +65,14 @@ class HelperFunctions():
         predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
         if not meier_version:
             
-            predictions = np.reshape(predictions, (predictions.shape[0]))
-            y_test = np.reshape(y_test, (y_test.shape[0]))
+            predictions = np.reshape(predictions, (predictions.shape[0], 1))
+            y_test = np.reshape(y_test, (y_test.shape[0, 1]))
             y_test = y_test[:len(predictions)]
             
         else:
             y_test = y_test[:len(predictions)][:,1]
         print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
+        print(y_test.shape, predictions.shape)
         num_classes = len(set(label_dict.values()))
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))

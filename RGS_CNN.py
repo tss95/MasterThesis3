@@ -117,7 +117,7 @@ hyper_grid = {
 }
 """
 hyper_grid = {
-    "num_layers" : [1, 2, 3],
+    "num_layers" : [1, 2],
     "batch_size" : [64],
     "epochs" : [75],
     "learning_rate" : [0.025],
