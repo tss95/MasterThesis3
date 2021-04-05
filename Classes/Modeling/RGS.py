@@ -179,8 +179,9 @@ class RGS(GridSearchResultProcessor):
 
             
             # Generate fit args using picks.
-            fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, batch_size, 
-                                                     epoch, val_gen, use_tensorboard = self.use_tensorboard, 
+            fit_args = self.helper.generate_fit_args(self.train_ds, self.val_ds, self.loadData, 
+                                                     batch_size, epoch, val_gen, 
+                                                     use_tensorboard = self.use_tensorboard, 
                                                      use_liveplots = self.use_liveplots, 
                                                      use_custom_callback = self.use_custom_callback,
                                                      use_early_stopping = self.use_early_stopping,

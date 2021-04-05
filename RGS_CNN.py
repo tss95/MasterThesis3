@@ -61,7 +61,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.2,
+    'subsample_size' : 0.25,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -75,7 +75,7 @@ handler = DataHandler(loadData)
 
 """
 hyper_grid = {
-    "num_layers" : [1, 2, 3, 4, 5],
+    "num_layers" : [1, 2, 3],
     "batch_size" : [64, 128, 256],
     "epochs" : [50, 50, 50, 50, 50, 50, 50, 50, 50],
     "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.001, 0.0001, 0.0001],
@@ -83,7 +83,7 @@ hyper_grid = {
     "num_filters" : np.arange(50, 100, 2),
     "filter_size" : np.arange(50, 130, 3),
     "cnn_activation" : ["tanh", "relu"],
-    "dense_activation" : ["softmax", "sigmoid", "relu", "tanh"],
+    "dense_activation" : ["relu", "tanh"],
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [False, True],
     "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
@@ -94,13 +94,13 @@ hyper_grid = {
     "second_dense_units" : np.arange(75,300),
     "output_layer_activation" : ["sigmoid"]
 }
-"""
+
 # Near the parameters of the old best performer
 hyper_grid = {
-    "num_layers" : [1, 2, 3, 4, 5],
+    "num_layers" : [1, 2],
     "batch_size" : [64, 128, 256],
     "epochs" : [75],
-    "learning_rate" : [0.05, 0.025, 0.01, 0.005],
+    "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.001, 0.001],
     "optimizer" : ["sgd"],
     "num_filters" : np.arange(60, 80, 2),
     "filter_size" : np.arange(40, 60, 2),
@@ -110,18 +110,40 @@ hyper_grid = {
     "use_layerwise_dropout_batchnorm" : [True, False],
     "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "l2_r" : [0.1, 0.01],
+    "l2_r" : [0.01, 0.001, 0.0001],
     "l1_r" : [0.01, 0.001, 0.0001],
     "first_dense_units" : np.arange(250,300, 2),
     "output_layer_activation" : ["sigmoid"]
 }
+"""
+hyper_grid = {
+    "num_layers" : [1],
+    "batch_size" : [64],
+    "epochs" : [75],
+    "learning_rate" : [0.025],
+    "optimizer" : ["sgd"],
+    "num_filters" : [68],
+    "filter_size" : [42],
+    "cnn_activation" : ["relu"],
+    "dense_activation" : ["relu"],
+    "padding" : ["same"],
+    "use_layerwise_dropout_batchnorm" : [True],
+    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+    "dropout_rate" : [0.001],
+    "l2_r" : [0.01],
+    "l1_r" : [0.001],
+    "first_dense_units" : [286],
+    "output_layer_activation" : ["sigmoid"]
+}
+
+
 
 model_type = "CNN_short"
 is_lstm = True
 num_channels = 3
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = None
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
