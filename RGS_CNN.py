@@ -94,14 +94,14 @@ hyper_grid = {
     "second_dense_units" : np.arange(75,300),
     "output_layer_activation" : ["sigmoid"]
 }
-
+"""
 # Near the parameters of the old best performer
 hyper_grid = {
-    "num_layers" : [1, 2],
+    "num_layers" : [1, 2, 3],
     "batch_size" : [64, 128, 256],
-    "epochs" : [75],
-    "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.001, 0.001],
-    "optimizer" : ["sgd"],
+    "epochs" : [50],
+    "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.0025, 0.0001],
+    "optimizer" : ["sgd", "adam", "rmsprop"],
     "num_filters" : np.arange(60, 80, 2),
     "filter_size" : np.arange(40, 60, 2),
     "cnn_activation" : ["tanh", "relu"],
@@ -135,7 +135,7 @@ hyper_grid = {
     "first_dense_units" : [286],
     "output_layer_activation" : ["sigmoid"]
 }
-
+"""
 
 
 model_type = "CNN_grow"

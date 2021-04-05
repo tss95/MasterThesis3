@@ -3,6 +3,7 @@ import pandas as pd
 from tensorflow.keras import utils
 from obspy import Stream, Trace, UTCDateTime
 import time
+import datetime
 
 import os
 import sys
@@ -114,7 +115,8 @@ class RamLoader:
             noise_traces = train_trace[noise_indexes]
             self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
         print("\n")
-
+        end = time.time()
+        print(f"Process took {datetime.timedelta(seconds=end-start)} seconds.")
         if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.noiseAug
@@ -152,7 +154,7 @@ class RamLoader:
         print("\n")
         print("Completed loading to RAM")
         end = time.time()
-        print(f"Process took {int((end-start))} seconds.")
+        print(f"Process took {datetime.timedelta(seconds=end-start)} seconds.")
         if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.noiseAug

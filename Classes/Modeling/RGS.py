@@ -166,7 +166,7 @@ class RGS(GridSearchResultProcessor):
             train_enq.start(workers = 16, max_queue_size = 15)
             val_enq.start(workers = 16, max_queue_size = 15)
             train_gen = train_enq.get()
-            val_gen = train_enq.get()
+            val_gen = val_enq.get()
 
             # Generate compiler args using picks
             model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)
@@ -193,6 +193,8 @@ class RGS(GridSearchResultProcessor):
                 
                 # Fit the model using the generated args
                 model.fit(train_gen, **fit_args)
+
+                
                 
                 # Evaluate the fitted model on the validation set
                 val_eval = model.evaluate(x=val_gen,
@@ -218,19 +220,24 @@ class RGS(GridSearchResultProcessor):
                                     "train_accuracy" : train_eval["binary_accuracy"],
                                     "train_precision": train_eval["precision"],
                                     "train_recall" : train_eval["recall"]}
+
+            
+
+                del train_enq, train_gen, val_gen, val_enq
+                print("Validation evaluation:")
+                val_conf, _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, self.num_channels, self.noiseAug)
+                print("Train evaluation:") 
+                _, _ = self.helper.evaluate_model(model, self.x_train, self.y_train, self.loadData.label_dict, self.num_channels, self.noiseAug)
                 
-                
-                conf, _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
-                train_enq.stop()
-                val_enq.stop()
+                            
                 gc.collect()
                 
                 tf.keras.backend.clear_session()
                 tf.compat.v1.reset_default_graph()
-                del model, train_gen, val_gen, train_enq, val_enq
+                del model
                 
                 if self.log_data:
-                    self.results_df = self.store_metrics_after_fit(metrics, conf, self.results_df, self.results_file_name)
+                    self.results_df = self.store_metrics_after_fit(metrics, val_conf, self.results_df, self.results_file_name)
 
             except Exception as e:
                 print(str(e))

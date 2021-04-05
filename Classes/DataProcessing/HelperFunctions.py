@@ -10,6 +10,7 @@ import seaborn as sns
 import os
 import csv
 import pylab as pl
+import pprint
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint
@@ -22,7 +23,7 @@ from tensorflow.keras.utils import Sequence
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
 from Classes.DataProcessing.ts_RamGenerator import data_generator
-from tensorflow.keras.utils import GeneratorEnqueuer
+from tensorflow.keras.utils import GeneratorEnqueuer, OrderedEnqueuer
 
 from tensorflow.keras import utils
 from sklearn.model_selection import train_test_split
@@ -45,9 +46,8 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_model_generator(self, model, gen, class_dict):
+    def predict_generator(self, model, gen, steps, label_dict):
         predictions = model.predict(x = gen, steps = steps)
-        predictions = self.convert_to_class(predictions)
         return predictions
     
     def convert_to_class(self, predictions):
@@ -56,7 +56,7 @@ class HelperFunctions():
             return predictions
         raise Exception("More than two classes has not been implemented")
         
-
+    """
     def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, plot = True, run_evaluate = False, meier_version = False):
         x_test = x_test[:][:,:num_channels]
         x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
@@ -83,37 +83,58 @@ class HelperFunctions():
         
         
         return conf, class_report
+    """
 
-    def evaluate_model_gen(self, model, x_test, y_test, batch_size, noiseAug, num_channels, is_lstm, label_dict, plot = True, run_evaluate = False, meier_version = False):
-        steps = self.get_steps_per_epoch(x_test, batch_size)
-        if run_evaluate:
-            test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-            test_enq.start(workers = 1, max_queue_size = 15)
-            test_gen = test_enq.get()
-            model.evaluate(x = test_gen, steps = steps)
-            test_enq.stop()
-            del test_gen, test_enq
-        test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-        test_enq.start(workers = 1, max_queue_size = 15)
-        test_gen = test_enq.get()
-        predictions = self.predict_model_generator(model, test_gen, label_dict)[:,1]
-        test_enq.stop()
-        del test_gen, test_enq
-        if not meier_version:
-            predictions = np.reshape(predictions, (predictions.shape[0]))
-            y_test = np.reshape(y_test, (y_test.shape[0]))
-            y_test = y_test[:len(predictions)]
-            
-        else:
-            y_test = y_test[:len(predictions)][:,1]
-        print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
+    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
+        pp = pprint.PrettyPrinter(indent = 4)
+        if noiseAug != None:
+            x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/10)
+        x_test[:][:,:num_channels]
+        x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[2], x_test.shape[1]))
+        model.evaluate(x = x_test, y = y_test)
+        predictions = model.predict(x_test)
+        predictions = np.rint(predictions)
+        y_test = np.rint(y_test)
+        y_test = y_test[:len(predictions)]
+        predictions = np.reshape(predictions, (predictions.shape[0]))
+        y_test = np.reshape(y_test, (y_test.shape[0]))
         num_classes = len(set(label_dict.values()))
+        assert predictions.shape == y_test.shape
+        print(y_test.shape)
+        print(predictions.shape)
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
-        if plot:
-            self.plot_confusion_matrix(conf, label_dict)
-        print(conf)
+        if plot_confusion_matrix:
+            self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(conf)
         print(class_report)
+        return conf, class_report
+
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
+        pp = pprint.PrettyPrinter(indent=4)
+        steps = self.get_steps_per_epoch(x_test, batch_size)
+        test_enq = OrderedEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), use_multiprocessing = False)
+        test_enq.start(workers = 16, max_queue_size = 15)
+        test_gen = test_enq.get()
+        predictions = self.predict_generator(model, test_gen, steps, label_dict)
+        predictions = np.rint(predictions)
+        y_test = np.rint(y_test)
+        y_test = y_test[0:len(predictions)]
+        num_classes = len(set(label_dict.values()))
+        predictions = np.reshape(predictions,(predictions.shape[0]))
+        y_test = np.reshape(y_test, (y_test.shape[0]))
+        assert predictions.shape == y_test.shape
+        print(y_test.shape)
+        print(predictions.shape)
+        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
+        class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
+        if plot_confusion_matrix:
+            self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(conf)
+        print(class_report)
+        return conf, class_report
 
 
     def plot_confusion_matrix(self, conf, label_dict):
