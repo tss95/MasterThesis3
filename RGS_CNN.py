@@ -117,7 +117,7 @@ hyper_grid = {
 }
 """
 hyper_grid = {
-    "num_layers" : [1],
+    "num_layers" : [1, 2, 3],
     "batch_size" : [64],
     "epochs" : [75],
     "learning_rate" : [0.025],
@@ -128,7 +128,7 @@ hyper_grid = {
     "dense_activation" : ["relu"],
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [True],
-    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,0.75, 0.50, 0.5, 0.75, 1]],
     "dropout_rate" : [0.001],
     "l2_r" : [0.01],
     "l1_r" : [0.001],
@@ -138,12 +138,12 @@ hyper_grid = {
 
 
 
-model_type = "CNN_short"
+model_type = "CNN_grow"
 is_lstm = True
 num_channels = 3
 
 use_time_augmentor = True
-scaler_name = None
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0

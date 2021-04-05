@@ -4,13 +4,9 @@ import time
 
 class RobustScalerFitter(ScalerFitter):
 
-    def __init__(self, train_ds, timeAug):
-        self.timeAug = timeAug
-        self.train_ds = train_ds
+    def __init__(self):
         self.scaler = RobustScaler()
-        self.use_time_augmentor = False
-        if timeAug != None:
-            self.use_time_augmentor = True
+
 
     def fit_scaler_ram(self, traces):
         print("I SHOULD NOT BE USED")

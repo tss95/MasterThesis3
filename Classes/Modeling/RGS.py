@@ -220,7 +220,7 @@ class RGS(GridSearchResultProcessor):
                                     "train_recall" : train_eval["recall"]}
                 
                 
-                conf, _ = self.helper.evaluate_model(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
+                conf, _ = self.helper.evaluate_model_generator(model, self.x_val, self.y_val, self.loadData.label_dict, num_channels = self.num_channels, plot = False, run_evaluate = False)
                 train_enq.stop()
                 val_enq.stop()
                 gc.collect()

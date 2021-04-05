@@ -18,6 +18,7 @@ from Classes.Scaling.ScalerFitter import ScalerFitter
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
+from Classes.Scaling.DataNormalizer import DataNormalizer
 
 class RamLoader:
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
@@ -73,57 +74,81 @@ class RamLoader:
             print("\n")
         return timeAug
     
-    
-    
     def load_to_ram(self):
+        if self.loadData.noise_not_noise:
+            return self.load_to_ram_noise_not_noise()
+        if self.loadData.earth_explo_only:
+            return self.load_to_ram_earth_explo_only()
+        else:
+            raise Exception("Loading to ram for this type of data has not been implemented.")
+
+    def load_to_ram_noise_not_noise(self):
         start = time.time()
-        # Starting with fitting potential time augmentor
         self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
         self.val_timeAug = self.fit_timeAug(self.val_ds, "validation")
         if self.load_test_set:
             self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
-            
-        # If we want to use noise augmentor while we arent classifying noise,
-        # we need to fit time augmentor for the noise samples.
-        if self.loadData.earth_explo_only and self.use_noise_augmentor:
-            self.noise_timeAug = self.fit_timeAug(self.noise_ds, "noise set")
-            
+        
         # Step one, load traces and apply time augmentation and/or detrend/highpass
         train_trace, train_label = self.stage_one_load(self.train_ds, self.train_timeAug, 0)
         val_trace, val_label = self.stage_one_load(self.val_ds, self.val_timeAug, 1)
         if self.load_test_set:
             test_trace, test_label = self.stage_one_load(self.test_ds, self.test_timeAug, 2)
-        
-        
-        # The scaler is dependent on timeAug and highpasss/detrend, so must now fit the scaler:
-        self.scaler = self.fit_scaler(train_trace, self.train_timeAug)
-        
-        # When using noise augmentor and earth_explo_only, a scaler for the noise data needs to be fitted.
-        # This is temporarily memory expensive with the current solution.
-        if self.use_noise_augmentor and self.loadData.earth_explo_only:
-            noise_trace, _ = self.stage_one_load(self.noise_ds, self.noise_timeAug, 3)
-            self.noise_scaler = self.fit_scaler(noise_trace, self.noise_timeAug)
-            if self.scaler_name == "robust":
-                for idx, trace in enumerate(noise_trace):
-                    trace = self.noise_scaler.fit_transform(trace)
-            self.noiseAug = self.fit_noiseAug(self.loadData, noise_trace)
-            del noise_trace
-            
-        
-        # Using the fitted scaler, we transform the traces:
+
+        # Step 1.5, fit scaler:
+        self.scaler = self.fit_scaler(train_trace)
+
         train_trace, train_label = self.stage_two_load(train_trace, train_label, 0, self.meier_load)
         val_trace, val_label = self.stage_two_load(val_trace, val_label, 1, self.meier_load)
         if self.load_test_set:
-            test_trace = self.stage_two_load(test_trace, test_label, 2, self.meier_load)
+            test_trace, test_label = self.stage_two_load(test_trace, test_label, 2, self.meier_load)
         
-        if self.use_noise_augmentor and not self.loadData.earth_explo_only:
+        self.noiseAug = None
+        if self.use_noise_augmentor:
             # Need to get only the noise traces:
             if (self.meier_load and self.num_classes == 2) or self.num_classes > 2:
                 noise_indexes = np.where(train_label[:,self.loadData.label_dict["noise"]] == 1)
             if not self.meier_load and self.num_classes == 2:
                 noise_indexes = np.where(train_label == self.loadData.label_dict["noise"])
+            print(noise_indexes)
             noise_traces = train_trace[noise_indexes]
             self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
+        print("\n")
+
+        if self.load_test_set:
+            return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
+        return train_trace, train_label, val_trace, val_label, self.noiseAug
+
+
+
+    def load_to_ram_earth_explo_only(self):
+        start = time.time()
+        if self.use_time_augmentor:
+            self.noise_timeAug = self.fit_timeAug(self.noise_ds, "noise set")
+        self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
+        self.val_timeAug = self.fit_timeAug(self.val_ds, "validation")
+        if self.load_test_set:
+            self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
+
+        # Step one, load traces and apply time augmentation and/or detrend/highpass
+        train_trace, train_label = self.stage_one_load(self.train_ds, self.train_timeAug, 0)
+        val_trace, val_label = self.stage_one_load(self.val_ds, self.val_timeAug, 1)
+        if self.load_test_set:
+            test_trace, test_label = self.stage_one_load(self.test_ds, self.test_timeAug, 2)
+        self.scaler = self.fit_scaler(train_trace)
+        self.noiseAug = None
+        if self.use_noise_augmentor:
+            noise_trace, noise_label = self.stage_one_load(self.noise_ds, self.noise_timeAug, 3)
+            num_noise = len(noise_trace)
+            noise_trace, _ = self.stage_two_load(noise_trace, noise_label, 3, self.meier_load)
+            self.noiseAug = self.fit_noiseAug(self.loadData, noise_trace)
+            print("\n")
+            #del noise_trace, noise_label, self.noise_timeAug
+
+        train_trace, train_label = self.stage_two_load(train_trace, train_label, 0, self.meier_load)
+        val_trace, val_label = self.stage_two_load(val_trace, val_label, 1, self.meier_load)
+        if self.load_test_set:
+            test_trace, test_label = self.stage_two_load(test_trace, test_label, 2, self.meier_load)
         print("\n")
         print("Completed loading to RAM")
         end = time.time()
@@ -131,25 +156,26 @@ class RamLoader:
         if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.noiseAug
+
     
     
-    
-    
-    
-    def fit_scaler(self, traces, timeAug):
+    def fit_scaler(self, traces):
         scaler = None
         if self.scaler_name != None:
             if self.scaler_name == "minmax":
-                scaler = MinMaxScalerFitter(self.train_ds, timeAug)
+                scaler = MinMaxScalerFitter()
                 scaler.fit_scaler_ram(traces)
                 scaler = scaler.scaler
             elif self.scaler_name == "standard":
-                scaler = StandardScalerFitter(self.train_ds, timeAug)
+                scaler = StandardScalerFitter()
                 scaler.fit_scaler_ram(traces)
                 scaler = scaler.scaler
             elif self.scaler_name == "robust":
-                scaler = RobustScalerFitter(self.train_ds, timeAug)
+                scaler = RobustScalerFitter().scaler
                 print("Fit process of robust scaler skipped as unecessary.")
+            elif self.scaler_name == "normalize":
+                scaler = DataNormalizer()
+                print("Fit process of normalizer skipped as unecessary")
             elif self.scaler_name != "minmax" or self.scaler_name != "standard" or self.scaler_name != "robust":
                 raise Exception(f"{self.scaler_name} is not implemented.")
             print("\n")
@@ -159,6 +185,7 @@ class RamLoader:
         noiseAug = None
         if self.use_noise_augmentor:
             noiseAug = NoiseAugmentor(loadData, noise_traces)
+        print("\n")
         return noiseAug
             
     def get_substage(self, substage):
@@ -213,7 +240,7 @@ class RamLoader:
         num_samples = traces.shape[0]
         bar_text = self.stage_two_text(substage)
         if self.scaler_name != None:
-            if self.scaler_name != "robust":
+            if self.scaler_name != "robust" and self.scaler_name != "normalize":
                 for i in range(num_samples):
                     self.progress_bar(i+1, num_samples, bar_text)
                     traces[i] = self.scaler.transform(traces[i])
@@ -223,11 +250,12 @@ class RamLoader:
                     self.progress_bar(i+1, num_samples, bar_text)
                     traces[i] = self.scaler.fit_transform_trace(traces[i])
                 print("\n")
-
-        labels = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
-        if self.num_classes == 2 and not meier_load:
-            labels = labels[:,1]
-            labels = np.reshape(labels, (labels.shape[0],1))
+        
+        if substage != 3:
+            labels = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
+            if self.num_classes == 2 and not meier_load:
+                labels = labels[:,1]
+                labels = np.reshape(labels, (labels.shape[0],1))
         return traces, labels
     
     def stage_two_text(self, substage):

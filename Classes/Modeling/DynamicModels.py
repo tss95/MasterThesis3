@@ -73,6 +73,8 @@ class DynamicModels():
             self.model = self.create_Meier_CNN_model(**p)
         if self.model_type == "Modified_Meier_CNN":
             self.model = self.create_modified_Meier_CNN_model(**p) 
+        if self.model_type == "CNN_grow":
+            self.model = self.create_CNN_grow_model(**p)
         self.model.summary()
         
     
@@ -179,6 +181,46 @@ class DynamicModels():
 
         for i in range(num_layers):
             x = Conv1D(num_filters//decay_sequence[i], 
+                       kernel_size = [filter_size], 
+                       padding = padding, 
+                       activation = None,
+                       kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r), 
+                       bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
+            if use_layerwise_dropout_batchnorm:
+                x = BatchNormalization()(x)
+            x = Activation(cnn_activation)(x)
+            if use_layerwise_dropout_batchnorm:
+                x = Dropout(dropout_rate)(x)
+            x = MaxPool1D()(x)
+        x = Flatten()(x)
+        x = Dense(first_dense_units, activation = dense_activation)(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
+
+
+    def create_CNN_grow_model(self, **p):
+
+        num_layers = p['num_layers']
+        growth_sequence = p['growth_sequence']
+        num_filters = p['num_filters']
+        filter_size = p['filter_size']
+        cnn_activation = p['cnn_activation']
+        dense_activation = p['dense_activation']
+        padding = p['padding']
+        l1_r = p['l1_r']
+        l2_r = p['l2_r']
+        dropout_rate = p['dropout_rate']
+        use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        first_dense_units = p['first_dense_units']
+        output_layer_activation = p['output_layer_activation']
+
+
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+
+        for i in range(num_layers):
+            x = Conv1D(int(num_filters*growth_sequence[i]), 
                        kernel_size = [filter_size], 
                        padding = padding, 
                        activation = None,

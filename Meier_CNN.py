@@ -88,7 +88,7 @@ is_lstm = True
 num_channels = 3    
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -167,7 +167,7 @@ def generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epoc
                     "callbacks" : callbacks
                     }
 
-epochs = 40
+epochs = 20
 batch_size = 48
 
 
@@ -193,7 +193,7 @@ ramLoader = RamLoader(loadData,
 x_train, y_train, x_val, y_val, noiseAug = ramLoader.load_to_ram()
 
 train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
+val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
 train_enq.start(workers = 16, max_queue_size = 15)
 val_enq.start(workers = 16, max_queue_size = 15)
 train_gen = train_enq.get()

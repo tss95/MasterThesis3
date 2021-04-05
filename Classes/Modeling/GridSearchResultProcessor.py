@@ -100,8 +100,8 @@ class GridSearchResultProcessor():
                 file_name = f"{file_name}-{self.highpass_freq}"
         if self.use_time_augmentor:
             file_name = f"{file_name}_timeAug"
-        if self.scaler_name:
-            file_name == file_name + f"{self.scaler_name}"
+        if self.scaler_name != None:
+            file_name = file_name + f"_{self.scaler_name}"
         if self.use_noise_augmentor:
             file_name = f"{file_name}_noiseAug"
         if self.use_early_stopping:
