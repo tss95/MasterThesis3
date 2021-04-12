@@ -100,6 +100,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
         first_dense_units = p['first_dense_units']
         second_dense_units = p['second_dense_units']
         dense_activation = p['dense_activation']
@@ -119,9 +120,10 @@ class DynamicModels():
                         bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
             
             if use_layerwise_dropout_batchnorm:
-                x = BatchNormalization()(x)
-                x = Dropout(dropout_rate)(x)
-            
+                if dropout_T_bn_F:
+                    x = Dropout(dropout_rate)(x)
+                else:
+                    x = BatchNormalization()(x)
         x = Dense(first_dense_units, activation = dense_activation)(x)
         x = Dense(second_dense_units, activation = dense_activation)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
@@ -144,6 +146,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
         first_dense_units = p['first_dense_units']
         second_dense_units = p['second_dense_units']
         output_layer_activation = p['output_layer_activation']
@@ -159,10 +162,10 @@ class DynamicModels():
                        activation = None,
                        kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r), 
                        bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and not dropout_T_bn_F:
                 x = BatchNormalization()(x)
             x = Activation(cnn_activation)(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and dropout_T_bn_F:
                 x = Dropout(dropout_rate)(x)
             x = MaxPool1D()(x)
         x = Flatten()(x)
@@ -185,6 +188,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
         first_dense_units = p['first_dense_units']
         output_layer_activation = p['output_layer_activation']
 
@@ -199,10 +203,10 @@ class DynamicModels():
                        activation = None,
                        kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r), 
                        bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and not dropout_T_bn_F:
                 x = BatchNormalization()(x)
             x = Activation(cnn_activation)(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and dropout_T_bn_F:
                 x = Dropout(dropout_rate)(x)
             x = MaxPool1D()(x)
         x = Flatten()(x)
@@ -225,6 +229,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
         first_dense_units = p['first_dense_units']
         output_layer_activation = p['output_layer_activation']
 
@@ -239,10 +244,10 @@ class DynamicModels():
                        activation = None,
                        kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r), 
                        bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and not dropout_T_bn_F:
                 x = BatchNormalization()(x)
             x = Activation(cnn_activation)(x)
-            if use_layerwise_dropout_batchnorm:
+            if use_layerwise_dropout_batchnorm and dropout_T_bn_F:
                 x = Dropout(dropout_rate)(x)
             x = MaxPool1D()(x)
         x = Flatten()(x)
@@ -263,6 +268,7 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
         output_layer_activation = p['output_layer_activation']
 
         input_layer = tf.keras.layers.Input(self.input_shape)
@@ -274,8 +280,10 @@ class DynamicModels():
                       kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
                       activity_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
             if use_layerwise_dropout_batchnorm:
-                x = BatchNormalization()(x)
-                x = Dropout(dropout_rate)(x)
+                if dropout_T_bn_F:
+                    x = Dropout(dropout_rate)(x)
+                else: 
+                    x = BatchNormalization()(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model

@@ -152,7 +152,7 @@ class TrainSingleModel(GridSearchResultProcessor):
             print("Something went wrong.")
         return model
 
-    def metrics_producer(self, model, workers, max_queue_size, **p):
+    def metrics_producer(self, model, workers, max_queue_size, meier_mode = False,**p):
         print("Evaluating validation:")
         val_enq = self.create_enqueuer(self.x_val, self.y_val, p["batch_size"], self.noiseAug, self.num_channels)
         val_enq.start(workers = workers, max_queue_size = max_queue_size)
@@ -161,10 +161,16 @@ class TrainSingleModel(GridSearchResultProcessor):
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
         metrics = {}
-        metrics['val'] = {  "val_loss" : val_eval["loss"],
-                            "val_accuracy" : val_eval["binary_accuracy"],
-                            "val_precision": val_eval["precision"],
-                            "val_recall" : val_eval["recall"]}
+        if not meier_mode:
+            metrics['val'] = {  "val_loss" : val_eval["loss"],
+                                "val_accuracy" : val_eval["binary_accuracy"],
+                                "val_precision": val_eval["precision"],
+                                "val_recall" : val_eval["recall"]}
+        else:
+            metrics['val'] = {  "val_loss" : val_eval["loss"],
+                                "val_accuracy" : val_eval["categorical_accuracy"],
+                                "val_precision": val_eval["precision"],
+                                "val_recall" : val_eval["recall"]}
         val_enq.stop()
         del val_enq, val_gen
         val_conf, _ = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
@@ -175,11 +181,16 @@ class TrainSingleModel(GridSearchResultProcessor):
         train_eval = model.evaluate(x = train_gen, 
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
-
-        metrics['train'] = { "train_loss" : train_eval["loss"],
-                             "train_accuracy" : train_eval["binary_accuracy"],
-                             "train_precision": train_eval["precision"],
-                             "train_recall" : train_eval["recall"]}
+        if not meier_mode:
+            metrics['train'] = { "train_loss" : train_eval["loss"],
+                                "train_accuracy" : train_eval["binary_accuracy"],
+                                "train_precision": train_eval["precision"],
+                                "train_recall" : train_eval["recall"]}
+        else:
+            metrics['train'] = { "train_loss" : train_eval["loss"],
+                            "train_accuracy" : train_eval["categorical_accuracy"],
+                            "train_precision": train_eval["precision"],
+                            "train_recall" : train_eval["recall"]}
         del train_enq, train_gen
         _, _ = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
         return metrics, val_conf
@@ -191,14 +202,17 @@ class TrainSingleModel(GridSearchResultProcessor):
         model = self.create_and_compile_model(meier_mode = meier_mode, **p)
         model = self.fit_model(model, workers, max_queue_size, meier_mode = meier_mode, **p)
         if self.log_data and self.results_df is not None and self.results_file_name != None:
-            metrics, val_conf = self.metrics_producer(model, int(workers//2), int(max_queue_size), **p)
+            metrics, val_conf = self.metrics_producer(model, int(workers//2), int(max_queue_size), meier_mode, **p)
             self.results_df = self.store_metrics_after_fit(metrics, val_conf, self.results_df, self.results_file_name)
             print(self.results_df.iloc[-1])
         if evaluate_train:
+            print("Unsaved train eval:")
             self.helper.evaluate_generator(model, self.x_train, self.y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug)
         if evaluate_val:
+            print("Unsaved val eval:")
             self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug)
         if evaluate_test:
+            print("Unsaved test eval:")
             self.helper.evaluate_generator(model, self.x_test, self.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
         
         return model, self.results_df
