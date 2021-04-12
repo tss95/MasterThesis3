@@ -46,8 +46,8 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_generator(self, model, gen, steps, label_dict):
-        predictions = model.predict(x = gen, steps = steps)
+    def predict_generator(self, model, gen, batch_size, steps, label_dict):
+        predictions = model.predict(x = gen, batch_size = batch_size, steps = steps)
         return predictions
     
     def convert_to_class(self, predictions):
@@ -93,6 +93,11 @@ class HelperFunctions():
         x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[2], x_test.shape[1]))
         model.evaluate(x = x_test, y = y_test)
         predictions = model.predict(x_test)
+        print(predictions.shape)
+        print(y_test.shape)
+        if predictions.shape[1] == 2:
+            predictions = predictions[:,1]
+            y_test = y_test[:,1]
         predictions = np.rint(predictions)
         y_test = np.rint(y_test)
         y_test = y_test[:len(predictions)]
@@ -114,19 +119,20 @@ class HelperFunctions():
     def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
         pp = pprint.PrettyPrinter(indent=4)
         steps = self.get_steps_per_epoch(x_test, batch_size)
-        test_enq = OrderedEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), use_multiprocessing = False)
+        test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), use_multiprocessing = False)
         test_enq.start(workers = 16, max_queue_size = 15)
         test_gen = test_enq.get()
-        predictions = self.predict_generator(model, test_gen, steps, label_dict)
+        predictions = self.predict_generator(model, test_gen, batch_size, steps, label_dict) 
         predictions = np.rint(predictions)
+        if predictions.shape[1] == 2:
+            predictions = predictions[:,1]
+            y_test = y_test[:,1]
         y_test = np.rint(y_test)
-        y_test = y_test[0:len(predictions)]
+        y_test = y_test[0:predictions.shape[0]]
         num_classes = len(set(label_dict.values()))
         predictions = np.reshape(predictions,(predictions.shape[0]))
         y_test = np.reshape(y_test, (y_test.shape[0]))
         assert predictions.shape == y_test.shape
-        print(y_test.shape)
-        print(predictions.shape)
         conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
         if plot_confusion_matrix:
@@ -282,10 +288,10 @@ class HelperFunctions():
     
     def generate_model_compile_args(self, opt, nr_classes):
         if nr_classes == 2:
-            loss = "binary_crossentropy"
+            loss = tf.metrics.BinaryCrossentropy(from_logits = True)
             acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuracy", dtype=None, threshold=0.5)
         else:
-            loss = "categorical_crossentropy"
+            loss = tf.metrics.CategoricalCrossentropy(from_logits = True)
             acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
         return {"loss" : loss,
                 "optimizer" : opt,
@@ -312,10 +318,11 @@ class HelperFunctions():
     def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
         callbacks = []
         if use_liveplots:
-            callbacks.append(PlotLossesKeras())
+            #callbacks.append(PlotLossesKeras())
+            print("")
         if use_tensorboard:
             log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
             custom_callback = CustomCallback()
@@ -345,19 +352,77 @@ class HelperFunctions():
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
                                                                       factor=0.5, patience=3,
                                                                       min_lr=0.00005, 
-                                                                      verbose = 1))                                                
+                                                                      verbose = 1))
+                print("----------Reduce LR monitoring val_precision------------")                                           
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
-                        "epochs" : epoch,
-                        "validation_data" : val_gen,
-                        "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
-                        "verbose" : 1,
-                        "max_queue_size" : 10,
-                        "use_multiprocessing" : False, 
-                        "workers" : 1,
-                        "callbacks" : callbacks
-                       }
+                "epochs" : epoch,
+                "validation_data" : val_gen,
+                "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
+                "verbose" : 1,
+                "max_queue_size" : 10,
+                "use_multiprocessing" : False, 
+                "workers" : 1,
+                "callbacks" : callbacks
+                }
     
+    def generate_meier_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
+        callbacks = []
+        print("------------ Meier ------------")
+        if use_liveplots:
+            #callbacks.append(PlotLossesKeras())
+            a = 1
+            print("")
+        if use_tensorboard:
+            log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
+            callbacks.append(tensorboard_callback)
+        if use_custom_callback:
+            custom_callback = CustomCallback()
+            callbacks.append(custom_callback)
+        if use_early_stopping:
+            if loadData.balance_non_train_set:
+                earlystop = EarlyStopping(monitor = 'val_categorical_accuracy',
+                            min_delta = 0,
+                            patience = 5,
+                            verbose = 1,
+                            restore_best_weights = True)
+                callbacks.append(earlystop)
+                print("----------Early stop monitoring val_categorical_accuracy----------")
+            else: 
+                earlystop = EarlyStopping(monitor = 'val_precision',
+                            min_delta = 0,
+                            patience = 5,
+                            verbose = 1,
+                            restore_best_weights = True)
+                callbacks.append(earlystop)
+                print("----------Early stop monitoring val_precision----------")
+        if use_reduced_lr:
+            if loadData.balance_non_train_set:
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_categorical_accuracy', 
+                                                                    factor=0.5, patience=3,
+                                                                    min_lr=0.00005, 
+                                                                    verbose = 1))
+                print("----------Reduce LR monitoring val_categorical----------")
+            else:
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
+                                                                        factor=0.5, patience=3,
+                                                                        min_lr=0.00005, 
+                                                                        verbose = 1))
+                print("----------Reduce LR monitoring val_precision------------")
+        
+        return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
+                "epochs" : epoch,
+                "validation_data" : val_gen,
+                "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
+                "verbose" : 1,
+                "max_queue_size" : 10,
+                "use_multiprocessing" : False, 
+                "workers" : 1,
+                "callbacks" : callbacks
+                }
+
+
     def get_optimizer(self, optimizer, learning_rate):
         if optimizer == "adam":
             return tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -436,7 +501,25 @@ class HelperFunctions():
                 decay_sequence[idx] = decay_sequence[idx-1]
         return decay_sequence[0:num_layers]
 
-        
+    def handle_hyperparams(self, num_classes, **p):
+        if "first_dense_units" in p.keys() and "second_dense_units" in p.keys():
+            if p["first_dense_units"] < p["second_dense_units"]:
+                p["second_dense_units"] = p["first_dense_units"]
+
+        if "decay_sequence" in p.keys() or "growth_sequence" in p.keys():
+            if "num_filters" in p.keys():
+                units_or_num_filters = p["num_filters"]
+            else:
+                units_or_num_filters = p["units"]
+            num_layers = p["num_layers"]
+            if "decay_sequence" in p:
+                p["decay_sequence"] = self.get_max_decay_sequence(num_layers,
+                                                                  units_or_num_filters,
+                                                                  p["decay_sequence"],
+                                                                  num_classes)
+            else:
+                p["growth_sequence"] = p["growth_sequence"][:num_layers]
+        return p
 
 
     def progress_bar(self, current, total, text, barLength = 40):

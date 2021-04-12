@@ -34,6 +34,7 @@ from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.Modeling.DynamicModels import DynamicModels
+from Classes.Modeling.TrainSingleModel import TrainSingleModel
 from Classes.DataProcessing.RamLoader import RamLoader
 from Classes.DataProcessing.ts_RamGenerator import modified_data_generator
 import json
@@ -64,15 +65,15 @@ tf.config.optimizer.set_jit(True)
 mixed_precision.set_global_policy('mixed_float16')
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
     'subsample_size' : 0.25,
-    'balance_non_train_set' : True,
+    'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True
 }
@@ -106,6 +107,8 @@ log_data = True
 
 shutdown = False
 
+num_classes = len(list(set(loadData.label_dict.values())))
+
 def clear_tensorboard_dir():
         import os
         import shutil
@@ -117,57 +120,9 @@ def clear_tensorboard_dir():
 if use_tensorboard:
     clear_tensorboard_dir()
 
-def generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
-    callbacks = []
-    if use_liveplots:
-        #callbacks.append(PlotLossesKeras())
-        print("")
-    if use_tensorboard:
-        log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-        callbacks.append(tensorboard_callback)
-    if use_custom_callback:
-        custom_callback = CustomCallback()
-        callbacks.append(custom_callback)
-    if use_early_stopping:
-        if loadData.balance_non_train_set:
-            earlystop = EarlyStopping(monitor = 'val_categorical_accuracy',
-                        min_delta = 0,
-                        patience = 5,
-                        verbose = 1,
-                        restore_best_weights = True)
-            callbacks.append(earlystop)
-        else: 
-            earlystop = EarlyStopping(monitor = 'val_precision',
-                        min_delta = 0,
-                        patience = 5,
-                        verbose = 1,
-                        restore_best_weights = True)
-            callbacks.append(earlystop)
-    if use_reduced_lr:
-        if loadData.balance_non_train_set:
-            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_categorical_accuracy', 
-                                                                factor=0.5, patience=3,
-                                                                min_lr=0.00005, 
-                                                                verbose = 1))
-        else:
-            callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
-                                                                    factor=0.5, patience=3,
-                                                                    min_lr=0.00005, 
-                                                                    verbose = 1))                                                
-    
-    return {"steps_per_epoch" : helper.get_steps_per_epoch(train_ds, batch_size),
-                    "epochs" : epoch,
-                    "validation_data" : val_gen,
-                    "validation_steps" : helper.get_steps_per_epoch(val_ds, batch_size),
-                    "verbose" : 1,
-                    "max_queue_size" : 10,
-                    "use_multiprocessing" : False, 
-                    "workers" : 1,
-                    "callbacks" : callbacks
-                    }
 
-epochs = 20
+
+epochs = 40
 batch_size = 48
 
 
@@ -187,195 +142,116 @@ ramLoader = RamLoader(loadData,
                       band_min = band_min,
                       band_max = band_max,
                       highpass_freq = highpass_freq, 
-                      load_test_set = False, 
+                      load_test_set = True, 
                       meier_load = True)
 
-x_train, y_train, x_val, y_val, noiseAug = ramLoader.load_to_ram()
+x_train, y_train, x_val, y_val, x_test, y_test, noiseAug = ramLoader.load_to_ram()
 
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
 
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epochs, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
 
-num_classes = len(list(set(loadData.label_dict.values())))
+
+
+
+modelTrain = TrainSingleModel(x_train, y_train, x_val, y_val, x_test, y_test, noiseAug, helper,
+                              loadData, model_type, num_channels, use_tensorboard, use_liveplots,
+                              use_custom_callback, use_early_stopping, use_reduced_lr, ramLoader,
+                              log_data = log_data, results_df = None, results_file_name = None, index = None, 
+                              start_from_scratch = start_from_scratch)
 
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : False,
     "use_averagepool" : False,
     "use_batchnorm" : False
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
-
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
-
-train_enq.stop()
-val_enq.stop()
-gc.collect()
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-del model, train_gen, val_gen, train_enq, val_enq
+del model
 
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
-
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epochs, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
-
-num_classes = len(list(set(loadData.label_dict.values())))
+# =================================================================
 
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : True,
     "use_averagepool" : False,
     "use_batchnorm" : False
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
-
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
-
-train_enq.stop()
-val_enq.stop()
-gc.collect()
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-del model, train_gen, val_gen, train_enq, val_enq
+del model
 
 # =================================================================
  
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
-
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
-
-num_classes = len(list(set(loadData.label_dict.values())))
 
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : False,
     "use_averagepool" : True,
     "use_batchnorm" : False
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
-
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
-train_enq.stop()
-val_enq.stop()
-gc.collect()
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-del model, train_gen, val_gen, train_enq, val_enq
+del model
 
 # =================================================================
  
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
 
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epochs, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
-
-num_classes = len(list(set(loadData.label_dict.values())))
 
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : False,
     "use_averagepool" : False,
     "use_batchnorm" : True
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
-
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
-
-
-train_enq.stop()
-val_enq.stop()
-gc.collect()
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-del model, train_gen, val_gen, train_enq, val_enq
+del model
 
 
 # =================================================================
  
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
-
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epochs, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
-
-num_classes = len(list(set(loadData.label_dict.values())))
-
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : True,
     "use_averagepool" : False,
     "use_batchnorm" : True
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
-
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
-
-train_enq.stop()
-val_enq.stop()
-gc.collect()
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-del model, train_gen, val_gen, train_enq, val_enq
-
+del model
 
 # =================================================================
  
-train_enq = GeneratorEnqueuer(modified_data_generator(x_train, y_train, batch_size, noiseAug, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-val_enq = GeneratorEnqueuer(modified_data_generator(x_val, y_val,batch_size, None, num_channels = num_channels, is_lstm  = is_lstm), use_multiprocessing = False)
-train_enq.start(workers = 16, max_queue_size = 15)
-val_enq.start(workers = 16, max_queue_size = 15)
-train_gen = train_enq.get()
-val_gen = train_enq.get()
-
-fit_args = generate_meier_fit_args(train_ds, val_ds, loadData, helper, batch_size, epochs, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr)
-
-num_classes = len(list(set(loadData.label_dict.values())))
-
 params = {
+    "epochs" : epochs,
+    "batch_size" : batch_size,
     "use_maxpool" : False,
     "use_averagepool" : True,
     "use_batchnorm" : True
 }
 
-model = DynamicModels(model_type, num_classes, input_shape, **params).model
+model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
 
-model.fit(train_gen, **fit_args)
-
-conf, _ = helper.evaluate_model(model, x_val, y_val, loadData.label_dict, num_channels = num_channels, plot = False, run_evaluate = True, meier_version = True)
+tf.keras.backend.clear_session()
+tf.compat.v1.reset_default_graph()
+del model

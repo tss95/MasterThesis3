@@ -75,13 +75,16 @@ class GridSearchResultProcessor():
     def clear_results_df(self, file_name):
         path = self.get_results_file_path()
         file = f"{path}/{file_name}"
-        if os.path.isfile(file):
-            f = open(file, "w+")
-            f.close()
+        confirmation = input(f"Are you sure you want to clear {file_name}? Y/N").upper()
+        if confirmation == "Y":
+            if os.path.isfile(file):
+                f = open(file, "w+")
+                f.close()
+        
         
     
     def get_results_file_name(self, narrow = False, narrowOpt = False):
-        file_name = f"results_{self.model_nr_type}"
+        file_name = f"results_{self.model_type}"
         if narrow:
             file_name = f"{file_name}_NARROW"
         if narrowOpt:
@@ -92,20 +95,25 @@ class GridSearchResultProcessor():
             file_name = f"{file_name}_noiseEarth"
         if self.loadData.noise_not_noise:
             file_name = f"{file_name}_noiseNotNoise"
-        if self.filter_name != None:
-            file_name = f"{file_name}_{self.filter_name}"
-            if self.filter_name == "bandpass":
-                file_name = f"{file_name}-{self.band_min}-{self.band_max}"
-            if self.filter_name == "highpass":
-                file_name = f"{file_name}-{self.highpass_freq}"
-        if self.use_time_augmentor:
+        if self.ramLoader.filter_name != None:
+            file_name = f"{file_name}_{self.ramLoader.filter_name}"
+            if self.ramLoader.filter_name == "bandpass":
+                file_name = f"{file_name}-{self.ramLoader.band_min}-{self.ramLoader.band_max}"
+            if self.ramLoader.filter_name == "highpass":
+                file_name = f"{file_name}-{self.ramLoader.highpass_freq}"
+        if self.ramLoader.use_time_augmentor:
             file_name = f"{file_name}_timeAug"
-        if self.scaler_name != None:
-            file_name = file_name + f"_{self.scaler_name}"
-        if self.use_noise_augmentor:
+        if self.ramLoader.scaler_name != None:
+            file_name = file_name + f"_{self.ramLoader.scaler_name}"
+        if self.ramLoader.use_noise_augmentor:
             file_name = f"{file_name}_noiseAug"
         if self.use_early_stopping:
             file_name = f"{file_name}_earlyS"
+        if self.loadData.balance_non_train_set:
+            file_name = f"{file_name}_balanced_valtest"
+        if not self.loadData.balance_non_train_set:
+            file_name = f"{file_name}_unbalanced_valtest"
+        file_name = file_name + f"_subsample-{self.loadData.subsample_size}"
         file_name = file_name + f"_numChannels-{self.num_channels}"
         file_name = file_name + ".csv"
         return file_name

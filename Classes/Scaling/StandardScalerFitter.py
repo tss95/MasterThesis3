@@ -1,5 +1,6 @@
 from sklearn.preprocessing import StandardScaler
 from .ScalerFitter import ScalerFitter
+import numpy as np
 
 class StandardScalerFitter(ScalerFitter):
 
@@ -9,7 +10,7 @@ class StandardScalerFitter(ScalerFitter):
     def fit_scaler_ram(self, traces):
         num_samples = traces.shape[0]
         for i in range(num_samples):
-            self.scaler.partial_fit(traces[i])
+            self.scaler.partial_fit(np.transpose(traces[i]))
             self.progress_bar(i + 1, num_samples)
         return self.scaler
         

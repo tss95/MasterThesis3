@@ -1,5 +1,6 @@
 from sklearn.preprocessing import Normalizer
 from Classes.Scaling.ScalerFitter import ScalerFitter
+import numpy as np
 
 class DataNormalizer(ScalerFitter):
 

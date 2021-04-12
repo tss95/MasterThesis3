@@ -173,8 +173,9 @@ class RamLoader:
                 scaler.fit_scaler_ram(traces)
                 scaler = scaler.scaler
             elif self.scaler_name == "robust":
-                scaler = RobustScalerFitter().scaler
-                print("Fit process of robust scaler skipped as unecessary.")
+                scaler = RobustScalerFitter()
+                scaler.fit_scaler_ram(traces)
+                scaler = scaler.scaler
             elif self.scaler_name == "normalize":
                 scaler = DataNormalizer()
                 print("Fit process of normalizer skipped as unecessary")
@@ -242,10 +243,10 @@ class RamLoader:
         num_samples = traces.shape[0]
         bar_text = self.stage_two_text(substage)
         if self.scaler_name != None:
-            if self.scaler_name != "robust" and self.scaler_name != "normalize":
+            if self.scaler_name != "normalize":
                 for i in range(num_samples):
                     self.progress_bar(i+1, num_samples, bar_text)
-                    traces[i] = self.scaler.transform(traces[i])
+                    traces[i] = np.transpose(self.scaler.transform(np.transpose(traces[i])))
                 print("\n")
             else:
                 for i in range(num_samples):

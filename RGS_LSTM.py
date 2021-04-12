@@ -58,13 +58,13 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.25,
+    'subsample_size' : 0.2,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
 }
 loadData = LoadData(**load_args)
-full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
+train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
@@ -76,24 +76,26 @@ hyper_grid = {
         "epochs" : [50],
         "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
         "optimizer" : ["sgd", "sgd", "adam", "rmsprop"],
-        "num_layers" : [1, 2, 3, 4, 5],
-        "units" : np.arange(20, 80, 10),
+        "num_layers" : [1],
+        "units" : np.arange(80, 150, 10),
         "use_layerwise_dropout_batchnorm" : [False, True],
         "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
         "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
         "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
         "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
-        "activation" : ["tanh"],
+        "dense_activation" : ["tanh", "relu", "softmax"],
+        "first_dense_units" : np.arange(100, 300, 10),
+        "second_dense_units" : np.arange(100, 300 ,10),
         "output_layer_activation" : ["sigmoid"]
     }
 
 
 model_type = "LSTM"
 is_lstm = True
-num_channels = 2    
+num_channels = 3   
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "robust"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -106,7 +108,7 @@ use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
-start_from_scratch = True
+start_from_scratch = False
 use_reduced_lr = True
 log_data = False
 

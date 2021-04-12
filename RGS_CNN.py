@@ -54,14 +54,14 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.25,
+    'subsample_size' : 0.35,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -98,20 +98,20 @@ hyper_grid = {
 # Near the parameters of the old best performer
 hyper_grid = {
     "num_layers" : [1, 2, 3],
-    "batch_size" : [64, 128, 256],
+    "batch_size" : [48, 64, 128, 256],
     "epochs" : [50],
     "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.0025, 0.0001],
-    "optimizer" : ["sgd", "adam", "rmsprop"],
-    "num_filters" : np.arange(60, 80, 2),
-    "filter_size" : np.arange(40, 60, 2),
+    "optimizer" : ["sgd"],
+    "num_filters" : np.arange(60, 90, 2),
+    "filter_size" : np.arange(40, 70, 2),
     "cnn_activation" : ["tanh", "relu"],
     "dense_activation" : ["relu", "tanh"],
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [True, False],
-    "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "l2_r" : [0.01, 0.001, 0.0001],
-    "l1_r" : [0.01, 0.001, 0.0001],
+    "l2_r" : [0.1, 0.01, 0.001, 0.0001],
+    "l1_r" : [0.1, 0.01, 0.001, 0.0001],
     "first_dense_units" : np.arange(250,300, 2),
     "output_layer_activation" : ["sigmoid"]
 }
@@ -143,7 +143,7 @@ is_lstm = True
 num_channels = 3
 
 use_time_augmentor = True
-scaler_name = "normalize"
+scaler_name = "robust"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -174,22 +174,10 @@ if use_tensorboard:
     clear_tensorboard_dir()
 
 
-try:
-    randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                            filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                            use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                            use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
-    randomGridSearch.fit()
-
-except Exception as e:
-    print(str(e))
-
-finally:
-    if shutdown:
-        os.system("shutdown now -h")
-    else:
-        print("Process completed.")
-            
-
+randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                        filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
+                        use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
+                        use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+randomGridSearch.fit()
 

@@ -65,7 +65,7 @@ load_args = {
     'even_balance' : True
 }
 loadData = LoadData(**load_args)
-full_ds, train_ds, val_ds, test_ds = loadData.get_datasets()
+train_ds, val_ds, test_ds = loadData.get_datasets()
 noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
@@ -96,7 +96,7 @@ is_lstm = True
 num_channels = 3    
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "robust"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -125,9 +125,13 @@ def clear_tensorboard_dir():
             shutil.rmtree(os.path.join(path,f))
 if use_tensorboard:
     clear_tensorboard_dir()
+randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                       filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
+                       use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                       start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+randomGridSearch.fit()
 
-
-try:
+"""try:
     randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                             filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
                             use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
@@ -142,6 +146,6 @@ finally:
         os.system("shutdown now -h")
     else:
         print("Process completed.")
-            
+            """
 
 

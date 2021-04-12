@@ -1,6 +1,7 @@
 from sklearn.preprocessing import RobustScaler
 from .ScalerFitter import ScalerFitter
 import time
+import numpy as np
 
 class RobustScalerFitter(ScalerFitter):
 
@@ -9,11 +10,10 @@ class RobustScalerFitter(ScalerFitter):
 
 
     def fit_scaler_ram(self, traces):
-        print("I SHOULD NOT BE USED")
         num_samples = traces.shape[0]
         start = time.time()
         for i in range(num_samples):
-            self.scaler.fit(traces[i])
+            self.scaler.fit(np.transpose(traces[i]))
             self.progress_bar(i + 1, num_samples)
         end = time.time()
         print(f"Completed fitting robust scaler. Total time taken: {int(end-start)} seconds")
@@ -21,4 +21,4 @@ class RobustScalerFitter(ScalerFitter):
         return self.scaler
         
     def fit_transform_trace(self, trace):
-        return self.scaler.fit_transform(trace)
+        return np.transpose(self.scaler.fit_transform(np.transpose(trace)))

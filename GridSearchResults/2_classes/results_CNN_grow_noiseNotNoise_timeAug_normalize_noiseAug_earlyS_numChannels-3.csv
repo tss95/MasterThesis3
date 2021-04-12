@@ -1,0 +1,2 @@
+use_layerwise_dropout_batchnorm,padding,output_layer_activation,optimizer,num_layers,num_filters,learning_rate,l2_r,l1_r,growth_sequence,first_dense_units,filter_size,epochs,dropout_rate,dense_activation,cnn_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+True,same,sigmoid,sgd,3,68,0.05,0.001,0.001,"[1, 4, 8]",252,56,50,0,relu,tanh,64,,,,,,,,,

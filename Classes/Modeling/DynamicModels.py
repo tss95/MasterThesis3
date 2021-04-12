@@ -75,10 +75,14 @@ class DynamicModels():
             self.model = self.create_modified_Meier_CNN_model(**p) 
         if self.model_type == "CNN_grow":
             self.model = self.create_CNN_grow_model(**p)
+        if self.model_type == "CNN_baseline":
+            self.model = self.create_CNN_baseline_model(**p)
         self.model.summary()
         
     
-    def output_nr_nodes(self, num_classes):
+    def output_nr_nodes(self, num_classes, two_output_units = False):
+        if two_output_units:
+            return 2
         if num_classes > 2:
             return num_classes
         else:
@@ -96,7 +100,11 @@ class DynamicModels():
         l2_r = p['l2_r']
         dropout_rate = p['dropout_rate']
         use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        first_dense_units = p['first_dense_units']
+        second_dense_units = p['second_dense_units']
+        dense_activation = p['dense_activation']
         output_layer_activation = p['output_layer_activation']
+
 
         input_layer = tf.keras.layers.Input(self.input_shape)
         x = input_layer
@@ -109,11 +117,16 @@ class DynamicModels():
                         return_sequences = return_sequences,
                         kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
                         bias_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
+            
             if use_layerwise_dropout_batchnorm:
                 x = BatchNormalization()(x)
                 x = Dropout(dropout_rate)(x)
+            
+        x = Dense(first_dense_units, activation = dense_activation)(x)
+        x = Dense(second_dense_units, activation = dense_activation)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        model.add_loss(1.00)
         return model
 
 
@@ -354,9 +367,15 @@ class DynamicModels():
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model
 
-
-            
-    
-    
-    
-    
+def create_CNN_baseline_model(self, **p):
+    cnn_activation = p['cnn_activation']
+    dense_activation = p['dense_activation']
+    output_layer_activation = p['output_layer_activation']
+    input_layer = tf.keras.layers.Input(self.input_shape)
+    x = input_layer
+    x = Conv1D(32, kernel_size = 16)(x)
+    x = Activation(cnn_activation)(x)
+    x = Dense(100, activation = dense_activation)(x)
+    output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+    model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+    return model

@@ -26,6 +26,7 @@ from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.RamLoader import RamLoader
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.DataProcessing.ts_RamGenerator import data_generator
+from Classes.Modeling.TrainSingleModel import TrainSingleModel
 
 
 import sys
@@ -48,7 +49,7 @@ class RGS(GridSearchResultProcessor):
         self.train_ds = train_ds
         self.val_ds = val_ds
         self.test_ds = test_ds
-        self.model_nr_type = model_type
+        self.model_type = model_type
         self.num_classes = len(set(self.loadData.label_dict.values()))
 
         self.scaler_name = scaler_name
@@ -74,10 +75,69 @@ class RGS(GridSearchResultProcessor):
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
         self.is_dynamic = False
-        if type(self.model_nr_type) == str:
+        if type(self.model_type) == str:
             self.is_dynamic = True
 
-            
+
+    def fit(self):
+        pp = pprint.PrettyPrinter(indent=4)
+        # Creating grid:
+        self.p = ParameterGrid(self.hyper_grid)
+        if len(self.p) < self.n_picks:
+            self.n_picks = len(self.p)
+            print(f"Picks higher than max. Reducing picks to {self.n_picks} picks")
+        self.p = self.get_n_params_from_list(self.p, self.n_picks)
+        
+        # Create name of results file, get initiated results df, either brand new or continue old.
+        self.results_file_name = self.get_results_file_name()
+        print(self.results_file_name)
+        self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
+        print(self.results_df)
+        # Preprocessing and loading all data to RAM:
+        self.ramLoader = RamLoader(self.loadData, 
+                              self.handler, 
+                              use_time_augmentor = self.use_time_augmentor, 
+                              use_noise_augmentor = self.use_noise_augmentor, 
+                              scaler_name = self.scaler_name,
+                              filter_name = self.filter_name, 
+                              band_min = self.band_min,
+                              band_max = self.band_max,
+                              highpass_freq = self.highpass_freq, 
+                              load_test_set = False)
+        self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = self.ramLoader.load_to_ram()
+
+
+        
+        
+        for i in range(len(self.p)):
+            gc.collect()
+            tf.keras.backend.clear_session()
+            tf.compat.v1.reset_default_graph()
+            tf.config.optimizer.set_jit(True)
+            mixed_precision.set_global_policy('mixed_float16')
+            try:
+                trainSingleModel = TrainSingleModel(self.x_train, self.y_train, self.x_val, self.y_val,
+                                                    None, None, self.noiseAug, self.helper, self.loadData,
+                                                    self.model_type, self.num_channels, self.use_tensorboard,
+                                                    self.use_liveplots, self.use_custom_callback, 
+                                                    self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
+                                                    log_data = self.log_data, results_df = self.results_df,
+                                                    results_file_name = self.results_file_name, index = i,
+                                                    start_from_scratch = False)
+                # Add try catch clauses here
+                model, self.results_df = trainSingleModel.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_load = False, **self.p[i])
+                del model
+            except Exception as e:
+                print(str(e))
+                continue
+            finally:
+                gc.collect()
+                    
+                tf.keras.backend.clear_session()
+                tf.compat.v1.reset_default_graph()
+                continue
+
+    """        
 
     def fit(self):
         pp = pprint.PrettyPrinter(indent=4)
@@ -127,22 +187,7 @@ class RGS(GridSearchResultProcessor):
             batch_size = self.p[i]["batch_size"]
             
             opt = self.helper.get_optimizer(self.p[i]["optimizer"], self.p[i]["learning_rate"])
-    
-
-            if "decay_sequence" in self.p[i]:
-                if "num_filters" in self.p[i]:
-                    units_or_num_filters = self.p[i]["num_filters"]
-                else:
-                    units_or_num_filters = self.p[i]["units"]
-                num_layers = self.p[i]["num_layers"]
-                self.p[i]["decay_sequence"] = self.helper.get_max_decay_sequence(num_layers, 
-                                                                                units_or_num_filters, 
-                                                                                self.p[i]["decay_sequence"], 
-                                                                                self.num_classes)
-   
-            if "first_dense_units" in self.p[i] and "second_dense_units" in self.p[i]:
-                if self.p[i]["first_dense_units"] < self.p[i]["second_dense_units"]:
-                    self.p[i]["second_dense_units"] = self.p[i]["first_dense_units"]
+            self.p[i] = self.helper.handle_hyperparams(self.num_classes, **self.p[i])
             
             current_picks = [model_info, self.p[i]]
             pp.pprint(current_picks)
@@ -244,7 +289,7 @@ class RGS(GridSearchResultProcessor):
                 print("Something went wrong while training the model (most likely)")
 
                 continue
-
+    """
 
     def print_best_performers(self, min_loss, max_accuracy, max_precision, max_recall):
         print("----------------------------------------------------LOSS----------------------------------------------------------")
