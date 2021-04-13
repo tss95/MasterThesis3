@@ -1,0 +1,6 @@
+use_layerwise_dropout_batchnorm,second_dense_units,padding,output_layer_activation,optimizer,num_layers,num_filters,learning_rate,l2_r,l1_r,growth_sequence,first_dense_units,filter_size,epochs,dropout_rate,dropout_T_bn_F,dense_activation,cnn_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+True,234,same,sigmoid,sgd,2,64,0.005,0.1,0.1,"[1, 2]",256,40,50,0.001,False,tanh,tanh,64,,,,,,,,,
+True,188,same,sigmoid,sgd,3,74,0.01,0.01,0.0001,"[1, 1, 1]",258,52,50,0.001,False,tanh,tanh,48,,,,,,,,,
+True,216,same,sigmoid,sgd,2,72,0.01,0.0001,0.001,"[1, 1]",276,44,50,0.2,False,relu,relu,48,0.434877067804,0.858109474182,0.948984563351,0.757694900036,0.669014215469,0.720410645008,0.991264402866,0.70388507843,"[[ 219   31]
+ [ 913 2149]]"
+True,208,same,sigmoid,sgd,2,78,0.0025,0.01,0.001,"[1, 2]",290,54,50,0.2,True,tanh,tanh,128,,,,,,,,,

@@ -54,15 +54,15 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.35,
-    'balance_non_train_set' : True,
+    'subsample_size' : 0.25,
+    'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True
 }
@@ -102,17 +102,19 @@ hyper_grid = {
     "epochs" : [50],
     "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.0025, 0.0001],
     "optimizer" : ["sgd"],
-    "num_filters" : np.arange(60, 90, 2),
+    "num_filters" : np.arange(60, 80, 2),
     "filter_size" : np.arange(40, 70, 2),
     "cnn_activation" : ["tanh", "relu"],
     "dense_activation" : ["relu", "tanh"],
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [True, False],
+    "dropout_T_bn_F" : [True, False],
     "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
     "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
     "l2_r" : [0.1, 0.01, 0.001, 0.0001],
     "l1_r" : [0.1, 0.01, 0.001, 0.0001],
     "first_dense_units" : np.arange(250,300, 2),
+    "second_dense_units" : np.arange(150, 300, 2),
     "output_layer_activation" : ["sigmoid"]
 }
 """
@@ -138,12 +140,12 @@ hyper_grid = {
 """
 
 
-model_type = "CNN_grow"
+model_type = "CNN_grow_double"
 is_lstm = True
 num_channels = 3
 
 use_time_augmentor = True
-scaler_name = "robust"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -154,7 +156,7 @@ n_picks = 300
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = True
+use_custom_callback = False
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True

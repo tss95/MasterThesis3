@@ -46,8 +46,8 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_generator(self, model, gen, batch_size, steps, label_dict):
-        predictions = model.predict(x = gen, batch_size = batch_size, steps = steps)
+    def predict_generator(self, model, gen, steps, label_dict):
+        predictions = model.predict(x = gen, steps = steps)
         return predictions
     
     def convert_to_class(self, predictions):
@@ -55,35 +55,6 @@ class HelperFunctions():
             predictions = np.rint(predictions)
             return predictions
         raise Exception("More than two classes has not been implemented")
-        
-    """
-    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, plot = True, run_evaluate = False, meier_version = False):
-        x_test = x_test[:][:,:num_channels]
-        x_test = np.reshape(x_test,(x_test.shape[0], x_test.shape[2], x_test.shape[1]))
-        if run_evaluate:
-            model.evaluate(x = x_test, y = y_test)
-        predictions = self.predict_model(model, x_test, y_test, label_dict)[:,1]
-        if not meier_version:
-            
-            predictions = np.reshape(predictions, (predictions.shape[0], 1))
-            y_test = np.reshape(y_test, (y_test.shape[0, 1]))
-            y_test = y_test[:len(predictions)]
-            
-        else:
-            y_test = y_test[:len(predictions)][:,1]
-        print(f"Num samples: {len(y_test)}, Num predictions: {len(predictions)}")
-        print(y_test.shape, predictions.shape)
-        num_classes = len(set(label_dict.values()))
-        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
-        class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
-        if plot:
-            self.plot_confusion_matrix(conf, label_dict)
-        print(conf)
-        print(class_report)
-        
-        
-        return conf, class_report
-    """
 
     def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
         pp = pprint.PrettyPrinter(indent = 4)
@@ -122,7 +93,7 @@ class HelperFunctions():
         test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), use_multiprocessing = False)
         test_enq.start(workers = 16, max_queue_size = 15)
         test_gen = test_enq.get()
-        predictions = self.predict_generator(model, test_gen, batch_size, steps, label_dict) 
+        predictions = self.predict_generator(model, test_gen, steps, label_dict) 
         predictions = np.rint(predictions)
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
@@ -288,10 +259,10 @@ class HelperFunctions():
     
     def generate_model_compile_args(self, opt, nr_classes):
         if nr_classes == 2:
-            loss = tf.metrics.BinaryCrossentropy(from_logits = True)
+            loss = "binary_crossentropy"
             acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuracy", dtype=None, threshold=0.5)
         else:
-            loss = tf.metrics.CategoricalCrossentropy(from_logits = True)
+            loss = "categorical_crossentropy"
             acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
         return {"loss" : loss,
                 "optimizer" : opt,
@@ -333,6 +304,7 @@ class HelperFunctions():
                             min_delta = 0,
                             patience = 5,
                             verbose = 1,
+                            mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
             else: 
@@ -340,17 +312,18 @@ class HelperFunctions():
                             min_delta = 0,
                             patience = 5,
                             verbose = 1,
+                            mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
         if use_reduced_lr:
             if loadData.balance_non_train_set:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
-                                                                    factor=0.5, patience=3,
+                                                                    factor=0.5, patience=3, mode = "max",
                                                                     min_lr=0.00005, 
                                                                     verbose = 1))
             else:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
-                                                                      factor=0.5, patience=3,
+                                                                      factor=0.5, patience=3, mode = "max",
                                                                       min_lr=0.00005, 
                                                                       verbose = 1))
                 print("----------Reduce LR monitoring val_precision------------")                                           
@@ -371,7 +344,6 @@ class HelperFunctions():
         print("------------ Meier ------------")
         if use_liveplots:
             #callbacks.append(PlotLossesKeras())
-            a = 1
             print("")
         if use_tensorboard:
             log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -386,6 +358,7 @@ class HelperFunctions():
                             min_delta = 0,
                             patience = 5,
                             verbose = 1,
+                            mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
                 print("----------Early stop monitoring val_categorical_accuracy----------")
@@ -394,18 +367,19 @@ class HelperFunctions():
                             min_delta = 0,
                             patience = 5,
                             verbose = 1,
+                            mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
                 print("----------Early stop monitoring val_precision----------")
         if use_reduced_lr:
             if loadData.balance_non_train_set:
-                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_categorical_accuracy', 
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_categorical_accuracy', mode = "max",
                                                                     factor=0.5, patience=3,
                                                                     min_lr=0.00005, 
                                                                     verbose = 1))
                 print("----------Reduce LR monitoring val_categorical----------")
             else:
-                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', mode = "max",
                                                                         factor=0.5, patience=3,
                                                                         min_lr=0.00005, 
                                                                         verbose = 1))

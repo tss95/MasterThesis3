@@ -89,7 +89,7 @@ is_lstm = True
 num_channels = 3    
 
 use_time_augmentor = True
-scaler_name = "normalize"
+scaler_name = "robust"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -166,7 +166,7 @@ params = {
     "use_batchnorm" : False
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
@@ -182,7 +182,7 @@ params = {
     "use_batchnorm" : False
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
@@ -199,7 +199,7 @@ params = {
     "use_batchnorm" : False
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
@@ -217,7 +217,7 @@ params = {
     "use_batchnorm" : True
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
@@ -234,7 +234,7 @@ params = {
     "use_batchnorm" : True
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
@@ -250,7 +250,7 @@ params = {
     "use_batchnorm" : True
 }
 
-model = modelTrain.run(16, 15, evaluate_train = True, evaluate_val = True, evaluate_test = True, meier_mode = True, **params)
+model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
 
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()

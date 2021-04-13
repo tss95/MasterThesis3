@@ -88,11 +88,6 @@ class RGS(GridSearchResultProcessor):
             print(f"Picks higher than max. Reducing picks to {self.n_picks} picks")
         self.p = self.get_n_params_from_list(self.p, self.n_picks)
         
-        # Create name of results file, get initiated results df, either brand new or continue old.
-        self.results_file_name = self.get_results_file_name()
-        print(self.results_file_name)
-        self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
-        print(self.results_df)
         # Preprocessing and loading all data to RAM:
         self.ramLoader = RamLoader(self.loadData, 
                               self.handler, 
@@ -106,9 +101,11 @@ class RGS(GridSearchResultProcessor):
                               load_test_set = False)
         self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = self.ramLoader.load_to_ram()
 
-
-        
-        
+        # Create name of results file, get initiated results df, either brand new or continue old.
+        self.results_file_name = self.get_results_file_name()
+        print(self.results_file_name)
+        self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
+        print(self.results_df)
         for i in range(len(self.p)):
             gc.collect()
             tf.keras.backend.clear_session()

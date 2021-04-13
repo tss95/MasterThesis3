@@ -157,7 +157,7 @@ class TrainSingleModel(GridSearchResultProcessor):
         val_enq = self.create_enqueuer(self.x_val, self.y_val, p["batch_size"], self.noiseAug, self.num_channels)
         val_enq.start(workers = workers, max_queue_size = max_queue_size)
         val_gen = val_enq.get()
-        val_eval = model.evaluate(x = val_gen, 
+        val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
         metrics = {}
@@ -178,7 +178,7 @@ class TrainSingleModel(GridSearchResultProcessor):
         train_enq = self.create_enqueuer(self.x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
         train_enq.start(workers = workers, max_queue_size = max_queue_size)
         train_gen = train_enq.get()
-        train_eval = model.evaluate(x = train_gen, 
+        train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
         if not meier_mode:
