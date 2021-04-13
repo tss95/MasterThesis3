@@ -56,10 +56,13 @@ class HelperFunctions():
             return predictions
         raise Exception("More than two classes has not been implemented")
 
-    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
+    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, noiseAug, scaler_name, plot_confusion_matrix = False):
         pp = pprint.PrettyPrinter(indent = 4)
         if noiseAug != None:
-            x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/10)
+            if scaler_name != "normalize":
+                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/10)
+            else:
+                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/15)
         x_test[:][:,:num_channels]
         x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[2], x_test.shape[1]))
         model.evaluate(x = x_test, y = y_test)
@@ -87,11 +90,14 @@ class HelperFunctions():
         print(class_report)
         return conf, class_report
 
-    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, plot_confusion_matrix = False):
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, plot_confusion_matrix = False):
+        norm_scale = False
+        if scaler_name == "normalize":
+            norm_scale = True
         pp = pprint.PrettyPrinter(indent=4)
         steps = self.get_steps_per_epoch(x_test, batch_size)
-        test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), use_multiprocessing = False)
-        test_enq.start(workers = 16, max_queue_size = 15)
+        test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), use_multiprocessing = False)
+        test_enq.start(workers = 8, max_queue_size = 10)
         test_gen = test_enq.get()
         predictions = self.predict_generator(model, test_gen, steps, label_dict) 
         predictions = np.rint(predictions)
@@ -307,6 +313,7 @@ class HelperFunctions():
                             mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
+                print("----------EarlyStop monitoring val_binary_accuracy------------") 
             else: 
                 earlystop = EarlyStopping(monitor = 'val_precision',
                             min_delta = 0,
@@ -315,12 +322,14 @@ class HelperFunctions():
                             mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
+                print("----------EarlyStop monitoring val_precision------------") 
         if use_reduced_lr:
             if loadData.balance_non_train_set:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
                                                                     factor=0.5, patience=3, mode = "max",
                                                                     min_lr=0.00005, 
                                                                     verbose = 1))
+                print("----------Reduce LR monitoring val_binary_accuracy------------") 
             else:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
                                                                       factor=0.5, patience=3, mode = "max",

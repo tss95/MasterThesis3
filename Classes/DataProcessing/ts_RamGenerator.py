@@ -30,7 +30,7 @@ def threadsafe_generator(f):
     return g
 
 @threadsafe_generator    
-def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_lstm = False):
+def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_lstm = False, norm_scale = False):
     """
     Creates a generator object which yields two arrays. One array for waveforms, and one array for labels
     """
@@ -54,7 +54,12 @@ def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_ls
 
             # Adds a little noise to each event, as a regulatory measure
             if noiseAug != None:
-                batch_traces = preprocess_data(batch_traces, noiseAug)
+                # Since normalize scaler is independent it will scale noise proportionally less than non noise events
+                if not norm_scale:
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/10)
+                else:
+                    # Choose 1/15, but this is just some number. Potential for improvement by tuning.
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/15)
 
             batch_traces = batch_traces[:][:,0:num_channels]
             if is_lstm:
@@ -62,12 +67,12 @@ def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_ls
 
             yield batch_traces, batch_labels
 
-def preprocess_data(traces, noiseAug):
-    return noiseAug.batch_augment_noise(traces, 0, noiseAug.noise_std/10)
+def preprocess_data(traces, noiseAug, std_frac):
+    return noiseAug.batch_augment_noise(traces, 0, noiseAug.noise_std*std_frac)
 
 
 @threadsafe_generator
-def modified_data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_lstm = False):
+def modified_data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_lstm = False, norm_scale = False):
     """
     Creates a generator object which yields two arrays. One array for waveforms, and one array for labels
     """
@@ -87,7 +92,10 @@ def modified_data_generator(traces, labels, batch_size, noiseAug, num_channels =
 
             # Adds a little noise to each event, as a regulatory measure
             if noiseAug != None:
-                batch_traces = preprocess_data(batch_traces, noiseAug)
+                if not norm_scale:
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/10)
+                else:
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/15)
 
             batch_traces = batch_traces[:][:,0:num_channels]
             if is_lstm:

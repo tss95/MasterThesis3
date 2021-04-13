@@ -109,7 +109,10 @@ class TrainSingleModel(GridSearchResultProcessor):
     
     
     def create_enqueuer(self, X, y, batch_size, noiseAug, num_channels):
-        enq = GeneratorEnqueuer(data_generator(X, y, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True), 
+        norm_scale = False
+        if self.ramLoader.scaler_name == "normalize":
+            norm_scale = True
+        enq = GeneratorEnqueuer(data_generator(X, y, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), 
                                 use_multiprocessing = False)
         return enq
         
@@ -173,7 +176,7 @@ class TrainSingleModel(GridSearchResultProcessor):
                                 "val_recall" : val_eval["recall"]}
         val_enq.stop()
         del val_enq, val_gen
-        val_conf, _ = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
+        val_conf, _ = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         print("Evaluating train:")
         train_enq = self.create_enqueuer(self.x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
         train_enq.start(workers = workers, max_queue_size = max_queue_size)
@@ -192,7 +195,7 @@ class TrainSingleModel(GridSearchResultProcessor):
                             "train_precision": train_eval["precision"],
                             "train_recall" : train_eval["recall"]}
         del train_enq, train_gen
-        _, _ = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
+        _, _ = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         return metrics, val_conf
     
     def run(self, workers, max_queue_size, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_mode = False, **p):
@@ -207,12 +210,12 @@ class TrainSingleModel(GridSearchResultProcessor):
             print(self.results_df.iloc[-1])
         if evaluate_train:
             print("Unsaved train eval:")
-            self.helper.evaluate_generator(model, self.x_train, self.y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug)
+            self.helper.evaluate_generator(model, self.x_train, self.y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         if evaluate_val:
             print("Unsaved val eval:")
-            self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug)
+            self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         if evaluate_test:
             print("Unsaved test eval:")
-            self.helper.evaluate_generator(model, self.x_test, self.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug)
+            self.helper.evaluate_generator(model, self.x_test, self.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         
         return model, self.results_df

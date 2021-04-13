@@ -200,7 +200,7 @@ class LoadData():
     def create_label_dict(self):
         # Method which produces the dictionary for labels. This is used in order to disguise labels during training.
         if self.earth_explo_only:
-            self.label_dict = {'earthquake' : 0, 'explosion' : 1}
+            self.label_dict = {'explosion' : 0, 'earthquake' : 1}
         elif self.noise_earth_only:
             self.label_dict = {'earthquake' : 0, 'noise' : 1}
         elif self.noise_not_noise:

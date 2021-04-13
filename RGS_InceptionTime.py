@@ -60,7 +60,7 @@ load_args = {
     'frac_diff' : 1,
     'seed' : 1,
     'subsample_size' : 0.25,
-    'balance_non_train_set' : True,
+    'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True
 }
@@ -73,14 +73,14 @@ handler = DataHandler(loadData)
 hyper_grid = {    
     "batch_size" : [64, 128, 256],
     "epochs" : [50],
-    "learning_rate" : [0.1, 0.01, 0.001, 0.0001],
-    "optimizer" : ["sgd", "adam", "rmsprop"],
+    "learning_rate" : [0.01, 0.001, 0.0001],
+    "optimizer" : ["sgd", "adam"],
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
     "num_modules" : np.concatenate((np.array([1]), np.arange(3, 9, 3))),
-    "filter_size" : np.arange(30, 60, 2),
+    "filter_size" : np.arange(30, 80, 2),
     "bottleneck_size" : np.arange(30, 50, 2),
-    "num_filters" : np.arange(20, 40, 2),
+    "num_filters" : np.arange(30, 80, 2),
     "residual_activation" : ["relu", "relu", "relu", "relu", "tanh"],
     "module_activation" : ["linear", "linear", "linear", "relu", "tanh"],
     "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "tanh"],
