@@ -74,9 +74,9 @@ handler = DataHandler(loadData)
 hyper_grid = {
         "batch_size" : [64, 128, 256],
         "epochs" : [50],
-        "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
+        "learning_rate" : [0.01, 0.01, 0.001, 0.0001],
         "optimizer" : ["sgd", "sgd", "adam", "rmsprop"],
-        "num_layers" : [1],
+        "num_layers" : [1, 2],
         "units" : np.arange(80, 150, 10),
         "use_layerwise_dropout_batchnorm" : [False, True],
         "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
