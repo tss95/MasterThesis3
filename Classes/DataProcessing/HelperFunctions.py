@@ -13,6 +13,7 @@ import pylab as pl
 import pprint
 
 import tensorflow as tf
+#import tensorflow_addons as tfa
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPooling3D, BatchNormalization, InputLayer, LSTM
@@ -26,6 +27,7 @@ from Classes.DataProcessing.ts_RamGenerator import data_generator
 from tensorflow.keras.utils import GeneratorEnqueuer, OrderedEnqueuer
 
 from tensorflow.keras import utils
+from tensorflow.keras import backend as K
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.callbacks import EarlyStopping
@@ -116,7 +118,7 @@ class HelperFunctions():
             self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(conf)
-        print(class_report)
+        f1 = class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
         return conf, class_report
 
 
@@ -159,20 +161,23 @@ class HelperFunctions():
                 label = path_and_label[1]
                 class_array[idx][class_dict.get(label)] = 1
         return class_array
+    def f1_metric(self, y_true, y_pred):
 
-    def convert_to_class(self, predictions):
-        
-        if predictions.shape[1] == 1:
-            predicted_classes = np.zeros((len(predictions), 2))
-            for idx, prediction in enumerate(predictions):
-                predicted_classes[idx][int(round(prediction[0]))] = round(prediction[0])
-        else:
-            predicted_classes = np.zeros((predictions.shape))
-            for idx, prediction in enumerate(predictions):
-                highest_pred = max(prediction)
-                highest_pred_index = np.where(prediction == highest_pred)
-                predicted_classes[idx][highest_pred_index] = 1
-        return predicted_classes
+        def recall(y_true, y_pred):
+            true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+            possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+            recall = (true_positives + K.epsilon()) / (possible_positives + K.epsilon())
+            return recall
+
+        def precision(y_true, y_pred):
+            true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+            predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+            precision = (true_positives + K.epsilon()) / (predicted_positives + K.epsilon())
+            return precision
+
+        precision = precision(y_true, y_pred)
+        recall = recall(y_true, y_pred)
+        return 2*((precision*recall)/(precision+recall+K.epsilon()))
     
     def get_class_distribution_from_csv(self,data_csv):
         with open(data_csv) as file:
@@ -263,18 +268,30 @@ class HelperFunctions():
                 "kernel_size" : kernel_size,
                 "padding" : padding}
     
-    def generate_model_compile_args(self, opt, nr_classes):
+    def generate_model_compile_args(self, opt, nr_classes, balance_non_train_set):
         if nr_classes == 2:
             loss = "binary_crossentropy"
             acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuracy", dtype=None, threshold=0.5)
         else:
+            raise Exception("Need to rewrite class_id!")
             loss = "categorical_crossentropy"
             acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
-        return {"loss" : loss,
-                "optimizer" : opt,
-                "metrics" : [acc,
-                            tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                            tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
+        if balance_non_train_set:
+            return {"loss" : loss,
+                    "optimizer" : opt,
+                    "metrics" : [acc,
+                                #tfa.metrics.F1Score(num_classes = nr_classes, threshold = 0.5),
+                                tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                                tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]
+                                }
+        else:
+            return {"loss" : loss,
+                    "optimizer" : opt,
+                    "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                                 tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                                 #self.f1_metric,
+                                 #tfa.metrics.F1Score(num_classes = nr_classes, threshold = 0.5),
+                                acc]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
@@ -292,7 +309,7 @@ class HelperFunctions():
                     "highpass_freq" : highpass_freq,
                     "is_lstm" : is_lstm}
     
-    def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False):
+    def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False, y_val = None):
         callbacks = []
         if use_liveplots:
             #callbacks.append(PlotLossesKeras())
@@ -302,27 +319,27 @@ class HelperFunctions():
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
-            custom_callback = CustomCallback()
+            custom_callback = CustomCallback(val_gen, self.get_steps_per_epoch(val_ds, batch_size), y_val)
             callbacks.append(custom_callback)
         if use_early_stopping:
             if loadData.balance_non_train_set:
                 earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
                             min_delta = 0,
-                            patience = 5,
+                            patience = 7,
                             verbose = 1,
                             mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
                 print("----------EarlyStop monitoring val_binary_accuracy------------") 
             else: 
-                earlystop = EarlyStopping(monitor = 'val_precision',
+                earlystop = EarlyStopping(monitor = "val_f1",
                             min_delta = 0,
-                            patience = 5,
+                            patience = 7,
                             verbose = 1,
                             mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
-                print("----------EarlyStop monitoring val_precision------------") 
+                print("----------EarlyStop monitoring val_f1------------") 
         if use_reduced_lr:
             if loadData.balance_non_train_set:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
@@ -331,11 +348,11 @@ class HelperFunctions():
                                                                     verbose = 1))
                 print("----------Reduce LR monitoring val_binary_accuracy------------") 
             else:
-                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', 
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_f1', 
                                                                       factor=0.5, patience=3, mode = "max",
                                                                       min_lr=0.00005, 
                                                                       verbose = 1))
-                print("----------Reduce LR monitoring val_precision------------")                                           
+                print("----------Reduce LR monitoring val_f1------------")                                           
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                 "epochs" : epoch,
