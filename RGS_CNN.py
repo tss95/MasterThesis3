@@ -100,7 +100,7 @@ hyper_grid = {
     "num_layers" : [1, 2, 3],
     "batch_size" : [48, 64, 128, 256],
     "epochs" : [50],
-    "learning_rate" : [0.05, 0.025, 0.01, 0.005, 0.0025, 0.0001],
+    "learning_rate" : [0.01, 0.005, 0.0025, 0.0001],
     "optimizer" : ["sgd", "sgd", "adam"],
     "num_filters" : np.arange(60, 80, 2),
     "filter_size" : np.arange(40, 80, 2),
@@ -109,10 +109,10 @@ hyper_grid = {
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [True, False],
     "dropout_T_bn_F" : [True, False],
-    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
-    "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-    "l2_r" : [0.1, 0.01, 0.001, 0.0001],
-    "l1_r" : [0.1, 0.01, 0.001, 0.0001],
+    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,8,16,32,64,128], [1,4,8]],
+    "dropout_rate" : [0.2, 0.1, 0.01, 0.001, 0],
+    "l2_r" : [0.1, 0.01, 0.001, 0.0001, 0],
+    "l1_r" : [0.1, 0.01, 0.001, 0.0001, 0],
     "first_dense_units" : np.arange(250,300, 2),
     "second_dense_units" : np.arange(150, 300, 2),
     "output_layer_activation" : ["sigmoid"]
@@ -156,7 +156,7 @@ n_picks = 300
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = False
+use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
@@ -175,7 +175,7 @@ def clear_tensorboard_dir():
 if use_tensorboard:
     clear_tensorboard_dir()
 
-
+      
 randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                         filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
                         use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 

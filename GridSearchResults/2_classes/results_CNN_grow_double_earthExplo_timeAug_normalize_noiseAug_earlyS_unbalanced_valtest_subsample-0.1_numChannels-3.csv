@@ -1,0 +1,10 @@
+use_layerwise_dropout_batchnorm,second_dense_units,padding,output_layer_activation,optimizer,num_layers,num_filters,learning_rate,l2_r,l1_r,growth_sequence,first_dense_units,filter_size,epochs,dropout_rate,dropout_T_bn_F,dense_activation,cnn_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+True,274,same,sigmoid,adam,2,60,0.0001,0.0001,0.001,"[1, 1]",282,60,50,0.001,False,tanh,tanh,128,0.0855421423912,0.986755371094,0.9993673563,0.973859429359,0.595961153507,0.829752087593,0.278431355953,0.763440847397,"[[998 187]
+ [ 23  72]]"
+True,224,same,sigmoid,sgd,2,74,0.01,0.1,0.01,"[1, 1]",250,46,50,0.2,False,relu,tanh,128,,,,,,,,,
+False,242,same,sigmoid,adam,1,74,0.0025,0.01,0.0001,[1],292,58,50,0.0,False,tanh,relu,256,,,,,,,,,
+True,196,same,sigmoid,sgd,2,68,0.01,0.01,0.0,"[1, 1]",264,62,50,0.01,False,relu,relu,64,0.696962833405,0.890989780426,0.958773374557,0.814650893211,0.755675852299,0.872656285763,0.347417831421,0.755102038383,"[[1032  153]
+ [  37   58]]"
+True,182,same,sigmoid,sgd,1,66,0.01,0.1,0.001,[1],264,66,50,0.2,False,tanh,tanh,256,1.30648601055,0.721618652344,0.749787449837,0.654383599758,1.30719816685,0.742968738079,0.169491529465,0.631578981876,"[[891 294]
+ [ 36  59]]"
+True,284,same,sigmoid,adam,1,60,0.01,0.0,0.001,[1],284,78,50,0.0,True,relu,relu,64,,,,,,,,,

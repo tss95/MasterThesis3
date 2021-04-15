@@ -100,7 +100,7 @@ class TrainSingleModel(GridSearchResultProcessor):
         model = DynamicModels(self.model_type, self.num_classes, input_shape, **p).model
         if not meier_mode:
             opt = self.helper.get_optimizer(p["optimizer"], p["learning_rate"])
-            model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes)
+            model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes, self.loadData.balance_non_train_set)
             model.compile(**model_compile_args)
         return model
         
@@ -138,21 +138,24 @@ class TrainSingleModel(GridSearchResultProcessor):
                                                     use_liveplots = self.use_liveplots, 
                                                     use_custom_callback = self.use_custom_callback,
                                                     use_early_stopping = self.use_early_stopping,
-                                                    use_reduced_lr = self.use_reduced_lr)
-        try:
-            print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.val, p['batch_size'])*p['batch_size']}/{len(self.loadData.val)} validation points")
-            print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, p['batch_size'])*p['batch_size']}/{len(self.loadData.train)} training points")
-            print("---------------------------------------------------------------------------------")
+                                                    use_reduced_lr = self.use_reduced_lr,
+                                                    y_val = self.y_val)
+    
+        print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.val, p['batch_size'])*p['batch_size']}/{len(self.loadData.val)} validation points")
+        print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, p['batch_size'])*p['batch_size']}/{len(self.loadData.train)} training points")
+        print("---------------------------------------------------------------------------------")
 
-            # Fit the model using the generated args
-            model.fit(train_gen, **fit_args)
-            train_enq.stop()
-            val_enq.stop()
-            del train_gen, val_gen, train_enq, val_enq
-
+        # Fit the model using the generated args
+        model.fit(train_gen, **fit_args)
+        train_enq.stop()
+        val_enq.stop()
+        del train_gen, val_gen, train_enq, val_enq
+        """
         except Exception as e:
             print(str(e))
             print("Something went wrong.")
+        return model
+        """
         return model
 
     def metrics_producer(self, model, workers, max_queue_size, meier_mode = False,**p):
