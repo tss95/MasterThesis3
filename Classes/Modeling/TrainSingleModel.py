@@ -100,7 +100,7 @@ class TrainSingleModel(GridSearchResultProcessor):
         model = DynamicModels(self.model_type, self.num_classes, input_shape, **p).model
         if not meier_mode:
             opt = self.helper.get_optimizer(p["optimizer"], p["learning_rate"])
-            model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes, self.loadData.balance_non_train_set)
+            model_compile_args = self.helper.generate_model_compile_args(opt, self.num_classes, self.loadData.balance_non_train_set, self.loadData.noise_not_noise)
             model.compile(**model_compile_args)
         return model
         

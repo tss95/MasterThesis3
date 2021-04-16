@@ -79,6 +79,8 @@ class DynamicModels():
             self.model = self.create_CNN_baseline_model(**p)
         if self.model_type == "CNN_grow_double":
             self.model = self.create_CNN_grow_double_model(**p)
+        if self.model_type == "DENSE_baseline":
+            self.model = self.create_DENSE_baseline_model(**p)
         self.model.summary()
         
     
@@ -328,6 +330,19 @@ class DynamicModels():
                     x = Dropout(dropout_rate)(x)
                 else: 
                     x = BatchNormalization()(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
+
+    def create_DENSE_baseline_model(self, **p):
+        units = p['units']
+        dense_activation = p['dense_activation']
+        output_layer_activation = p['output_layer_activation']
+
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+        x = Flatten()(x)
+        x = Dense(units, activation = dense_activation)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model

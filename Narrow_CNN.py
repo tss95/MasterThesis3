@@ -74,43 +74,43 @@ handler = DataHandler(loadData)
 
 static_grid = {     'batch_size': 128,
                     'cnn_activation': 'relu',
-                    'dense_activation': 'tanh',
-                    'dropout_T_bn_F': False,
-                    'dropout_rate': 0.3,
+                    'dense_activation': 'relu',
+                    'dropout_T_bn_F': True,
+                    'dropout_rate': 0.001,
                     'epochs': 50,
-                    'filter_size': 46,
-                    'first_dense_units': 286,
-                    'growth_sequence': [1, 4, 8, 16],
-                    'l1_r': 0.0001,
-                    'l2_r': 0.01,
-                    'learning_rate': 0.005,
-                    'num_filters': 60,
-                    'num_layers': 2,
-                    'optimizer': 'sgd',
+                    'filter_size': 72,
+                    'first_dense_units': 254,
+                    'growth_sequence': [1, 4, 8, 8, 8],
+                    'l1_r': 0.0,
+                    'l2_r': 0.001,
+                    'learning_rate': 0.0001,
+                    'num_filters': 78,
+                    'num_layers': 3,
+                    'optimizer': 'adam',
                     'output_layer_activation': 'sigmoid',
                     'padding': 'same',
-                    'second_dense_units': 250,
+                    'second_dense_units': 234,
                     'use_layerwise_dropout_batchnorm': True}
 
 search_grid = {
-                    "num_layers" : [3, 4],
-                    "learning_rate" : [0.025, 0.001, 0.0001],
-                    "batch_size" : [64,256],
+                    "num_layers" : [5,4,2],
+                    "learning_rate" : [0.001, 0.00001],
+                    "batch_size" : [64, 256],
                     "epochs" : [50],
-                    "optimizer" : ["sgd"],
-                    "num_filters" : np.arange(56, 64 , 2),
-                    "filter_size" : np.arange(42, 50, 2),
+                    "optimizer" : ["adam", "sgd"],
+                    "num_filters" : np.arange(74, 2 , 2),
+                    "filter_size" : np.arange(68, 76, 2),
                     "cnn_activation" : ["tanh", "relu"],
                     "dense_activation" : ["relu", "tanh"],
                     "padding" : ["same"],
                     "use_layerwise_dropout_batchnorm" : [True, False],
                     "dropout_T_bn_F" : [True, False],
-                    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1, 2, 4, 6, 8, 10], [1,8,16,32,64,128]],
-                    "dropout_rate" : [0],
-                    "l2_r" : [0.1, 0.001, 0.0001, 0],
-                    "l1_r" : [0.01, 0.001, 0.0001,  0],
-                    "first_dense_units" : np.arange(280,290, 2),
-                    "second_dense_units" : np.arange(248, 254, 2),
+                    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1, 2, 4, 6, 8, 10], [1,8,8], [1,2,2], [1,4,4]],
+                    "dropout_rate" : [0.01,0.001],
+                    "l2_r" : [0.01, 0.001, 0.0001],
+                    "l1_r" : [0.01, 0.001,0],
+                    "first_dense_units" : np.arange(250,258, 2),
+                    "second_dense_units" : np.arange(230, 238, 2),
                     "output_layer_activation" : ["sigmoid"]
 }
 
@@ -128,7 +128,7 @@ highpass_freq = 15
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = False
+use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True

@@ -268,7 +268,7 @@ class HelperFunctions():
                 "kernel_size" : kernel_size,
                 "padding" : padding}
     
-    def generate_model_compile_args(self, opt, nr_classes, balance_non_train_set):
+    def generate_model_compile_args(self, opt, nr_classes, balance_non_train_set, noise_not_noise):
         if nr_classes == 2:
             loss = "binary_crossentropy"
             acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuracy", dtype=None, threshold=0.5)
@@ -276,11 +276,17 @@ class HelperFunctions():
             raise Exception("Need to rewrite class_id!")
             loss = "categorical_crossentropy"
             acc = tf.keras.metrics.CategoricalAccuracy(name="categorical_accuracy", dtype=None)
+        if noise_not_noise:
+            return {"loss" : loss,
+                    "optimizer" : opt,
+                    "metrics" : [acc,
+                                tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                                 tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]
+                                 }
         if balance_non_train_set:
             return {"loss" : loss,
                     "optimizer" : opt,
                     "metrics" : [acc,
-                                #tfa.metrics.F1Score(num_classes = nr_classes, threshold = 0.5),
                                 tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
                                 tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]
                                 }
@@ -289,9 +295,7 @@ class HelperFunctions():
                     "optimizer" : opt,
                     "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
                                  tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                 #self.f1_metric,
-                                 #tfa.metrics.F1Score(num_classes = nr_classes, threshold = 0.5),
-                                acc]}
+                                 acc]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
                           use_time_augmentor = False, timeAug = None, use_noise_augmentor = False, 
@@ -322,7 +326,7 @@ class HelperFunctions():
             custom_callback = CustomCallback(val_gen, self.get_steps_per_epoch(val_ds, batch_size), y_val)
             callbacks.append(custom_callback)
         if use_early_stopping:
-            if loadData.balance_non_train_set:
+            if loadData.balance_non_train_set or loadData.noise_not_noise:
                 earlystop = EarlyStopping(monitor = 'val_binary_accuracy',
                             min_delta = 0,
                             patience = 7,
@@ -341,7 +345,7 @@ class HelperFunctions():
                 callbacks.append(earlystop)
                 print("----------EarlyStop monitoring val_f1------------") 
         if use_reduced_lr:
-            if loadData.balance_non_train_set:
+            if loadData.balance_non_train_set or loadData.noise_not_noise:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_binary_accuracy', 
                                                                     factor=0.5, patience=3, mode = "max",
                                                                     min_lr=0.00005, 
@@ -376,10 +380,10 @@ class HelperFunctions():
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
-            custom_callback = CustomCallback()
+            custom_callback = CustomCallback(val_gen, self.get_steps_per_epoch(val_ds, batch_size), y_val)
             callbacks.append(custom_callback)
         if use_early_stopping:
-            if loadData.balance_non_train_set:
+            if loadData.balance_non_train_set or loadData.noise_not_noise:
                 earlystop = EarlyStopping(monitor = 'val_categorical_accuracy',
                             min_delta = 0,
                             patience = 5,
@@ -389,27 +393,27 @@ class HelperFunctions():
                 callbacks.append(earlystop)
                 print("----------Early stop monitoring val_categorical_accuracy----------")
             else: 
-                earlystop = EarlyStopping(monitor = 'val_precision',
+                earlystop = EarlyStopping(monitor = 'val_f1',
                             min_delta = 0,
                             patience = 5,
                             verbose = 1,
                             mode = "max",
                             restore_best_weights = True)
                 callbacks.append(earlystop)
-                print("----------Early stop monitoring val_precision----------")
+                print("----------Early stop monitoring val_f1----------")
         if use_reduced_lr:
-            if loadData.balance_non_train_set:
+            if loadData.balance_non_train_set or loadData.noise_not_noise:
                 callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_categorical_accuracy', mode = "max",
                                                                     factor=0.5, patience=3,
                                                                     min_lr=0.00005, 
                                                                     verbose = 1))
-                print("----------Reduce LR monitoring val_categorical----------")
+                print("----------Reduce LR monitoring val_categorical_accuracy----------")
             else:
-                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_precision', mode = "max",
+                callbacks.append(tf.keras.callbacks.ReduceLROnPlateau(monitor='val_f1', mode = "max",
                                                                         factor=0.5, patience=3,
                                                                         min_lr=0.00005, 
                                                                         verbose = 1))
-                print("----------Reduce LR monitoring val_precision------------")
+                print("----------Reduce LR monitoring val_f1------------")
         
         return {"steps_per_epoch" : self.get_steps_per_epoch(train_ds, batch_size),
                 "epochs" : epoch,

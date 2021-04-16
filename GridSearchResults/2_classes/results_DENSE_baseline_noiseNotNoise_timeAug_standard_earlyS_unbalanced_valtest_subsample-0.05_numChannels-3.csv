@@ -1,0 +1,4 @@
+units,output_layer_activation,optimizer,learning_rate,epochs,dense_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+100,sigmoid,sgd,0.001,50,relu,64,0.692807495594,0.573950409889,0.841370522976,0.161313861609,0.694184541702,0.533593773842,0.828282833099,0.123867072165,"[[601  17]
+ [580  82]]"
+450,sigmoid,sgd,0.001,50,sigmoid,64,,,,,,,,,
