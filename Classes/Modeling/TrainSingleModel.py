@@ -145,6 +145,7 @@ class TrainSingleModel(GridSearchResultProcessor):
         print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, p['batch_size'])*p['batch_size']}/{len(self.loadData.train)} training points")
         print("---------------------------------------------------------------------------------")
 
+
         # Fit the model using the generated args
         model.fit(train_gen, **fit_args)
         train_enq.stop()
@@ -166,20 +167,17 @@ class TrainSingleModel(GridSearchResultProcessor):
         val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
-        metrics = {}
-        if not meier_mode:
-            metrics['val'] = {  "val_loss" : val_eval["loss"],
-                                "val_accuracy" : val_eval["binary_accuracy"],
-                                "val_precision": val_eval["precision"],
-                                "val_recall" : val_eval["recall"]}
-        else:
-            metrics['val'] = {  "val_loss" : val_eval["loss"],
-                                "val_accuracy" : val_eval["categorical_accuracy"],
-                                "val_precision": val_eval["precision"],
-                                "val_recall" : val_eval["recall"]}
         val_enq.stop()
         del val_enq, val_gen
-        val_conf, _ = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)       
+        metrics = {}
+        metrics['val'] = {  "val_loss" : val_eval["loss"],
+                            "val_accuracy" : val_acc,
+                            "val_precision": val_precision,
+                            "val_recall" : val_recall,
+                            "val_f1" : val_fscore}
+
+        
         print("Evaluating train:")
         train_enq = self.create_enqueuer(self.x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
         train_enq.start(workers = workers, max_queue_size = max_queue_size)
@@ -187,18 +185,13 @@ class TrainSingleModel(GridSearchResultProcessor):
         train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
-        if not meier_mode:
-            metrics['train'] = { "train_loss" : train_eval["loss"],
-                                "train_accuracy" : train_eval["binary_accuracy"],
-                                "train_precision": train_eval["precision"],
-                                "train_recall" : train_eval["recall"]}
-        else:
-            metrics['train'] = { "train_loss" : train_eval["loss"],
-                            "train_accuracy" : train_eval["categorical_accuracy"],
-                            "train_precision": train_eval["precision"],
-                            "train_recall" : train_eval["recall"]}
         del train_enq, train_gen
-        _, _ = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+        metrics['train'] = { "train_loss" : train_eval["loss"],
+                            "train_accuracy" : train_acc,
+                            "train_precision": train_precision,
+                            "train_recall" : train_recall,
+                            "train_f1" : train_fscore}
         return metrics, val_conf
     
     def run(self, workers, max_queue_size, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_mode = False, **p):

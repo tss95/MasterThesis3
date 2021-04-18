@@ -22,16 +22,16 @@ class GridSearchResultProcessor():
     def create_results_df(self, hyper_picks, model_picks):
         hyper_keys = list(hyper_picks.keys())
         model_keys = list(model_picks.keys())
-        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall"]
-        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall"]
+        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", "train_f1"]
+        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", "val_f1"]
         header = np.concatenate((hyper_keys, model_keys, metrics_train_keys, metrics_val_keys))
         results_df = pd.DataFrame(columns = header)
         return results_df
 
     def create_results_df_opti(self, current_picks):
         keys = list(current_picks.keys())
-        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall"]
-        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall"]
+        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", "train_f1"]
+        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", "val_f1"]
         confusion_matrix_key = ["confusion_matrix"]
         header = np.concatenate((keys, metrics_train_keys, metrics_val_keys, confusion_matrix_key))
         results_df = pd.DataFrame(columns = header)
@@ -80,6 +80,8 @@ class GridSearchResultProcessor():
             if os.path.isfile(file):
                 f = open(file, "w+")
                 f.close()
+        else:
+            raise Exception("Terminating due to lack of confirmation.")
         
         
     
@@ -191,15 +193,15 @@ class GridSearchResultProcessor():
                       'val_index' : metrics_df[metrics_df['val_recall'] == max(metrics_df['val_recall'])].index[0]}
 
         return min_loss, max_accuracy, max_precision, max_recall
-    
-    """
-    TODO: The functions below are largely redundant, and should be streamlined in the future
 
-    They are included as is in order to speed up the development of NarrowOptimizer
-    """
 
     def get_results_df_by_name(self, file_name):
         file_path = f"{utils.base_dir}/GridSearchResults/{self.num_classes}_classes"
+        loaded_df = pd.read_csv(file_path+'/'+file_name)
+        return loaded_df
+
+    def get_results_df_by_name_and_history_folder(self, file_name, history_folder):
+        file_path = f"{utils.base_dir}/GridSearchResults/{self.num_classes}_classes/History/{history_folder}"
         loaded_df = pd.read_csv(file_path+'/'+file_name)
         return loaded_df
 

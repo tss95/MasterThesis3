@@ -51,14 +51,14 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.25,
+    'subsample_size' : 0.05,
     'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -89,7 +89,7 @@ num_channels = 3
 
 use_time_augmentor = True
 scaler_name = "standard"
-use_noise_augmentor = False
+use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
 band_max = 4.0

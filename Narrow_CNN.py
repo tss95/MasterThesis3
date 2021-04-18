@@ -72,13 +72,13 @@ noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
 
-static_grid = {     'batch_size': 128,
+static_grid = {     'batch_size': 256,
                     'cnn_activation': 'relu',
                     'dense_activation': 'relu',
                     'dropout_T_bn_F': True,
                     'dropout_rate': 0.001,
                     'epochs': 50,
-                    'filter_size': 72,
+                    'filter_size': 74,
                     'first_dense_units': 254,
                     'growth_sequence': [1, 4, 8, 8, 8],
                     'l1_r': 0.0,
@@ -93,14 +93,13 @@ static_grid = {     'batch_size': 128,
                     'use_layerwise_dropout_batchnorm': True}
 
 search_grid = {
-                    "num_layers" : [5,4,2],
+                    "num_filters" : np.arange(74, 84 , 2),
+                    "filter_size" : np.arange(68, 76, 2),
+                    "num_layers" : [5,4],
                     "learning_rate" : [0.001, 0.00001],
-                    "batch_size" : [64, 256],
+                    "batch_size" : [256, 512],
                     "epochs" : [50],
                     "optimizer" : ["adam", "sgd"],
-                    "num_filters" : np.arange(74, 2 , 2),
-                    "filter_size" : np.arange(68, 76, 2),
-                    "cnn_activation" : ["tanh", "relu"],
                     "dense_activation" : ["relu", "tanh"],
                     "padding" : ["same"],
                     "use_layerwise_dropout_batchnorm" : [True, False],
@@ -133,7 +132,9 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 log_data = True
-skip_to_index = 0
+skip_to_index = 4
+# Increase num filters. 82 is better performing than 78. But 80 is not better than 78
+# 5 Layers perform better than less layers. Cost is of course training time is ridiculous.
 
 shutdown = False
 
@@ -162,5 +163,5 @@ narrowOpt = NarrowOpt(loadData, model_type, scaler_name, use_time_augmentor, use
                       use_reduced_lr = use_reduced_lr, 
                       num_channels = num_channels,
                       log_data = log_data,
-                      skip_to_index = 0)
+                      skip_to_index = skip_to_index)
 narrowOpt.fit()

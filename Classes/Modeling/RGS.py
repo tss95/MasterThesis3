@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import h5py
 import gc
+import traceback
 
 import sklearn as sk
 
@@ -129,7 +130,7 @@ class RGS(GridSearchResultProcessor):
                 model, self.results_df = trainSingleModel.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_load = False, **self.p[i])
                 del model
             except Exception as e:
-                print(str(e))
+                traceback.print_exc()
                 continue
             finally:
                 gc.collect()

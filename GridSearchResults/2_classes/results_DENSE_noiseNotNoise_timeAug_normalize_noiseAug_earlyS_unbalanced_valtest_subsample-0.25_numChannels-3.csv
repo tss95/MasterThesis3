@@ -1,0 +1,2 @@
+use_layerwise_dropout_batchnorm,units,output_layer_activation,optimizer,num_layers,learning_rate,l2_r,l1_r,epochs,dropout_rate,dropout_T_bn_F,decay_sequence,batch_size,activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+True,250,sigmoid,rmsprop,5,0.01,0,0.1,50,0,False,"[1, 2, 4, 4, 2]",256,softmax,,,,,,,,,,,

@@ -54,9 +54,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -109,7 +109,7 @@ hyper_grid = {
     "padding" : ["same"],
     "use_layerwise_dropout_batchnorm" : [True, False],
     "dropout_T_bn_F" : [True, False],
-    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,8,16,32,64,128], [1,4,8]],
+    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,8,16,32,64,128], [1,4,8], [1,4,4], [1,8,8], [1,2,2]],
     "dropout_rate" : [0.2, 0.1, 0.01, 0.001, 0],
     "l2_r" : [0.1, 0.01, 0.001, 0.0001, 0],
     "l1_r" : [0.1, 0.01, 0.001, 0.0001, 0],

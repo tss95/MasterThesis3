@@ -56,10 +56,11 @@ def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_ls
             if noiseAug != None:
                 # Since normalize scaler is independent it will scale noise proportionally less than non noise events
                 if not norm_scale:
-                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/10)
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/15)
                 else:
                     # Choose 1/15, but this is just some number. Potential for improvement by tuning.
-                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/15)
+                    # Chaned to 1/20 as the validation results were soooo affected by the augmentation
+                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/20)
 
             batch_traces = batch_traces[:][:,0:num_channels]
             if is_lstm:

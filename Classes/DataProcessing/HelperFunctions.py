@@ -5,7 +5,7 @@ import h5py
 import sklearn as sk
 import matplotlib.pyplot as plt
 from obspy import Stream, Trace, UTCDateTime
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve
 import seaborn as sns
 import os
 import csv
@@ -92,7 +92,7 @@ class HelperFunctions():
         print(class_report)
         return conf, class_report
 
-    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, plot_confusion_matrix = False):
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, plot_conf_matrix = False, plot_p_r_curve = False):
         norm_scale = False
         if scaler_name == "normalize":
             norm_scale = True
@@ -102,25 +102,36 @@ class HelperFunctions():
         test_enq.start(workers = 8, max_queue_size = 10)
         test_gen = test_enq.get()
         predictions = self.predict_generator(model, test_gen, steps, label_dict) 
-        predictions = np.rint(predictions)
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
             y_test = y_test[:,1]
-        y_test = np.rint(y_test)
+        #y_test = np.rint(y_test)
         y_test = y_test[0:predictions.shape[0]]
         num_classes = len(set(label_dict.values()))
         predictions = np.reshape(predictions,(predictions.shape[0]))
+        rounded_predictions = predictions = np.rint(predictions)
         y_test = np.reshape(y_test, (y_test.shape[0]))
         assert predictions.shape == y_test.shape
-        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
+
+        conf = tf.math.confusion_matrix(y_test, rounded_predictions, num_classes=num_classes)
         class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
-        if plot_confusion_matrix:
+        precision, recall, fscore = np.round(precision_recall_fscore_support(y_test, predictions, pos_label = 1, average = 'binary', zero_division = 0.0)[0:3], 6)
+        accuracy = self.calculate_accuracy(conf)
+        if plot_p_r_curve:
+            p,r,_ = precision_recall_curve(y_test, predictions, pos_label=1, sample_weight=None)
+            self.plot_precision_recall_curve(p, r)
+        if plot_conf_matrix:
             self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(conf)
-        f1 = class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
-        return conf, class_report
+        print(class_report)
+        return conf, class_report, accuracy, precision, recall, fscore
 
+    def calculate_accuracy(self, conf):
+        tn, fp, fn, tp = np.array(conf).ravel()
+        print(tn, fp, fn, tp)
+        accuracy = (tn + tp)/(tp + tn + fn + fp)
+        return accuracy
 
     def plot_confusion_matrix(self, conf, label_dict):
         fig = plt.figure()
@@ -140,7 +151,16 @@ class HelperFunctions():
         
         plt.show()
         
-        
+    def plot_precision_recall_curve(self, precision, recall):
+        plt.clf()
+        plt.plot(recall, precision)
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.ylim([0.0, 1.05])
+        plt.xlim([0.0, 1.0])
+        plt.title('Precision-Recall')
+        plt.show()
+
     def handle_non_noise_dict(self, label_dict):
         if len(list(set(label_dict.values()))) == 2 and len(list(label_dict.keys())) == 3:
             label_dict = {'noise' : 0, 'not_noise' : 1}
