@@ -1,0 +1,10 @@
+use_layerwise_dropout_batchnorm,units,output_layer_activation,optimizer,num_layers,learning_rate,l2_r,l1_r,growth_sequence,epochs,dropout_rate,dropout_T_bn_F,batch_size,activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+False,410,sigmoid,adam,3,0.001,0.001,0.0001,"[1, 4, 8]",50,0.1,False,64,sigmoid,inf,0.49284151446,0.492842,1.0,0.660273,inf,0.516398514851,0.516399,1.0,0.681085,"[[   0 3126]
+ [   0 3338]]"
+True,230,sigmoid,rmsprop,1,0.01,0.1,0.0001,[1],50,0.2,True,128,relu,inf,0.49297351372,0.492995,0.999662,0.660337,13.1148824692,0.51578125,0.51571,0.999697,0.680417,"[[   2 3098]
+ [   1 3299]]"
+False,120,sigmoid,sgd,1,0.01,0.1,0.3,[1],50,0.2,False,256,tanh,974.958984375,0.507455221037,0.833333,0.001208,0.002412,974.956542969,0.4846875,0.75,0.000909,0.001816,"[[3099    1]
+ [3297    3]]"
+False,400,sigmoid,adam,3,0.1,0.0,0.001,"[1, 1, 1]",50,0.2,False,256,sigmoid,72.604850769,0.493021150915,0.493021,1.0,0.660434,72.602104187,0.515625,0.515625,1.0,0.680412,"[[   0 3100]
+ [   0 3300]]"
+True,200,sigmoid,adam,5,0.01,0.0001,0.001,"[1, 2, 4, 6, 8]",50,0.001,True,128,sigmoid,,,,,,,,,,,

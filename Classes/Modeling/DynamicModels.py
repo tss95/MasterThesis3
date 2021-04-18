@@ -67,6 +67,8 @@ class DynamicModels():
             self.model = self.create_CNN_short_model(**p)
         if self.model_type == "DENSE":
             self.model = self.create_DENSE_model(**p)
+        if self.model_type == "DENSE_grow":
+            self.model = self.create_DENSE_grow_model(**p)
         if self.model_type == "InceptionTime":
             self.model = self.create_InceptionTime_model(**p)
         if self.model_type == "Meier_CNN":
@@ -322,6 +324,36 @@ class DynamicModels():
         x = Flatten()(x)
         for i in range(num_layers):
             x = Dense(units//decay_sequence[i], 
+                      activation = activation,
+                      kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
+                      activity_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)
+            if use_layerwise_dropout_batchnorm:
+                if dropout_T_bn_F:
+                    x = Dropout(dropout_rate)(x)
+                else: 
+                    x = BatchNormalization()(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
+
+
+    def create_DENSE_grow_model(self, **p):
+        num_layers = p['num_layers']
+        growth_sequence = p['growth_sequence']
+        units = p['units']
+        activation = p['activation']
+        l1_r = p['l1_r']
+        l2_r = p['l2_r']
+        dropout_rate = p['dropout_rate']
+        use_layerwise_dropout_batchnorm = p['use_layerwise_dropout_batchnorm']
+        dropout_T_bn_F = p['dropout_T_bn_F']
+        output_layer_activation = p['output_layer_activation']
+
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+        x = Flatten()(x)
+        for i in range(num_layers):
+            x = Dense(units*growth_sequence[i], 
                       activation = activation,
                       kernel_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r),
                       activity_regularizer = regularizers.l1_l2(l1 = l1_r, l2 = l2_r))(x)

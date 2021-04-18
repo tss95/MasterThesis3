@@ -80,7 +80,8 @@ hyper_grid = {
         "units" : np.arange(100, 500, 10),
         "dropout_T_bn_F" : [True, False],
         "use_layerwise_dropout_batchnorm" : [False, True],
-        "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+        #"decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
+        "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,2,2,2,2], [1,4,4,4,4,4]],
         "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
         "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
         "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
@@ -88,7 +89,7 @@ hyper_grid = {
         "output_layer_activation" : ["sigmoid"]
     }
 
-model_type = "DENSE"
+model_type = "DENSE_grow"
 is_lstm = True
 num_channels = 3   
 
@@ -106,7 +107,7 @@ use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
-start_from_scratch = False
+start_from_scratch = True
 use_reduced_lr = True
 log_data = True
 
