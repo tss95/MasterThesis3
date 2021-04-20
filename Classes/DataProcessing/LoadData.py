@@ -3,10 +3,8 @@ import numpy as np
 import pandas as pd
 import json
 import h5py
-import seaborn as sns
 import os
 import csv
-import sys
 from sklearn.model_selection import train_test_split
 
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
@@ -27,45 +25,42 @@ class LoadData():
           its functionality is strictly dependent on label_dict = { 'noise': 0, 'earthquake' : 1, 'explosion' : 1}.
     
     PARAMETERS:
-    ----------------------------------
-    earth_explo_only:(Bool) Determining if only events labeled explosion and earthquake is to be loaded. 
-                            Will also load a training set sized sample of noise events for the noise augmentor.
-                            Splits into train/val/test
+    -----------------------------------------------------------------------------------------------------------------
+    earth_explo_only:(Bool)      Determining if only events labeled explosion and earthquake is to be loaded. 
+                                 Will also load a training set sized sample of noise events for the noise augmentor.
+                                 Splits into train/val/test
     
-    noise_earth_only:(Bool) Intended to behave much like the one above. Currently not in use.
+    noise_earth_only:(Bool)      Intended to behave much like the one above. Currently not in use.
     
-    noise_not_noise:(Bool)  Much like earth_explo_only, this boolean loads events of all classes, and splits them
-                            into train/val/test
+    noise_not_noise:(Bool)       Much like earth_explo_only, this boolean loads events of all classes, and splits them
+                                 into train/val/test
     
-    downsample:(Bool)       Will reduce the most frequent event so that it matches the second most frequent class in number.
+    downsample:(Bool)            Will reduce the most frequent event so that it matches the second most frequent class in number.
     
-    upsample:(Bool)         Will sample with replacement the least frequent class to match the second most frequent class in number.
+    upsample:(Bool)              Will sample with replacement the least frequent class to match the second most frequent class in number.
     
-    frac_diff:(float)       Ignore this, always set to 1.
+    frac_diff:(float)            Ignore this, always set to 1.
     
-    seed: (int)             Seed, makes sure that the shuffling and splits of the data are the same everytime with the same parameters.
+    seed: (int)                  Seed, makes sure that the shuffling and splits of the data are the same everytime with the same parameters.
     
-    subsample_size:(float)  Fraction, (0,1] which will select a subsample of the sets in order to reduce computational resource demand.
+    subsample_size:(float)       Fraction, (0,1] which will select a subsample of the sets in order to reduce computational resource demand.
     
     balance_non_train_set:(Bool) Dictates whether or not upsampling/downsampling and even_balance should be done on the validation and test sets
     
-    use_true_test_set:(Bool) Whether or not the test set should consist of the isolated training set, or if a pseudo test set should be used
+    use_true_test_set:(Bool)     Whether or not the test set should consist of the isolated training set, or if a pseudo test set should be used
     
-    load_everything:(Bool) Whether or not to load all the data from the second batch of data. Will also load the isolated
-                           test set. Useful when graphing and looking at the whole dataset. NEVER USE FOR MODELING
+    load_everything:(Bool)       Whether or not to load all the data from the second batch of data. Will also load the isolated
+                                 test set. Useful when graphing and looking at the whole dataset. NEVER USE FOR MODELING
     
-    even_balance:(Bool)    Whether or not to balance the classes so that each class so that the distribution of each class
-                           is all_events/nr_clases.
+    even_balance:(Bool)          Whether or not to balance the classes so that each class so that the distribution of each class
+                                 is all_events/nr_clases.
     """
     
     def __init__(self, earth_explo_only = False, noise_earth_only = False, noise_not_noise = False, 
                  downsample = False, upsample = False, frac_diff = 1, seed = None, subsample_size = 1,
                  balance_non_train_set = False, use_true_test_set = False, load_everything = False, 
                  load_first_batch = False, even_balance = False):
-        """
-        
-        
-        """
+
         self.seed = seed
         np.random.seed(self.seed)
         self.earth_explo_only = earth_explo_only
@@ -86,15 +81,13 @@ class LoadData():
             self.data_csv_name = utils.batch_1_csv_name
             assert not load_everything, "Load everything should be False when using the first batch. A test set has not been generated for this dataset"
         if load_everything:
-            #self.data_csv_name = 'event_paths_no_nan_no_induced.csv'
             print("Loading all of second batch. Including the test data.")
             self.data_csv_name = glob_utils.no_nan_no_induced_csv_name
         else:
             if self.use_true_test_set:
                 self.test_csv_name = glob_utils.test_csv_name
                 self.test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
-                print("WARNING!")
-                print("You are using the true test set.")
+                print("WARNING: You are using the true test set.")
                 print("If this is an error, please set use_true_test_set = False and reload the kernel")
             if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
                 raise Exception("Invalid load data arguments.")
@@ -103,14 +96,6 @@ class LoadData():
         self.load_data()
         print("\n")
         self.print_data_info()
-        
-    """
-    Todo:
-     - Want timeAug to fit to each data set, not the entire thing. Should speed things up.
-         - Therefore, want to map redundancy to each set, seperately.
-     - Want to split so that events in training is not in validation/test
-
-    """
 
     def load_data(self):
         if not self.use_true_test_set:
@@ -433,6 +418,7 @@ class LoadData():
         # Creates a redundancy index which distinguishes events which are sampled multiple times.
         # Primarily used in timeAugmentation in order to create unique augmentations of otherwise identical events.
         # This only works if we are upsampling EARTHQUAKES (NOTHING ELSE)!
+        # TODO: Check this function and improve it. This is sad.
         new_column = np.zeros((len(ds), 1), dtype = np.int8)
         mapped_ds = np.hstack((ds, new_column))
         earth_ds = ds[ds[:,1] == "earthquake"]

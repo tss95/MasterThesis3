@@ -76,8 +76,8 @@ hyper_grid = {
         "epochs" : [50],
         "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
         "optimizer" : ["rmsprop", "sgd", "adam"],
-        "num_layers" : [1, 2, 3, 4, 5],
-        "units" : np.arange(100, 500, 10),
+        "num_layers" : [1, 1, 2, 2, 3, 4, 5],
+        "units" : np.arange(100, 700, 10),
         "dropout_T_bn_F" : [True, False],
         "use_layerwise_dropout_batchnorm" : [False, True],
         #"decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
@@ -91,10 +91,11 @@ hyper_grid = {
 
 model_type = "DENSE_grow"
 is_lstm = True
-num_channels = 3   
+num_channels = 3
+beta = 1   
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "minmax"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -107,9 +108,9 @@ use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
-start_from_scratch = True
+start_from_scratch = False
 use_reduced_lr = True
-log_data = True
+log_data = False
 
 shutdown = False
 
@@ -129,5 +130,5 @@ randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_n
                         filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
                         use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
                         use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, beta = beta)
 randomGridSearch.fit()

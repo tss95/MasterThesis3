@@ -22,16 +22,16 @@ class GridSearchResultProcessor():
     def create_results_df(self, hyper_picks, model_picks):
         hyper_keys = list(hyper_picks.keys())
         model_keys = list(model_picks.keys())
-        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", "train_f1"]
-        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", "val_f1"]
+        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", f"train_f{self.beta}"]
+        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", f"val_f{self.beta}"]
         header = np.concatenate((hyper_keys, model_keys, metrics_train_keys, metrics_val_keys))
         results_df = pd.DataFrame(columns = header)
         return results_df
 
     def create_results_df_opti(self, current_picks):
         keys = list(current_picks.keys())
-        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", "train_f1"]
-        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", "val_f1"]
+        metrics_train_keys = ["train_loss", "train_accuracy", "train_precision", "train_recall", f"train_f{self.beta}"]
+        metrics_val_keys = ["val_loss", "val_accuracy", "val_precision", "val_recall", f"val_f{self.beta}"]
         confusion_matrix_key = ["confusion_matrix"]
         header = np.concatenate((keys, metrics_train_keys, metrics_val_keys, confusion_matrix_key))
         results_df = pd.DataFrame(columns = header)
@@ -117,6 +117,7 @@ class GridSearchResultProcessor():
             file_name = f"{file_name}_unbalanced_valtest"
         file_name = file_name + f"_subsample-{self.loadData.subsample_size}"
         file_name = file_name + f"_numChannels-{self.num_channels}"
+        file_name = file_name + f"_f{self.beta}"
         file_name = file_name + ".csv"
         return file_name
     

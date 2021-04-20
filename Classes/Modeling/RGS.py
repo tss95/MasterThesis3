@@ -44,7 +44,7 @@ class RGS(GridSearchResultProcessor):
                  filter_name, n_picks, hyper_grid, use_tensorboard = False, 
                  use_liveplots = True, use_custom_callback = False, use_early_stopping = False, use_reduced_lr = False,
                  band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, start_from_scratch = True, is_lstm = False, 
-                 log_data = True, num_channels = 3):
+                 log_data = True, num_channels = 3, beta = 1):
         
         self.loadData = loadData
         self.train_ds = train_ds
@@ -72,6 +72,7 @@ class RGS(GridSearchResultProcessor):
         self.is_lstm = is_lstm
         self.log_data = log_data
         self.num_channels = num_channels
+        self.beta = beta
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
@@ -111,32 +112,45 @@ class RGS(GridSearchResultProcessor):
         print(self.results_file_name)
         self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
         print(self.results_df)
+        _, self.used_m, _= map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         for i in range(len(self.p)):
-            gc.collect()
             tf.keras.backend.clear_session()
             tf.compat.v1.reset_default_graph()
+            gc.collect()
             tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
+            tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+            print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
+            if used_m > self.used_m:
+                print("=======================")
+                print(f"POTENTIAL MEMORY LEAK ALERT!!! Previosuly max RAM usage was {self.used_m} now it is {used_m}. Leak size: {used_m - self.used_m}")
+                print("=======================")
+                self.used_m = used_m
             try:
-                trainSingleModel = TrainSingleModel(self.x_train, self.y_train, self.x_val, self.y_val,
-                                                    None, None, self.noiseAug, self.helper, self.loadData,
-                                                    self.model_type, self.num_channels, self.use_tensorboard,
-                                                    self.use_liveplots, self.use_custom_callback, 
-                                                    self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
-                                                    log_data = self.log_data, results_df = self.results_df,
-                                                    results_file_name = self.results_file_name, index = i,
-                                                    start_from_scratch = False)
-                # Add try catch clauses here
-                model, self.results_df = trainSingleModel.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_load = False, **self.p[i])
-                del model
-            except Exception as e:
+                # The hard defined variables in the run call refer to nr_workers and max_queue_size respectively.
+                _, self.results_df = TrainSingleModel(self.x_train, self.y_train, self.x_val, self.y_val,
+                                                      None, None, self.noiseAug, self.helper, self.loadData,
+                                                      self.model_type, self.num_channels, self.use_tensorboard,
+                                                      self.use_liveplots, self.use_custom_callback, 
+                                                      self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
+                                                      log_data = self.log_data, results_df = self.results_df,
+                                                      results_file_name = self.results_file_name, index = i,
+                                                      start_from_scratch = False, beta = self.beta).run(16, 15, 
+                                                                                                        evaluate_train = False, 
+                                                                                                        evaluate_val = False, 
+                                                                                                        evaluate_test = False, 
+                                                                                                        meier_load = False, 
+                                                                                                        **self.p[i])
+            except Exception:
                 traceback.print_exc()
                 continue
             finally:
-                gc.collect()
-                    
                 tf.keras.backend.clear_session()
                 tf.compat.v1.reset_default_graph()
+                gc.collect()
+                print("After everything in the iteration:")
+                tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+                print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
                 continue
 
     

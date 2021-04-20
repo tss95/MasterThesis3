@@ -36,6 +36,8 @@ from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.Modeling.RGS import RGS
 import json
+#from Classes import Tf_shutup
+#Tf_shutup.Tf_shutup()
 
 helper = HelperFunctions()
 
@@ -48,13 +50,10 @@ import pprint
 mixed_precision.set_global_policy('mixed_float16')
 
 
-
-
-
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -70,40 +69,27 @@ noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
 
-hyper_grid = {    
-    "batch_size" : [64, 128, 256],
-    "epochs" : [50],
-    "learning_rate" : [0.01, 0.001, 0.0001],
-    "optimizer" : ["sgd", "adam"],
-    "use_residuals" : [True, True, False],
-    "use_bottleneck" : [True, True, False],
-    "num_modules" : np.concatenate((np.array([1]), np.arange(3, 9, 3))),
-    "filter_size" : np.arange(30, 80, 2),
-    "bottleneck_size" : np.arange(30, 50, 2),
-    "num_filters" : np.arange(30, 80, 2),
-    "residual_activation" : ["relu", "relu", "relu", "relu", "tanh"],
-    "module_activation" : ["linear", "linear", "linear", "relu", "tanh"],
-    "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "tanh"],
-    "output_layer_activation": ["sigmoid"],
-    "reg_residual": [True, False, False],
-    "reg_module" : [True, False, False],
-    "l1_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0],
-    "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
-}
+#- Consider editing the decay_sequences.
 
-model_type = "InceptionTime"
+hyper_grid = {
+        "units" : [8, 64, 128],
+        "output_layer_activation" : "sigmoid"
+    }
+
+model_type = "LSTM_FCN"
 is_lstm = True
-num_channels = 3    
+num_channels = 3
+beta = 1   
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 300
+n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False
@@ -111,7 +97,7 @@ use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = True
+log_data = False
 
 shutdown = False
 
@@ -125,28 +111,11 @@ def clear_tensorboard_dir():
             shutil.rmtree(os.path.join(path,f))
 if use_tensorboard:
     clear_tensorboard_dir()
+
+      
 randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                       filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                       use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq,
-                       use_custom_callback = use_custom_callback, 
-                       start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+                        filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
+                        use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
+                        use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, beta = beta)
 randomGridSearch.fit()
-
-"""try:
-    randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                            filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                            use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
-    randomGridSearch.fit()
-
-except Exception as e:
-    print(str(e))
-
-finally:
-    if shutdown:
-        os.system("shutdown now -h")
-    else:
-        print("Process completed.")
-            """
-
-

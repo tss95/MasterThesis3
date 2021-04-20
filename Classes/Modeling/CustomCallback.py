@@ -1,21 +1,25 @@
 import tensorflow as tf
 import gc
-from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
+import os
+from sklearn.metrics import fbeta_score
 import numpy as np
 
 class CustomCallback(tf.keras.callbacks.Callback):
     
-    def __init__(self, val_gen, steps, y_val):
+    def __init__(self, val_gen, steps, y_val, beta):
         self.val_gen = val_gen
         self.steps = steps
         self.y_val = y_val
-        self.val_f1s = 0
+        self.val_fs = 0
+        self.beta = beta
     
     def on_train_begin(self, logs=None):
         pass
 
     def on_train_end(self, logs=None):
-        pass
+        self.val_gen = None
+        gc.collect()
+        
 
     def on_epoch_begin(self, epoch, logs=None):
         pass
@@ -23,13 +27,14 @@ class CustomCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         val_predict = (np.asarray(self.model.predict(x = self.val_gen, steps = self.steps))).round()
         val_targ = self.y_val[:len(val_predict)]
-        _val_f1 = f1_score(val_targ, val_predict)
-        self.val_f1s = _val_f1
-        logs["val_f1"] = _val_f1
+        _val_f = np.round(fbeta_score(val_targ, val_predict, beta = self.beta), 4 )
+        self.val_fs = _val_f
+        logs[f"val_f{self.beta}"] = _val_f
 
-        print("- val_f1: %f" %(_val_f1))
+        print(f"- val_f{self.beta}: {_val_f}")
         gc.collect()
-        return
+        #tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        #print(f"------------------Epoch end RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         
     def on_test_begin(self, logs=None):
         pass
@@ -41,9 +46,6 @@ class CustomCallback(tf.keras.callbacks.Callback):
     def on_predict_end(self, logs=None):
         gc.collect()
         
-        
-        
-
     def on_train_batch_begin(self, batch, logs=None):
         pass
 

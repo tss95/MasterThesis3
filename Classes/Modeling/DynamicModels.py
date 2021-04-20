@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
 
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, LSTM
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, Permute, GlobalAveragePooling1D, concatenate
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
@@ -61,6 +61,10 @@ class DynamicModels():
         self.model = None
         if self.model_type == "LSTM":
             self.model = self.create_LSTM_model(**p)
+        if self.model_type == "LSTM_baseline":
+            self.model = self.create_LSTM_baseline_model(**p)
+        if self.model_type == "LSTM_FCN":
+            self.model = self.create_LSTM_FCN_model(**p)
         if self.model_type == "CNN":
             self.model = self.create_CNN_model(**p)
         if self.model_type == "CNN_short":
@@ -134,8 +138,52 @@ class DynamicModels():
         x = Dense(second_dense_units, activation = dense_activation)(x)
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
-        model.add_loss(1.00)
         return model
+
+    def create_LSTM_baseline_model(self, **p):
+        units = p['units']
+        output_layer_activation = p['output_layer_activation']
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+        x = CuDNNLSTM(units)(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model
+
+    def create_LSTM_FCN_model(self, **p):
+        # Code borrowed from https://github.com/houshd/LSTM-FCN/blob/master/hyperparameter_search.py
+        units = p['units']
+        output_layer_activation = p['output_layer_activation']
+        
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        ip = input_layer
+
+        x = CuDNNLSTM(units)(ip)
+        x = Dropout(0.8)(x)
+
+        y = Permute((2,1))(ip)
+        y = Conv1D(128, 8, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = BatchNormalization()(y)
+        y = Activation('relu')(y)
+
+        y = Conv1D(256, 5, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = BatchNormalization()(y)
+        y = Activation('relu')(y)
+
+        y = Conv1D(128, 3, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = BatchNormalization()(y)
+        y = Activation('relu')(y)
+
+        y = GlobalAveragePooling1D()(y)
+
+        x = concatenate([x, y])
+
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+
+        return model
+
+        
 
 
 

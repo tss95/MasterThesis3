@@ -83,7 +83,7 @@ static_grid = {     'batch_size': 256,
                     'growth_sequence': [1, 4, 8, 8, 8],
                     'l1_r': 0.0,
                     'l2_r': 0.001,
-                    'learning_rate': 0.0001,
+                    'learning_rate': 0.001,
                     'num_filters': 78,
                     'num_layers': 3,
                     'optimizer': 'adam',
@@ -93,6 +93,7 @@ static_grid = {     'batch_size': 256,
                     'use_layerwise_dropout_batchnorm': True}
 
 search_grid = {
+                    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1, 2, 4, 6, 8, 10], [1,8,8], [1,2,2], [1,4,4]],
                     "num_filters" : np.arange(74, 84 , 2),
                     "filter_size" : np.arange(68, 76, 2),
                     "num_layers" : [5,4],
@@ -104,7 +105,7 @@ search_grid = {
                     "padding" : ["same"],
                     "use_layerwise_dropout_batchnorm" : [True, False],
                     "dropout_T_bn_F" : [True, False],
-                    "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1, 2, 4, 6, 8, 10], [1,8,8], [1,2,2], [1,4,4]],
+                    
                     "dropout_rate" : [0.01,0.001],
                     "l2_r" : [0.01, 0.001, 0.0001],
                     "l1_r" : [0.01, 0.001,0],
@@ -116,6 +117,7 @@ search_grid = {
 model_type = "CNN_grow_double"
 is_lstm = True
 num_channels = 3
+beta = 3
 
 use_time_augmentor = True
 scaler_name = "normalize"
@@ -129,10 +131,10 @@ use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
-start_from_scratch = False
+start_from_scratch = True
 use_reduced_lr = True
 log_data = True
-skip_to_index = 4
+skip_to_index = 8
 # Increase num filters. 82 is better performing than 78. But 80 is not better than 78
 # 5 Layers perform better than less layers. Cost is of course training time is ridiculous.
 
@@ -163,5 +165,6 @@ narrowOpt = NarrowOpt(loadData, model_type, scaler_name, use_time_augmentor, use
                       use_reduced_lr = use_reduced_lr, 
                       num_channels = num_channels,
                       log_data = log_data,
-                      skip_to_index = skip_to_index)
+                      skip_to_index = skip_to_index,
+                      beta = beta)
 narrowOpt.fit()
