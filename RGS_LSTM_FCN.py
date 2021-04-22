@@ -72,8 +72,12 @@ handler = DataHandler(loadData)
 #- Consider editing the decay_sequences.
 
 hyper_grid = {
+        "batch_size" : [128],
+        "epochs" : [50],
+        "learning_rate" : [0.001],
+        "optimizer" : ["adam"],
         "units" : [8, 64, 128],
-        "output_layer_activation" : "sigmoid"
+        "output_layer_activation" : ["sigmoid"]
     }
 
 model_type = "LSTM_FCN"
@@ -97,7 +101,7 @@ use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = False
+log_data = True
 
 shutdown = False
 

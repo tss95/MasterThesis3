@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import h5py
 import gc
+import traceback
 
 import sklearn as sk
 import tensorflow as tf
@@ -29,19 +30,11 @@ import json
 
 
 
-class TrainSingleModel(GridSearchResultProcessor):
+class TrainSingleModel():
     
-    def __init__(self, x_train, y_train, x_val, y_val, x_test, y_test, noiseAug, helper, loadData, 
+    def __init__(self, noiseAug, helper, loadData, 
                  model_type, num_channels, use_tensorboard, use_liveplots, use_custom_callback,
-                 use_early_stopping, use_reduced_lr, ramLoader, log_data = True, results_df = None, 
-                 results_file_name = None, index = None, start_from_scratch = False, beta = 1):
-        self.x_train = x_train
-        self.y_train = y_train
-        self.x_val = x_val
-        self.y_val = y_val
-        self.x_test = x_test
-        self.y_test = y_test
-        
+                 use_early_stopping, use_reduced_lr, ramLoader, log_data = True, start_from_scratch = False, beta = 1):        
         self.num_channels = num_channels
         self.beta = beta
         
@@ -59,21 +52,21 @@ class TrainSingleModel(GridSearchResultProcessor):
         self.num_classes = len(set(self.loadData.label_dict.values()))
         
         self.model_type = model_type
-        self.results_df = results_df
-        self.results_file_name = results_file_name
+        self.results_df = None
+        self.results_file_name = None
         self.log_data = log_data
         self.start_from_scratch = start_from_scratch
+        self.resultsProcessor = GridSearchResultProcessor(self.num_classes, self.model_type, self.loadData, self.ramLoader, self.use_early_stopping, self.num_channels, self.beta)
         
-        self.index = index
 
     def create_result_file(self):
         print("Trying to create result file")
         if self.log_data and self.results_df is None and self.results_file_name is None:
-            self.results_file_name = self.get_results_file_name()
-            self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p)
+            self.results_file_name = self.resultsProcessor.get_results_file_name()
+            self.results_df = self.resultsProcessor.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p)
             print("Made result file: ", self.results_file_name)
         
-    def create_and_compile_model(self, meier_mode = False, **p):
+    def create_and_compile_model(self, x_train, index = None, meier_mode = False, **p):
         tf.keras.backend.clear_session()
         tf.compat.v1.reset_default_graph()
         gc.collect()
@@ -81,17 +74,17 @@ class TrainSingleModel(GridSearchResultProcessor):
         mixed_precision.set_global_policy('mixed_float16')
         p = self.helper.handle_hyperparams(self.num_classes, **p)
         
-        if self.index != None:
-            model_info = {"model_type" : self.model_type, "index" : self.index}
+        if index != None:
+            model_info = {"model_type" : self.model_type, "index" : index}
         else:
             model_info = {"model_type" : self.model_type}
         current_picks = [model_info, p]
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(current_picks)
         if self.log_data and self.results_df is not None and self.results_file_name != None:
-            self.results_df = self.store_params_before_fit_opti(p, self.results_df, self.results_file_name)
+            self.results_df = self.resultsProcessor.store_params_before_fit_opti(p, self.results_df, self.results_file_name)
         
-        _,_,timesteps = self.x_train.shape
+        _,_,timesteps = x_train.shape
         input_shape = (timesteps, self.num_channels)
         
         model = DynamicModels(self.model_type, self.num_classes, input_shape, **p).model
@@ -113,12 +106,19 @@ class TrainSingleModel(GridSearchResultProcessor):
                                 use_multiprocessing = False)
         return enq
         
-    def fit_model(self, model, workers, max_queue_size, meier_mode = False, **p):
+    def fit_model(self, model, x_train, y_train, x_val, y_val, workers, max_queue_size, meier_mode = False, **p):
+        norm_scale = False
+        if self.ramLoader.scaler_name == "normalize":
+            norm_scale = True
+
+
         print("Before starting enquers and generators")
         tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
-        train_enq = self.create_enqueuer(self.x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
-        val_enq = self.create_enqueuer(self.x_val, self.y_val, p["batch_size"], self.noiseAug, self.num_channels)
+        #train_enq = self.create_enqueuer(x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
+        #val_enq = self.create_enqueuer(x_val, self.y_val, p["batch_size"], self.noiseAug, self.num_channels)
+        train_enq = GeneratorEnqueuer(data_generator(x_train, y_train, p["batch_size"], self.noiseAug, num_channels = self.num_channels, is_lstm = True, norm_scale = norm_scale), use_multiprocessing = False)
+        val_enq = GeneratorEnqueuer(data_generator(x_val, y_val, p["batch_size"], self.noiseAug, num_channels = self.num_channels, is_lstm = True, norm_scale = norm_scale), use_multiprocessing = False)
         train_enq.start(workers = workers, max_queue_size = max_queue_size)
         val_enq.start(workers = workers, max_queue_size = max_queue_size)
         train_gen = train_enq.get()
@@ -133,7 +133,7 @@ class TrainSingleModel(GridSearchResultProcessor):
                                                             use_liveplots = self.use_liveplots, 
                                                             use_custom_callback = self.use_custom_callback,
                                                             use_early_stopping = self.use_early_stopping,
-                                                            use_reduced_lr = self.use_reduced_lr, beta = self.beta)
+                                                            use_reduced_lr = self.use_reduced_lr, y_val = y_val,  beta = self.beta)
         else:    
             fit_args = self.helper.generate_fit_args(self.loadData.train, self.loadData.val, self.loadData,
                                                     p["batch_size"], p["epochs"], val_gen,
@@ -142,21 +142,39 @@ class TrainSingleModel(GridSearchResultProcessor):
                                                     use_custom_callback = self.use_custom_callback,
                                                     use_early_stopping = self.use_early_stopping,
                                                     use_reduced_lr = self.use_reduced_lr,
-                                                    y_val = self.y_val, beta = self.beta)
+                                                    y_val = y_val, beta = self.beta)
     
         print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.val, p['batch_size'])*p['batch_size']}/{len(self.loadData.val)} validation points")
         print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, p['batch_size'])*p['batch_size']}/{len(self.loadData.train)} training points")
-        print("---------------------------------------------------------------------------------")
+        print("-------------------------------------------------------------------")
+        print("Loaded fit args. Starting training")
+        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         # Fit the model using the generated args
-        model.fit(train_gen, **fit_args)
-        train_enq.stop()
-        val_enq.stop()
-        del train_gen, val_gen, train_enq, val_enq        
-        return model
+        try:
+            # Try block allows for evaluation of the current state of the model at any time.
+            tf.keras.backend.clear_session()
+            tf.compat.v1.reset_default_graph()
+            gc.collect()
+            tf.config.optimizer.set_jit(True)
+            mixed_precision.set_global_policy('mixed_float16')
+            model.fit(train_gen, **fit_args)
+        except Exception:
+            traceback.print_exc()
+            model = None
+        finally:
+            train_enq.stop()
+            val_enq.stop()
+            del train_gen, val_gen, train_enq, val_enq     
+            gc.collect()   
+            return model
 
-    def metrics_producer(self, model, workers, max_queue_size, meier_mode = False,**p):
+    def metrics_producer(self, model, x_train, y_train, x_val, y_val, workers, max_queue_size, meier_mode = False,**p):
+        print("Finished training, starting evaluation")
+        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         print("Evaluating validation:")
-        val_enq = self.create_enqueuer(self.x_val, self.y_val, p["batch_size"], self.noiseAug, self.num_channels)
+        val_enq = self.create_enqueuer(x_val, y_val, p["batch_size"], self.noiseAug, self.num_channels)
         val_enq.start(workers = workers, max_queue_size = max_queue_size)
         val_gen = val_enq.get()
         val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
@@ -164,7 +182,7 @@ class TrainSingleModel(GridSearchResultProcessor):
                                   return_dict = True)
         val_enq.stop()
         del val_enq, val_gen
-        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, beta = self.beta)       
+        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, beta = self.beta)       
         metrics = {}
         metrics['val'] = {  "val_loss" : val_eval["loss"],
                             "val_accuracy" : val_acc,
@@ -174,7 +192,7 @@ class TrainSingleModel(GridSearchResultProcessor):
 
         
         print("Evaluating train:")
-        train_enq = self.create_enqueuer(self.x_train, self.y_train, p["batch_size"], self.noiseAug, self.num_channels)
+        train_enq = self.create_enqueuer(x_train, y_train, p["batch_size"], self.noiseAug, self.num_channels)
         train_enq.start(workers = workers, max_queue_size = max_queue_size)
         train_gen = train_enq.get()
         train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
@@ -182,32 +200,35 @@ class TrainSingleModel(GridSearchResultProcessor):
                                     return_dict = True)
         train_enq.stop()
         del train_enq, train_gen
-        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_generator(model, self.x_train, self.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, beta = self.beta)
+        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_generator(model, x_train, y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, beta = self.beta)
         metrics['train'] = { "train_loss" : train_eval["loss"],
                             "train_accuracy" : train_acc,
                             "train_precision": train_precision,
                             "train_recall" : train_recall,
                             f"train_f{self.beta}" : train_fscore}
+        print("Finished evaluation")
+        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         return metrics, val_conf
     
-    def run(self, workers, max_queue_size, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_mode = False, **p):
+    def run(self, x_train, y_train, x_val, y_val, x_test, y_test, workers, max_queue_size, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_mode = False, index = None, **p):
         if self.log_data and self.results_df is None and self.results_file_name is None:
             self.p = p
             self.create_result_file()
-        model = self.create_and_compile_model(meier_mode = meier_mode, **p)
-        model = self.fit_model(model, workers, max_queue_size, meier_mode = meier_mode, **p)
+        model = self.create_and_compile_model(x_train, index = index, meier_mode = meier_mode, **p)
+        model = self.fit_model(model, x_train, y_train, x_val, y_val, workers, max_queue_size, meier_mode = meier_mode, **p)
         if self.log_data and self.results_df is not None and self.results_file_name != None:
-            metrics, val_conf = self.metrics_producer(model, int(workers//2), int(max_queue_size), meier_mode, **p)
-            self.results_df = self.store_metrics_after_fit(metrics, val_conf, self.results_df, self.results_file_name)
+            metrics, val_conf = self.metrics_producer(model, x_train, y_train, x_val, y_val, int(workers//2), int(max_queue_size), meier_mode, **p)
+            self.results_df = self.resultsProcessor.store_metrics_after_fit(metrics, val_conf, self.results_df, self.results_file_name)
             print(self.results_df.iloc[-1])
         if evaluate_train:
             print("Unsaved train eval:")
-            self.helper.evaluate_generator(model, self.x_train, self.y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+            self.helper.evaluate_generator(model, x_train, y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         if evaluate_val:
             print("Unsaved val eval:")
-            self.helper.evaluate_generator(model, self.x_val, self.y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+            self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         if evaluate_test:
             print("Unsaved test eval:")
-            self.helper.evaluate_generator(model, self.x_test, self.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
+            self.helper.evaluate_generator(model, x_test, y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name)
         gc.collect()
         return model, self.results_df

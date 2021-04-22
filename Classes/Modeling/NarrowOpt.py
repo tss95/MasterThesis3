@@ -26,7 +26,8 @@ class NarrowOpt(GridSearchResultProcessor):
     def __init__(self, loadData, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                 filter_name, static_grid, search_grid, use_tensorboard = False, 
                 use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0,
-                band_max = 4.0, highpass_freq = 1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3, log_data = False, skip_to_index = 0):
+                band_max = 4.0, highpass_freq = 1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3, 
+                log_data = False, skip_to_index = 0, beta = 1):
         self.loadData = loadData
         self.model_type = model_type
         
@@ -53,6 +54,7 @@ class NarrowOpt(GridSearchResultProcessor):
         self.num_channels = num_channels
         self.log_data = log_data
         self.skip_to_index = skip_to_index
+        self.beta = beta
 
         
         self.helper = HelperFunctions()
@@ -80,11 +82,7 @@ class NarrowOpt(GridSearchResultProcessor):
                               load_test_set = False)
         self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = self.ramLoader.load_to_ram()
 
-        # Create name of results file, get initiated results df, either brand new or continue old.
-        self.results_file_name = self.get_results_file_name()
-        print(self.results_file_name)
-        self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
-        print(self.results_df)
+
         print(f"Starting narrow optimizer. Will finish after training {len(self.p)} models.")
         for i in range(len(self.p)):
             if i < self.skip_to_index:
@@ -102,9 +100,8 @@ class NarrowOpt(GridSearchResultProcessor):
                                                     self.model_type, self.num_channels, self.use_tensorboard,
                                                     self.use_liveplots, self.use_custom_callback, 
                                                     self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
-                                                    log_data = self.log_data, results_df = self.results_df,
-                                                    results_file_name = self.results_file_name, index = i,
-                                                    start_from_scratch = False)
+                                                    log_data = self.log_data, index = i,
+                                                    start_from_scratch = False, beta = self.beta)
                 # Add try catch clauses here
                 model, self.results_df = trainSingleModel.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_load = False, **self.p[i])
                 del model

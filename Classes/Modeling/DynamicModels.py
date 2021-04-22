@@ -161,16 +161,19 @@ class DynamicModels():
         x = CuDNNLSTM(units)(ip)
         x = Dropout(0.8)(x)
 
-        y = Permute((2,1))(ip)
-        y = Conv1D(128, 8, padding = "same", kernel_initializer ="he_uniform")(y)
+        #y = Permute((2,1))(ip)
+        # Filter_size = 8
+        #y = Conv1D(128, 16, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = Conv1D(60, 80, padding = "same", kernel_initializer ="he_uniform")(ip)
         y = BatchNormalization()(y)
         y = Activation('relu')(y)
 
-        y = Conv1D(256, 5, padding = "same", kernel_initializer ="he_uniform")(y)
+        # Filter_size = 5
+        y = Conv1D(120, 80, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
         y = Activation('relu')(y)
-
-        y = Conv1D(128, 3, padding = "same", kernel_initializer ="he_uniform")(y)
+        # Filter size = 3
+        y = Conv1D(240, 80, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
         y = Activation('relu')(y)
 

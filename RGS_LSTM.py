@@ -58,7 +58,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.2,
+    'subsample_size' : 0.25,
     'balance_non_train_set' : True,
     'use_true_test_set' : False,
     'even_balance' : True
@@ -79,6 +79,7 @@ hyper_grid = {
         "num_layers" : [1, 2],
         "units" : np.arange(80, 150, 10),
         "use_layerwise_dropout_batchnorm" : [False, True],
+        "dropout_T_bn_F" : [False, True],
         "decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
         "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
         "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
@@ -95,7 +96,7 @@ is_lstm = True
 num_channels = 3   
 
 use_time_augmentor = True
-scaler_name = "robust"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0

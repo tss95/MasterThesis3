@@ -15,8 +15,14 @@ utils = GlobalUtils()
 
 class GridSearchResultProcessor():
 
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, model_type, loadData, ramLoader, use_early_stopping, num_channels, beta):
         self.num_classes = num_classes
+        self.model_type = model_type
+        self.loadData = loadData
+        self.ramLoader = ramLoader
+        self.use_early_stopping = use_early_stopping
+        self.num_channels = num_channels
+        self.beta = beta
         
     
     def create_results_df(self, hyper_picks, model_picks):
@@ -83,7 +89,8 @@ class GridSearchResultProcessor():
         else:
             raise Exception("Terminating due to lack of confirmation.")
         
-        
+    
+
     
     def get_results_file_name(self, narrow = False, narrowOpt = False):
         file_name = f"results_{self.model_type}"

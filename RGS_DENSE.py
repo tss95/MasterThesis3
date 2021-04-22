@@ -75,9 +75,9 @@ hyper_grid = {
         "batch_size" : [64, 128, 256],
         "epochs" : [50],
         "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
-        "optimizer" : ["rmsprop", "sgd", "adam"],
+        "optimizer" : ["rmsprop", "sgd", "adam", "adam", "sgd"],
         "num_layers" : [1, 1, 2, 2, 3, 4, 5],
-        "units" : np.arange(100, 700, 10),
+        "units" : np.arange(50, 700, 10),
         "dropout_T_bn_F" : [True, False],
         "use_layerwise_dropout_batchnorm" : [False, True],
         #"decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
@@ -85,7 +85,7 @@ hyper_grid = {
         "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
         "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
         "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
-        "activation" : ["tanh", "relu", "sigmoid", "softmax"],
+        "activation" : ["tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
         "output_layer_activation" : ["sigmoid"]
     }
 
@@ -95,7 +95,7 @@ num_channels = 3
 beta = 1   
 
 use_time_augmentor = True
-scaler_name = "minmax"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -106,11 +106,11 @@ n_picks = 100
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = True
+use_custom_callback = False
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = False
+log_data = True
 
 shutdown = False
 

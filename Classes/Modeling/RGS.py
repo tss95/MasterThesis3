@@ -20,12 +20,10 @@ base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 
 from Classes.Modeling.DynamicModels import DynamicModels
-from Classes.Modeling.StaticModels import StaticModels
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.RamLoader import RamLoader
-from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.DataProcessing.ts_RamGenerator import data_generator
 from Classes.Modeling.TrainSingleModel import TrainSingleModel
 
@@ -35,10 +33,8 @@ import sys
 
 import random
 import pprint
-import re
-import json
 
-class RGS(GridSearchResultProcessor):
+class RGS():
     
     def __init__(self, loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                  filter_name, n_picks, hyper_grid, use_tensorboard = False, 
@@ -76,10 +72,6 @@ class RGS(GridSearchResultProcessor):
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
-        self.is_dynamic = False
-        if type(self.model_type) == str:
-            self.is_dynamic = True
-
 
     def fit(self):
         pp = pprint.PrettyPrinter(indent=4)
@@ -105,15 +97,19 @@ class RGS(GridSearchResultProcessor):
                               band_max = self.band_max,
                               highpass_freq = self.highpass_freq, 
                               load_test_set = False)
-        self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = self.ramLoader.load_to_ram()
+        x_train, y_train, x_val, y_val, noiseAug = self.ramLoader.load_to_ram()
 
-        # Create name of results file, get initiated results df, either brand new or continue old.
-        self.results_file_name = self.get_results_file_name()
-        print(self.results_file_name)
-        self.results_df = self.initiate_results_df_opti(self.results_file_name, self.num_classes, self.start_from_scratch, self.p[0])
-        print(self.results_df)
         _, self.used_m, _= map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+
+        singleModel = TrainSingleModel(noiseAug, self.helper, self.loadData,
+                                        self.model_type, self.num_channels, self.use_tensorboard,
+                                        self.use_liveplots, self.use_custom_callback, 
+                                        self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
+                                        log_data = self.log_data,
+                                        start_from_scratch = self.start_from_scratch, 
+                                        beta = self.beta)
         for i in range(len(self.p)):
+            gc.collect()
             tf.keras.backend.clear_session()
             tf.compat.v1.reset_default_graph()
             gc.collect()
@@ -128,23 +124,11 @@ class RGS(GridSearchResultProcessor):
                 self.used_m = used_m
             try:
                 # The hard defined variables in the run call refer to nr_workers and max_queue_size respectively.
-                _, self.results_df = TrainSingleModel(self.x_train, self.y_train, self.x_val, self.y_val,
-                                                      None, None, self.noiseAug, self.helper, self.loadData,
-                                                      self.model_type, self.num_channels, self.use_tensorboard,
-                                                      self.use_liveplots, self.use_custom_callback, 
-                                                      self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
-                                                      log_data = self.log_data, results_df = self.results_df,
-                                                      results_file_name = self.results_file_name, index = i,
-                                                      start_from_scratch = False, beta = self.beta).run(16, 15, 
-                                                                                                        evaluate_train = False, 
-                                                                                                        evaluate_val = False, 
-                                                                                                        evaluate_test = False, 
-                                                                                                        meier_load = False, 
-                                                                                                        **self.p[i])
+                self.train_model(singleModel, x_train, y_train, x_val, y_val, i, **self.p[i])
             except Exception:
                 traceback.print_exc()
-                continue
             finally:
+                gc.collect()
                 tf.keras.backend.clear_session()
                 tf.compat.v1.reset_default_graph()
                 gc.collect()
@@ -152,6 +136,15 @@ class RGS(GridSearchResultProcessor):
                 tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
                 print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
                 continue
+
+    def train_model(self, singleModel, x_train, y_train, x_val, y_val, index, **p):
+        _ = singleModel.run(x_train, y_train, x_val, y_val, None, None, 16, 15, 
+                            evaluate_train = False, 
+                            evaluate_val = False, 
+                            evaluate_test = False, 
+                            meier_load = False, 
+                            index = index,
+                            **p)
 
     
     def get_n_params_from_list(self, grid, n_picks):

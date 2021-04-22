@@ -1,0 +1,12 @@
+use_residuals,use_bottleneck,residual_activation,reg_residual,reg_module,output_layer_activation,optimizer,num_modules,num_filters,module_output_activation,module_activation,learning_rate,l2_r,l1_r,filter_size,epochs,bottleneck_size,batch_size,train_loss,train_accuracy,train_precision,train_recall,train_f3,val_loss,val_accuracy,val_precision,val_recall,val_f3,confusion_matrix
+True,False,relu,False,False,sigmoid,adam,1,74,relu,linear,0.0001,0,0.01,32,50,36,128,0.689624786377,0.517912772586,0.672048,0.065007,0.071462,0.661598205566,0.904747596154,0.111111,0.035433,0.038023,"[[3002   72]
+ [ 245    9]]"
+True,False,relu,False,False,sigmoid,adam,1,74,linear,tanh,0.01,0,0.01,58,50,34,256,0.671012461185,0.5466796875,0.574446,0.35026,0.364484,0.673007249832,0.734074519231,0.088657,0.267717,0.222732,"[[2375  699]
+ [ 186   68]]"
+False,False,relu,False,True,sigmoid,adam,1,60,relu,linear,0.001,0.1,0.01,36,50,42,256,0.693801403046,0.501489257812,0.8,0.000196,0.000218,0.692462384701,0.923677884615,0.0,0.0,0.0,"[[3074    0]
+ [ 254    0]]"
+True,True,relu,False,False,sigmoid,sgd,6,40,linear,linear,0.001,0.01,0.0,62,50,32,128,0.707088172436,0.498539719626,0.498611,0.998536,0.907542,0.856469273567,0.0769230769231,0.076113,0.996063,0.45098,"[[   3 3071]
+ [   1  253]]"
+False,True,relu,True,False,sigmoid,adam,1,50,relu,linear,0.0001,0.01,0.0,64,50,48,128,0.692787468433,0.508128894081,0.805677,0.018009,0.01996,0.630603611469,0.921404162783,0.0,0.0,0.0,"[[2966   13]
+ [ 240    0]]"
+True,False,relu,True,False,sigmoid,sgd,6,66,tanh,linear,0.001,0.001,0.0,38,50,30,64,,,,,,,,,,,

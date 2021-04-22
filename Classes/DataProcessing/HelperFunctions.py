@@ -131,7 +131,7 @@ class HelperFunctions():
                 incorrect_prediction_indexes.append(i)
         return incorrect_prediction_indexes
 
-    def get_false_negative_indexes(self, rounded_predictions, y_test):
+    def get_false_negative_indexes(self, rounded_predictions, y_test): 
         false_negative_indexes = []
         for i in range(len(rounded_predictions)):
             if y_test[i] == 1 and rounded_predictions[i] == 0:
@@ -151,13 +151,20 @@ class HelperFunctions():
         accuracy = (tn + tp)/(tp + tn + fn + fp)
         return accuracy
 
+    """
     def plot_confusion_matrix(self, conf, label_dict):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         cax = ax.matshow(conf)
         labels = list(self.handle_non_noise_dict(label_dict))
-        plt.title('Confusion matrix of the classifier')
-        fig.colorbar(cax)
+        print("labels")
+        if labels == ["noise", "not-noise"]
+            classifier = "3N"
+        else:
+            classifier = "EE"
+        print(classifier)
+        plt.title(f'Confusion matrix of the {classifier} classifier')
+        #fig.colorbar(cax)
         ax.set_xticklabels([''] + labels)
         ax.set_yticklabels([''] + labels)
         plt.xlabel('Predicted')
@@ -165,10 +172,42 @@ class HelperFunctions():
         print(conf.shape)
         for i in range(conf.shape[0]):
             for j in range(conf.shape[1]):
-                text = ax.text(j, i, int(conf[i, j]), ha="center", va="center", color="r")
+                text = ax.text(j, i, int(conf[i, j]), ha="center", va="center", color="black")
         
         plt.show()
-        
+    """
+
+    def plot_confusion_matrix(self, conf, label_dict):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        labels = list(self.handle_non_noise_dict(label_dict))
+        for x in range(len(labels)):
+            for y in range(len(labels)):
+                ax.annotate(str(np.array(conf[x,y]).ravel()[0]), xy = (y, x), ha = 'center', va = 'center')
+        print(labels)
+        if labels == ["noise", "not_noise"]:
+            classifier = "3N"
+        else:
+            classifier = "EE"
+        print(classifier)
+        offset = 0.5
+        width = height = len(labels)
+        ax.set_xlim(-offset, width - offset)
+        ax.set_ylim(-offset, height - offset)
+        plt.title(f'Confusion matrix of the {classifier} classifier')
+        #ax.set_xticklabels([''] + labels)
+        #ax.set_yticklabels([''] + labels)
+        ax.hlines(y=np.arange(height+1)- offset, xmin=-offset, xmax=width-offset, color  = "black")
+        ax.vlines(x=np.arange(width+1) - offset, ymin=-offset, ymax=height-offset, color = "black")
+        plt.xticks(range(width), labels)
+        plt.yticks(range(height), labels)
+        ax.invert_yaxis()
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        plt.show()
+
+
+
     def plot_precision_recall_curve(self, precision, recall):
         plt.clf()
         plt.plot(recall, precision)
@@ -424,7 +463,7 @@ class HelperFunctions():
             if loadData.balance_non_train_set or loadData.noise_not_noise:
                 earlystop = EarlyStopping(monitor = 'val_categorical_accuracy',
                             min_delta = 0,
-                            patience = 5,
+                            patience = 7,
                             verbose = 1,
                             mode = "max",
                             restore_best_weights = True)
@@ -433,7 +472,7 @@ class HelperFunctions():
             else: 
                 earlystop = EarlyStopping(monitor = f'val_f{beta}',
                             min_delta = 0,
-                            patience = 5,
+                            patience = 7,
                             verbose = 1,
                             mode = "max",
                             restore_best_weights = True)

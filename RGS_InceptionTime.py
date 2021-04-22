@@ -112,6 +112,7 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 log_data = True
+beta = 3
 
 shutdown = False
 
@@ -129,7 +130,7 @@ randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_n
                        filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
                        use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq,
                        use_custom_callback = use_custom_callback, 
-                       start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+                       start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, beta = beta)
 randomGridSearch.fit()
 
 """try:
