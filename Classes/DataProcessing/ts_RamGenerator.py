@@ -107,9 +107,7 @@ def modified_data_generator(traces, labels, batch_size, noiseAug, num_channels =
 
 @threadsafe_generator
 def ramless_data_generator(ds, batch_size, ramLessLoader, noiseAug, timeAug, num_channels, is_lstm = True, norm_scale = False):
-    # Number of samples 
-    num_samples = len(labels)
-    _, channels, timesteps = ramLessLoader.helper.get_trace_shape_no_cast(ds, ramLessLoader.use_time_augmentor))
+    num_samples, channels, timesteps = ramLessLoader.helper.get_trace_shape_no_cast(ds, ramLessLoader.use_time_augmentor)
     while True:
         # Loop which goes from 0 to num_samples, jumping n number for each loop, where n is equal to batch_size
         for offset in range(0, num_samples, batch_size):
@@ -123,7 +121,7 @@ def ramless_data_generator(ds, batch_size, ramLessLoader, noiseAug, timeAug, num
             # so at next call the iterator will start at 0 again.
             
             
-            batch_traces, batch_labels = ramLessLoader.preprocess.data(ds[offset:offset + batch_size], timeAug, batch_traces, batch_labels)
+            batch_traces, batch_labels = ramLessLoader.load_batch(ds[offset:offset + batch_size], timeAug, batch_traces, batch_labels)
 
             # Adds a little noise to each event, as a regulatory measure
             if noiseAug != None:

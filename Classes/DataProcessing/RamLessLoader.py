@@ -109,6 +109,8 @@ class RamLessLoader:
                 loaded_trace, _ = self.timeAug_and_filter(self.train_timeAug, path, label, red_i)
                 # Now to fit scaler:
                 self.scaler.partial_fit_ramless(loaded_trace)
+        self.scaler = self.scaler.scaler
+            
 
     def fit_noiseAug(self, noise_ds, timeAug, scaler):
         noiseAug = NoiseAugmentor(self.loadData, None)
@@ -124,8 +126,8 @@ class RamLessLoader:
             self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
         # This is where things start to change. We only need to care about the training set. Everything else will be handled in the generators.
         # We need to fit scaler and noiseAug seperately.
-        self.scaler = self.get_scaler()
-        if self.scaler is not None:
+        self.scalerObj = self.get_scaler()
+        if self.scalerObj is not None:
             self.fit_scaler()
 
         self.noiseAug = None
@@ -160,13 +162,13 @@ class RamLessLoader:
     def get_scaler(self):
         scaler = None
         if self.scaler_name == "minmax":
-            scaler = MinMaxScalerFitter().scaler
+            scaler = MinMaxScalerFitter()
         elif self.scaler_name == "standard":
-            scaler = StandardScalerFitter().scaler
+            scaler = StandardScalerFitter()
         elif self.scaler_name == "robust":
-            scaler = RobustScalerFitter().scaler
+            scaler = RobustScalerFitter()
         elif self.scaler_name == "normalize":
-            scaler = DataNormalizer().scaler
+            scaler = DataNormalizer()
         elif self.scaler_name != "minmax" or self.scaler_name != "standard" or self.scaler_name != "robust":
             raise Exception(f"{self.scaler_name} is not implemented.")
         print("\n")
@@ -241,9 +243,9 @@ class RamLessLoader:
     
 
 
-    def preprocess_data(self, path_label_red, timeAug, batch_traces, batch_labels):
+    def load_batch(self, batch, timeAug, batch_traces, batch_labels):
         for i in range(path_label_red):
-            path, label, red_i = path_label_red[i]
+            path, label, red_i = batch[i]
             batch_traces[i], batch_labels[i] = self.timeAug_and_filter(timeAug, path, label, red_i)
             batch_traces[i] = self.scaler_transform_trace(batch_traces[i])
         return batch_traces, batch_labels

@@ -15,6 +15,7 @@ class NoiseAugmentor(DataHandler):
             self.noise_mean, self.noise_std = self.get_noise_mean_std_ram(traces)
         else:
             print("RAM-less noise augmentor initiated.")
+            print("\n")
         
     def create_noise(self, mean, std, sample_shape):
         noise = np.random.normal(mean, std, (sample_shape))
@@ -37,10 +38,12 @@ class NoiseAugmentor(DataHandler):
         return noise_mean, noise_std
 
     def get_noise_mean_std_ramless(self, noise_ds, timeAug, ramLessLoader, scaler):
+        noise_mean = 0
+        noise_std = 0
         nr_noise = len(noise_ds)
         for i in range(nr_noise):
             self.helper.progress_bar(i + 1, nr_noise, "Fitting noise augmentor")
-            loaded_trace, _ = ramLessLoader.timeAug_andFilter(timeAug, noise_ds[0], noise_ds[1], noise_ds[2])
+            loaded_trace, _ = ramLessLoader.timeAug_and_filter(timeAug, noise_ds[i][0], noise_ds[i][1], noise_ds[i][2])
             loaded_trace = ramLessLoader.scaler_transform_trace(loaded_trace)
             noise_mean += np.mean(loaded_trace)
             noise_std += np.std(loaded_trace)
