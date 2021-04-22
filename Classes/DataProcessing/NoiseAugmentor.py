@@ -11,7 +11,10 @@ class NoiseAugmentor(DataHandler):
         super().__init__(loadData)
         self.loadData = loadData
         self.helper = HelperFunctions()
-        self.noise_mean, self.noise_std = self.get_noise_mean_std_ram(traces)
+        if traces != None:
+            self.noise_mean, self.noise_std = self.get_noise_mean_std_ram(traces)
+        else:
+            print("RAM-less noise augmentor initiated.")
         
     def create_noise(self, mean, std, sample_shape):
         noise = np.random.normal(mean, std, (sample_shape))
@@ -32,6 +35,20 @@ class NoiseAugmentor(DataHandler):
         noise_mean = noise_mean/nr_noise
         noise_std = noise_std/nr_noise
         return noise_mean, noise_std
+
+    def get_noise_mean_std_ramless(self, noise_ds, timeAug, ramLessLoader, scaler):
+        nr_noise = len(noise_ds)
+        for i in range(nr_noise):
+            self.helper.progress_bar(i + 1, nr_noise, "Fitting noise augmentor")
+            loaded_trace, _ = ramLessLoader.timeAug_andFilter(timeAug, noise_ds[0], noise_ds[1], noise_ds[2])
+            loaded_trace = ramLessLoader.scaler_transform_trace(loaded_trace)
+            noise_mean += np.mean(loaded_trace)
+            noise_std += np.std(loaded_trace)
+        self.noise_mean = noise_mean/nr_noise
+        self.noise_std = noise_std/nr_noise
+
+
+
 
     """
     def __init__(self, ds, filter_name, scaler_name, scaler, loadData, timeAug, band_min = 2.0, band_max = 4.0, highpass_freq = 1):

@@ -20,5 +20,5 @@ class RobustScalerFitter(ScalerFitter):
         print(f"Seconds per event: {(end-start)/num_samples}")
         return self.scaler
         
-    def fit_transform_trace(self, trace):
-        return np.transpose(self.scaler.fit_transform(np.transpose(trace)))
+    def partial_fit_ramless(self, trace):
+        self.scaler.fit(np.transpose(trace))

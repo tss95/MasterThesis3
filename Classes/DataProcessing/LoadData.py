@@ -257,11 +257,7 @@ class LoadData():
         self.full_ds = np.concatenate((self.train, self.val, self.test))
         
         # Create noise_ds. 
-        # Create zero redundancy column
-        train_noise = train_noise[np.random.choice(train_noise.shape[0], int(len(train_noise)*self.subsample_size), replace = False)]
-        zero_column = np.zeros((len(train_noise), 1), dtype = np.int)
-        self.noise_ds = np.hstack((train_noise, zero_column))
-        
+        self.noise_ds = self.train[self.train[:,1] == "noise"]        
         
             
     def load_earth_explo_only(self):
@@ -321,6 +317,8 @@ class LoadData():
     
                 
     def create_label_dict(self):
+        # Used 
+        self.complete_label_dict = {'noise' : 0, 'earthquake' : 1, 'explosion' : 2}
         # Method which produces the dictionary for labels. This is used in order to disguise labels during training.
         if self.earth_explo_only:
             self.label_dict = {'explosion' : 0, 'earthquake' : 1}

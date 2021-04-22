@@ -10,4 +10,5 @@ class DataNormalizer(ScalerFitter):
 
     def fit_transform_trace(self, trace):
         return self.scaler.fit_transform(trace)
+
         

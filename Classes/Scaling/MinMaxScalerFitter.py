@@ -13,3 +13,6 @@ class MinMaxScalerFitter(ScalerFitter):
             self.scaler.partial_fit(np.transpose(traces[i]))
             self.progress_bar(i + 1, num_samples)
         return self.scaler
+
+    def partial_fit_ramless(self, trace):
+        self.scaler.partial_fit(np.transpose(trace))
