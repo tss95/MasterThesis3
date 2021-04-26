@@ -35,8 +35,9 @@ class RamLessLoader:
         self.band_max = band_max
         self.highpass_freq = highpass_freq
         self.load_test_set = load_test_set
-        self.num_classes = len(set(handler.loadData.label_dict.values()))
+        self.num_classes = len(set(self.loadData.label_dict.values()))
         self.meier_load = meier_load
+
 
     
 
@@ -88,6 +89,9 @@ class RamLessLoader:
         return timeAug
     
     def fit(self):
+        _, num_channels, timesteps = self.handler.get_trace_shape_no_cast(self.loadData.train, self.use_time_augmentor)
+        self.input_shape = (timesteps, num_channels)
+        self.create_y()
         if self.loadData.noise_not_noise:
             return self.fit_noise_not_noise()
         if self.loadData.earth_explo_only:
@@ -126,13 +130,13 @@ class RamLessLoader:
             self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
         # This is where things start to change. We only need to care about the training set. Everything else will be handled in the generators.
         # We need to fit scaler and noiseAug seperately.
-        self.scalerObj = self.get_scaler()
-        if self.scalerObj is not None:
+        self.scaler = self.get_scaler()
+        if self.scaler is not None:
             self.fit_scaler()
 
         self.noiseAug = None
         if self.use_noise_augmentor:
-            noise_ds = self.train_ds[self.train_ds[:,] == "noise"]
+            noise_ds = self.train_ds[self.train_ds[:,1] == "noise"]
             self.noiseAug = self.fit_noiseAug(noise_ds, self.train_timeAug, self.scaler)
         print("\n")
         end = time.time()
@@ -241,14 +245,30 @@ class RamLessLoader:
             stream.filter('bandpass', freqmin=band_min, freqmax=band_max)
         return np.array(stream)
     
+    def create_y(self):
+        self.y_train = self.convert_labels(self.train_ds, self.num_classes, self.meier_load)
+        self.y_val = self.convert_labels(self.val_ds, self.num_classes, self.meier_load)
+        if self.load_test_set:
+            self.y_test = self.convert_labels(self.test_ds, self.num_classes, self.meier_load)
+
+    def convert_labels(self, ds, num_classes, meier_load):
+        labels = ds[:,1]
+        y = np.empty((len(ds), 1))
+        for i in range(len(ds)):
+            y[i] = self.handler.label_dict.get(labels[i])
+        y = utils.to_categorical(y, self.num_classes, dtype = np.int8)
+        if self.num_classes == 2 and not meier_load:
+            y = y[:,1]
+            y = np.reshape(y, (y.shape[0], 1))
+        return y 
 
 
-    def load_batch(self, batch, timeAug, batch_traces, batch_labels):
-        for i in range(path_label_red):
+    def load_batch(self, batch, timeAug, batch_traces):
+        for i in range(len(batch)):
             path, label, red_i = batch[i]
-            batch_traces[i], batch_labels[i] = self.timeAug_and_filter(timeAug, path, label, red_i)
+            batch_traces[i], _ = self.timeAug_and_filter(timeAug, path, label, red_i)
             batch_traces[i] = self.scaler_transform_trace(batch_traces[i])
-        return batch_traces, batch_labels
+        return batch_traces
         
 
 

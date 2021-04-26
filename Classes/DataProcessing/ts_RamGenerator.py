@@ -42,13 +42,7 @@ def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_ls
             # Initiates the arrays.
             batch_traces = np.empty((batch_size, traces.shape[1], traces.shape[2]))
             batch_labels = np.empty((batch_size, 1))
-            # If condition that handles what happens when the funcion has been called k times, and k*batch_size > num_samples.
-            # This makes sure that the shape of the arrays remain the same, even though there arent enough events 
-            # to fill an entire batch.
-            # when this condition is true, it will be the last iteration of the loop, 
-            # so at next call the iterator will start at 0 again.
-            
-            
+
             batch_traces = traces[offset:offset + batch_size]
             batch_labels = labels[offset:offset + batch_size]
 
@@ -106,35 +100,33 @@ def modified_data_generator(traces, labels, batch_size, noiseAug, num_channels =
             yield batch_traces, batch_labels
 
 @threadsafe_generator
-def ramless_data_generator(ds, batch_size, ramLessLoader, noiseAug, timeAug, num_channels, is_lstm = True, norm_scale = False):
-    num_samples, channels, timesteps = ramLessLoader.helper.get_trace_shape_no_cast(ds, ramLessLoader.use_time_augmentor)
+def ramless_data_generator(ds, y, batch_size, ramLessLoader, timeAug, num_channels, input_shape, is_lstm = True, norm_scale = False):
+    num_samples = len(y)
+    timesteps, channels = input_shape
     while True:
         # Loop which goes from 0 to num_samples, jumping n number for each loop, where n is equal to batch_size
         for offset in range(0, num_samples, batch_size):
-            # Initiates the arrays.
-            batch_traces = np.empty((batch_size, channels, timesteps))
-            batch_labels = np.empty((batch_size, 1))
-            # If condition that handles what happens when the funcion has been called k times, and k*batch_size > num_samples.
-            # This makes sure that the shape of the arrays remain the same, even though there arent enough events 
-            # to fill an entire batch.
-            # when this condition is true, it will be the last iteration of the loop, 
-            # so at next call the iterator will start at 0 again.
-            
-            
-            batch_traces, batch_labels = ramLessLoader.load_batch(ds[offset:offset + batch_size], timeAug, batch_traces, batch_labels)
+            batch_traces = load_batch(ds[offset:offset + batch_size], timeAug, (batch_size, channels, timesteps), ramLessLoader)
+            batch_labels = y[offset:offset + batch_size]
 
             # Adds a little noise to each event, as a regulatory measure
-            if noiseAug != None:
+            if ramLessLoader.noiseAug is not None:
                 # Since normalize scaler is independent it will scale noise proportionally less than non noise events
                 if not norm_scale:
-                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/15)
+                    batch_traces = preprocess_data(batch_traces, ramLessLoader.noiseAug, 1/15)
                 else:
                     # Choose 1/15, but this is just some number. Potential for improvement by tuning.
-                    # Chaned to 1/20 as the validation results were soooo affected by the augmentation
-                    batch_traces = preprocess_data(batch_traces, noiseAug, 1/20)
+                    # Changed to 1/20 as the validation results were soooo affected by the augmentation
+                    batch_traces = preprocess_data(batch_traces, ramLessLoader.noiseAug, 1/20)
 
             batch_traces = batch_traces[:][:,0:num_channels]
             if is_lstm:
                 batch_traces = np.reshape(batch_traces, (batch_traces.shape[0], batch_traces.shape[2], batch_traces.shape[1]))
 
             yield batch_traces, batch_labels
+
+
+
+def load_batch(batch, timeAug, shape, ramLessLoader):
+    return ramLessLoader.load_batch(batch, timeAug, np.empty((shape)))
+    

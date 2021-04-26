@@ -13,13 +13,14 @@ import pylab as pl
 import pprint
 
 import tensorflow as tf
+from tensorflow.keras import mixed_precision
 #import tensorflow_addons as tfa
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
-from Classes.DataProcessing.ts_RamGenerator import data_generator
+from Classes.DataProcessing.ts_RamGenerator import data_generator, ramless_data_generator
 from tensorflow.keras.utils import GeneratorEnqueuer
 
 from tensorflow.keras import utils
@@ -38,13 +39,38 @@ utils = GlobalUtils()
 
 class HelperFunctions():
     
-    def predict_model(self, model, x_test, y_test, class_dict):
+    def predict_model_no_generator(self, model, x_test, y_test, noiseAug, class_dict, scaler_name, num_channels):
+        if noiseAug is not None:
+            if scaler_name != "normalize":
+                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/15)
+            else:
+                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/20)
+        x_test[:][:,:num_channels]
+        x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[2], x_test.shape[1]))
+        model.evaluate(x = x_test, y = y_test)
+        predictions = model.predict(x_test)
         predictions = model.predict(x_test)
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_generator(self, model, gen, steps, label_dict):
+    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels):
+        steps = self.get_steps_per_epoch(X, batch_size)
+        enq = GeneratorEnqueuer(data_generator(X, y, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), use_multiprocessing = False)
+        enq.start(workers = 8, max_queue_size = 10)
+        gen = enq.get()
         predictions = model.predict(x = gen, steps = steps)
+        enq.stop()
+        del enq, gen
+        return predictions
+
+    def predict_RamLessGenerator(self, model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, label_dict, num_channels):
+        steps = self.get_steps_per_epoch(ds, batch_size)
+        enq = GeneratorEnqueuer(ramless_data_generator(ds, y, ramLessLoader, timeAug, num_channels, is_lstm = True, norm_scale = norm_scale))
+        enq.start(workers = 8, max_queue_size = 10)
+        gen = enq.get()
+        predictions = model.predict(x = gen, steps = steps)
+        enq.stop()
+        del enq, gen
         return predictions
     
     def convert_to_class(self, predictions):
@@ -53,63 +79,36 @@ class HelperFunctions():
             return predictions
         raise Exception("More than two classes has not been implemented")
 
-    def evaluate_model(self, model, x_test, y_test, label_dict, num_channels, noiseAug, scaler_name, plot_confusion_matrix = False):
-        pp = pprint.PrettyPrinter(indent = 4)
-        if noiseAug != None:
-            if scaler_name != "normalize":
-                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/10)
-            else:
-                x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/15)
-        x_test[:][:,:num_channels]
-        x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[2], x_test.shape[1]))
-        model.evaluate(x = x_test, y = y_test)
-        predictions = model.predict(x_test)
-        print(predictions.shape)
-        print(y_test.shape)
-        if predictions.shape[1] == 2:
-            predictions = predictions[:,1]
-            y_test = y_test[:,1]
-        predictions = np.rint(predictions)
-        y_test = np.rint(y_test)
-        y_test = y_test[:len(predictions)]
-        predictions = np.reshape(predictions, (predictions.shape[0]))
-        y_test = np.reshape(y_test, (y_test.shape[0]))
-        num_classes = len(set(label_dict.values()))
-        assert predictions.shape == y_test.shape
-        print(y_test.shape)
-        print(predictions.shape)
-        conf = tf.math.confusion_matrix(y_test, predictions, num_classes=num_classes)
-        class_report = classification_report(y_test, predictions, target_names = self.handle_non_noise_dict(label_dict))
-        if plot_confusion_matrix:
-            self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(conf)
-        print(class_report)
-        return conf, class_report
+    def evaluate_no_generator(self, model, x_test, y_test, label_dict, num_channels, noiseAug, scaler_name, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
+        predictions = self.predict_model_no_generator(model, x_test, y_test, noiseAug, class_dict, scaler_name)
+        return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
-    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
         norm_scale = False
         if scaler_name == "normalize":
             norm_scale = True
         pp = pprint.PrettyPrinter(indent=4)
-        steps = self.get_steps_per_epoch(x_test, batch_size)
-        test_enq = GeneratorEnqueuer(data_generator(x_test, y_test, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), use_multiprocessing = False)
-        test_enq.start(workers = 8, max_queue_size = 10)
-        test_gen = test_enq.get()
-        predictions = self.predict_generator(model, test_gen, steps, label_dict) 
-        test_enq.stop()
-        del test_enq, test_gen
+        predictions = self.predict_RamGenerator(model, x_test, y_test, batch_size, norm_scale, noiseAug, label_dict, num_channels)
+        return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta)
+
+    def evaluate_RamLessGenerator(self, model, ds, y, batch_size, label_dict, num_channels, ramLessLoader, timeAug, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
+        norm_scale = False 
+        if ramLessLoader.scaler_name == "nornalize":
+            norm_scale = True
+        predictions = self.predict_RamLessGenerator(model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, label_dict, num_channels)
+        return self.evaluate_predictions(predictions, y, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
+
+    def evaluate_predictions(self, predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta):
+        pp = pprint.PrettyPrinter(indent = 4)
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
             y_test = y_test[:,1]
-        #y_test = np.rint(y_test)
         y_test = y_test[0:predictions.shape[0]]
         num_classes = len(set(label_dict.values()))
         predictions = np.reshape(predictions,(predictions.shape[0]))
         rounded_predictions  = np.rint(predictions)
         y_test = np.reshape(y_test, (y_test.shape[0]))
         assert predictions.shape == y_test.shape
-
         conf = tf.math.confusion_matrix(y_test, rounded_predictions, num_classes=num_classes)
         class_report = classification_report(y_test, rounded_predictions, target_names = self.handle_non_noise_dict(label_dict))
         precision, recall, fscore = np.round(precision_recall_fscore_support(y_test, rounded_predictions, beta = beta, pos_label = 1, average = 'binary', zero_division = 0.0)[0:3], 6)
@@ -119,7 +118,6 @@ class HelperFunctions():
             self.plot_precision_recall_curve(p, r)
         if plot_conf_matrix:
             self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
-        pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(conf)
         print(class_report)
         return conf, class_report, accuracy, precision, recall, fscore
@@ -255,6 +253,18 @@ class HelperFunctions():
         precision = precision(y_true, y_pred)
         recall = recall(y_true, y_pred)
         return 2*((precision*recall)/(precision+recall+K.epsilon()))
+
+    def precision(self, y_true, y_pred):
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+        precision = (true_positives + K.epsilon()) / (predicted_positives + K.epsilon())
+        return precision
+    
+    def recall(self, y_true, y_pred):
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+        recall = (true_positives + K.epsilon()) / (possible_positives + K.epsilon())
+        return recall
     
     def get_class_distribution_from_csv(self,data_csv):
         with open(data_csv) as file:
@@ -357,9 +367,9 @@ class HelperFunctions():
             return {"loss" : loss,
                     "optimizer" : opt,
                     "metrics" : [acc,
-                                tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                 tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]
-                                 }
+                                self.precision,
+                                self.recall
+                    ]}
         if balance_non_train_set:
             return {"loss" : loss,
                     "optimizer" : opt,

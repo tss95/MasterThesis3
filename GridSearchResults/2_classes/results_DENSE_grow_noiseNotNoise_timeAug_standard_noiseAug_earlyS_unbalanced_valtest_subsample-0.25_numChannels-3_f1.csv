@@ -1,0 +1,10 @@
+meier_load,use_layerwise_dropout_batchnorm,units,output_layer_activation,optimizer,num_layers,learning_rate,l2_r,l1_r,growth_sequence,epochs,dropout_rate,dropout_T_bn_F,batch_size,activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+False,False,200,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,200,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,0.887723554033,0.888549,0.882932,0.885732,3.98065972328,0.745783691784,0.773402,0.71801,0.744678,"[[2424  702]
+ [ 941 2396]]"
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],10,0,True,64,relu,,,,,,,,,,,

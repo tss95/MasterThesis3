@@ -70,7 +70,7 @@ handler = DataHandler(loadData)
 
 
 #- Consider editing the decay_sequences.
-
+"""
 hyper_grid = {
         "batch_size" : [64, 128, 256],
         "epochs" : [50],
@@ -88,6 +88,25 @@ hyper_grid = {
         "activation" : ["tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
         "output_layer_activation" : ["sigmoid"]
     }
+"""
+
+hyper_grid = {
+        "batch_size" : [64],
+        "epochs" : [10],
+        "learning_rate" : [0.01],
+        "optimizer" : ["rmsprop"],
+        "num_layers" : [1],
+        "units" : [208],
+        "dropout_T_bn_F" : [True],
+        "use_layerwise_dropout_batchnorm" : [False],
+        "growth_sequence" : [[1]],
+        "dropout_rate" : [0],
+        "l2_r" : [0],
+        "l1_r" : [0],
+        "activation" : ["relu"],
+        "output_layer_activation" : ["sigmoid"]
+}
+
 
 model_type = "DENSE_grow"
 is_lstm = True
@@ -95,18 +114,18 @@ num_channels = 3
 beta = 1   
 
 use_time_augmentor = True
-scaler_name = "normalize"
+scaler_name = "standard"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 100
+n_picks = 1000
 
 use_tensorboard = True
 use_liveplots = False
-use_custom_callback = False
+use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True

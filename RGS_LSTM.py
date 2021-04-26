@@ -59,7 +59,7 @@ load_args = {
     'frac_diff' : 1,
     'seed' : 1,
     'subsample_size' : 0.25,
-    'balance_non_train_set' : True,
+    'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True
 }
@@ -96,7 +96,7 @@ is_lstm = True
 num_channels = 3   
 
 use_time_augmentor = True
-scaler_name = "normalize"
+scaler_name = "standard"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -112,6 +112,8 @@ use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
 log_data = False
+
+ramless = True
 
 shutdown = False
 
@@ -130,7 +132,7 @@ randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_n
                             filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
                             use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
                             use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
+                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, ramLess = ramless)
 results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
 """
 

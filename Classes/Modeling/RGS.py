@@ -24,8 +24,10 @@ from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.RamLoader import RamLoader
+from Classes.DataProcessing.RamLessLoader import RamLessLoader
 from Classes.DataProcessing.ts_RamGenerator import data_generator
-from Classes.Modeling.TrainSingleModel import TrainSingleModel
+from Classes.Modeling.TrainSingleModelRam import TrainSingleModelRam
+from Classes.Modeling.TrainSingleModelRamLess import TrainSingleModelRamLess
 
 
 import sys
@@ -40,7 +42,7 @@ class RGS():
                  filter_name, n_picks, hyper_grid, use_tensorboard = False, 
                  use_liveplots = True, use_custom_callback = False, use_early_stopping = False, use_reduced_lr = False,
                  band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, start_from_scratch = True, is_lstm = False, 
-                 log_data = True, num_channels = 3, beta = 1):
+                 log_data = True, num_channels = 3, beta = 1, ramLess = False):
         
         self.loadData = loadData
         self.train_ds = train_ds
@@ -48,6 +50,7 @@ class RGS():
         self.test_ds = test_ds
         self.model_type = model_type
         self.num_classes = len(set(self.loadData.label_dict.values()))
+        self.ramLess = ramLess
 
         self.scaler_name = scaler_name
         self.use_noise_augmentor = use_noise_augmentor
@@ -86,28 +89,48 @@ class RGS():
             print("================================================================================================================================================")
             print("================================ YOU WILL BE PROMPTED AFTER DATA HAS BEEN LOADED TO CONFIRM CLEARING OF DATASET ================================")
             print("================================================================================================================================================")
-        # Preprocessing and loading all data to RAM:
-        self.ramLoader = RamLoader(self.loadData, 
-                              self.handler, 
-                              use_time_augmentor = self.use_time_augmentor, 
-                              use_noise_augmentor = self.use_noise_augmentor, 
-                              scaler_name = self.scaler_name,
-                              filter_name = self.filter_name, 
-                              band_min = self.band_min,
-                              band_max = self.band_max,
-                              highpass_freq = self.highpass_freq, 
-                              load_test_set = False)
-        x_train, y_train, x_val, y_val, noiseAug = self.ramLoader.load_to_ram()
+        if not self.ramLess:
+            # Preprocessing and loading all data to RAM:
+            self.ramLoader = RamLoader(self.loadData, 
+                                self.handler, 
+                                use_time_augmentor = self.use_time_augmentor, 
+                                use_noise_augmentor = self.use_noise_augmentor, 
+                                scaler_name = self.scaler_name,
+                                filter_name = self.filter_name, 
+                                band_min = self.band_min,
+                                band_max = self.band_max,
+                                highpass_freq = self.highpass_freq, 
+                                load_test_set = False)
+            x_train, y_train, x_val, y_val, noiseAug = self.ramLoader.load_to_ram()
 
-        _, self.used_m, _= map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
 
-        singleModel = TrainSingleModel(noiseAug, self.helper, self.loadData,
-                                        self.model_type, self.num_channels, self.use_tensorboard,
-                                        self.use_liveplots, self.use_custom_callback, 
-                                        self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
-                                        log_data = self.log_data,
-                                        start_from_scratch = self.start_from_scratch, 
-                                        beta = self.beta)
+            singleModel = TrainSingleModelRam(noiseAug, self.helper, self.loadData,
+                                            self.model_type, self.num_channels, self.use_tensorboard,
+                                            self.use_liveplots, self.use_custom_callback, 
+                                            self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
+                                            log_data = self.log_data,
+                                            start_from_scratch = self.start_from_scratch, 
+                                            beta = self.beta)
+
+        else: 
+            self.ramLessLoader = RamLessLoader(self.loadData, self.handler,
+                                               use_time_augmentor = self.use_time_augmentor,
+                                               use_noise_augmentor = self.use_time_augmentor,
+                                               scaler_name = self.scaler_name,
+                                               filter_name = self.filter_name,
+                                               band_min = self.band_min,
+                                               band_max = self.band_max,
+                                               highpass_freq = self.highpass_freq,
+                                               load_test_set = False,
+                                               meier_load = False)
+            self.ramLessLoader.fit()
+
+            singleModel = TrainSingleModelRamLess(self.ramLessLoader, self.helper, self.loadData, self.model_type,
+                                                  self.num_channels, self.use_tensorboard, self.use_liveplots,
+                                                  self.use_custom_callback, self.use_early_stopping, self.use_reduced_lr,
+                                                  log_data = self.log_data, start_from_scratch = self.start_from_scratch,
+                                                  beta = self.beta)
+        _, self.used_m, _ = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         for i in range(len(self.p)):
             gc.collect()
             tf.keras.backend.clear_session()
@@ -118,13 +141,16 @@ class RGS():
             tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
             print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
             if used_m > self.used_m:
-                print("=======================")
+                print("====================================================================================")
                 print(f"POTENTIAL MEMORY LEAK ALERT!!! Previosuly max RAM usage was {self.used_m} now it is {used_m}. Leak size: {used_m - self.used_m}")
-                print("=======================")
+                print("====================================================================================")
                 self.used_m = used_m
             try:
                 # The hard defined variables in the run call refer to nr_workers and max_queue_size respectively.
-                self.train_model(singleModel, x_train, y_train, x_val, y_val, i, **self.p[i])
+                if not self.ramLess:
+                    self.train_model(singleModel, x_train, y_train, x_val, y_val, i, **self.p[i])
+                else:
+                    self.train_model_ramless(singleModel, self.ramLessLoader, i, **self.p[i])
             except Exception:
                 traceback.print_exc()
             finally:
@@ -137,6 +163,9 @@ class RGS():
                 print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
                 continue
 
+    
+
+
     def train_model(self, singleModel, x_train, y_train, x_val, y_val, index, **p):
         _ = singleModel.run(x_train, y_train, x_val, y_val, None, None, 16, 15, 
                             evaluate_train = False, 
@@ -144,6 +173,15 @@ class RGS():
                             evaluate_test = False, 
                             meier_load = False, 
                             index = index,
+                            **p)
+
+    def train_model_ramless(self, singleModel, ramLessLoader, index, **p):
+        _ = singleModel.run(ramLessLoader, 16, 15, 
+                            evaluate_train = False, 
+                            evaluate_val = False, 
+                            evaluate_test = False, 
+                            meier_mode = False, 
+                            index = index, 
                             **p)
 
     

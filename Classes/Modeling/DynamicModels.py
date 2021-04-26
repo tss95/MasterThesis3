@@ -8,7 +8,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 
 from sklearn.model_selection import train_test_split
 
-
+import tensorflow as tf
 from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, Permute, GlobalAveragePooling1D, concatenate
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.layers import Dropout
@@ -25,7 +25,7 @@ from sklearn.metrics import confusion_matrix
 
 from livelossplot import PlotLossesKeras
 
-import tensorflow as tf
+
 from tensorflow.keras import mixed_precision
 
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel

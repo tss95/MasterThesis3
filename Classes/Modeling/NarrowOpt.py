@@ -14,8 +14,10 @@ os.chdir(base_dir)
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.RamLoader import RamLoader
+from Classes.DataProcessing.RamLessLoader import RamLessLoader
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-from Classes.Modeling.TrainSingleModel import TrainSingleModel
+from Classes.Modeling.TrainSingleModelRam import TrainSingleModelRam
+from Classes.Modeling.TrainSingleModelRamLess import TrainSingleModelRamLess
 
 import random
 import pprint
@@ -27,7 +29,7 @@ class NarrowOpt(GridSearchResultProcessor):
                 filter_name, static_grid, search_grid, use_tensorboard = False, 
                 use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0,
                 band_max = 4.0, highpass_freq = 1, start_from_scratch = True, use_reduced_lr = False, num_channels = 3, 
-                log_data = False, skip_to_index = 0, beta = 1):
+                log_data = False, skip_to_index = 0, beta = 1, ramLess = False):
         self.loadData = loadData
         self.model_type = model_type
         
@@ -56,6 +58,8 @@ class NarrowOpt(GridSearchResultProcessor):
         self.skip_to_index = skip_to_index
         self.beta = beta
 
+        self.ramLess = ramLess
+
         
         self.helper = HelperFunctions()
         self.handler = DataHandler(self.loadData)
@@ -70,18 +74,49 @@ class NarrowOpt(GridSearchResultProcessor):
             print("================================ YOU WILL BE PROMPTED AFTER DATA HAS BEEN LOADED TO CONFIRM CLEARING OF DATASET ================================")
             print("================================================================================================================================================")
         # Preprocessing and loading all data to RAM:
-        self.ramLoader = RamLoader(self.loadData, 
-                              self.handler, 
-                              use_time_augmentor = self.use_time_augmentor, 
-                              use_noise_augmentor = self.use_noise_augmentor, 
-                              scaler_name = self.scaler_name,
-                              filter_name = self.filter_name, 
-                              band_min = self.band_min,
-                              band_max = self.band_max,
-                              highpass_freq = self.highpass_freq, 
-                              load_test_set = False)
-        self.x_train, self.y_train, self.x_val, self.y_val, self.noiseAug = self.ramLoader.load_to_ram()
 
+        if not self.ramLess:
+            # Preprocessing and loading all data to RAM:
+            self.ramLoader = RamLoader(self.loadData, 
+                                self.handler, 
+                                use_time_augmentor = self.use_time_augmentor, 
+                                use_noise_augmentor = self.use_noise_augmentor, 
+                                scaler_name = self.scaler_name,
+                                filter_name = self.filter_name, 
+                                band_min = self.band_min,
+                                band_max = self.band_max,
+                                highpass_freq = self.highpass_freq, 
+                                load_test_set = False)
+            x_train, y_train, x_val, y_val, noiseAug = self.ramLoader.load_to_ram()
+
+
+            singleModel = TrainSingleModelRam(noiseAug, self.helper, self.loadData,
+                                            self.model_type, self.num_channels, self.use_tensorboard,
+                                            self.use_liveplots, self.use_custom_callback, 
+                                            self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
+                                            log_data = self.log_data,
+                                            start_from_scratch = self.start_from_scratch, 
+                                            beta = self.beta)
+
+        else: 
+            self.ramLessLoader = RamLessLoader(self.loadData, self.handler,
+                                               use_time_augmentor = self.use_time_augmentor,
+                                               use_noise_augmentor = self.use_time_augmentor,
+                                               scaler_name = self.scaler_name,
+                                               filter_name = self.filter_name,
+                                               band_min = self.band_min,
+                                               band_max = self.band_max,
+                                               highpass_freq = self.highpass_freq,
+                                               load_test_set = False,
+                                               meier_load = False)
+            self.ramLessLoader.fit()
+
+            singleModel = TrainSingleModelRamLess(self.ramLessLoader, self.helper, self.loadData, self.model_type,
+                                                  self.num_channels, self.use_tensorboard, self.use_liveplots,
+                                                  self.use_custom_callback, self.use_early_stopping, self.use_reduced_lr,
+                                                  log_data = self.log_data, start_from_scratch = self.start_from_scratch,
+                                                  beta = self.beta)
+        _, self.used_m, _ = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
 
         print(f"Starting narrow optimizer. Will finish after training {len(self.p)} models.")
         for i in range(len(self.p)):
@@ -90,30 +125,34 @@ class NarrowOpt(GridSearchResultProcessor):
             gc.collect()
             tf.keras.backend.clear_session()
             tf.compat.v1.reset_default_graph()
+            gc.collect()
             tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
-            if not self.find_changed_key(self.static_grid, self.p[i]):
-                continue
+            tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+            print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
+            if used_m > self.used_m:
+                print("====================================================================================")
+                print(f"POTENTIAL MEMORY LEAK ALERT!!! Previosuly max RAM usage was {self.used_m} now it is {used_m}. Leak size: {used_m - self.used_m}")
+                print("====================================================================================")
+                self.used_m = used_m
             try:
-                trainSingleModel = TrainSingleModel(self.x_train, self.y_train, self.x_val, self.y_val,
-                                                    None, None, self.noiseAug, self.helper, self.loadData,
-                                                    self.model_type, self.num_channels, self.use_tensorboard,
-                                                    self.use_liveplots, self.use_custom_callback, 
-                                                    self.use_early_stopping, self.use_reduced_lr, self.ramLoader,
-                                                    log_data = self.log_data, index = i,
-                                                    start_from_scratch = False, beta = self.beta)
-                # Add try catch clauses here
-                model, self.results_df = trainSingleModel.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_load = False, **self.p[i])
-                del model
-            except Exception as e:
-                print(str(e))
-                continue
+                # The hard defined variables in the run call refer to nr_workers and max_queue_size respectively.
+                if not self.ramLess:
+                    self.train_model(singleModel, x_train, y_train, x_val, y_val, i, **self.p[i])
+                else:
+                    self.train_model_ramless(singleModel, self.ramLessLoader, i, **self.p[i])
+            except Exception:
+                traceback.print_exc()
             finally:
                 gc.collect()
-                    
                 tf.keras.backend.clear_session()
                 tf.compat.v1.reset_default_graph()
+                gc.collect()
+                print("After everything in the iteration:")
+                tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+                print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
                 continue
+
         
     def create_search_space(self, static_grid, search_grid):
         key_list = list(search_grid.keys())
@@ -148,4 +187,22 @@ class NarrowOpt(GridSearchResultProcessor):
             print("Skipped as it is the same as the static model.")
             print("=================================================================")
             return False
+
+    def train_model(self, singleModel, x_train, y_train, x_val, y_val, index, **p):
+        _ = singleModel.run(x_train, y_train, x_val, y_val, None, None, 16, 15, 
+                            evaluate_train = False, 
+                            evaluate_val = False, 
+                            evaluate_test = False, 
+                            meier_load = False, 
+                            index = index,
+                            **p)
+
+    def train_model_ramless(self, singleModel, ramLessLoader, index, **p):
+        _ = singleModel.run(ramLessLoader, 16, 15, 
+                            evaluate_train = False, 
+                            evaluate_val = False, 
+                            evaluate_test = False, 
+                            meier_mode = False, 
+                            index = index, 
+                            **p)
                 

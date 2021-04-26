@@ -11,7 +11,7 @@ class NoiseAugmentor(DataHandler):
         super().__init__(loadData)
         self.loadData = loadData
         self.helper = HelperFunctions()
-        if traces != None:
+        if traces is not None:
             self.noise_mean, self.noise_std = self.get_noise_mean_std_ram(traces)
         else:
             print("RAM-less noise augmentor initiated.")
