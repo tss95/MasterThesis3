@@ -1,10 +1,23 @@
 meier_load,use_layerwise_dropout_batchnorm,units,output_layer_activation,optimizer,num_layers,learning_rate,l2_r,l1_r,growth_sequence,epochs,dropout_rate,dropout_T_bn_F,batch_size,activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
-False,False,200,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,200,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,0.887723554033,0.888549,0.882932,0.885732,3.98065972328,0.745783691784,0.773402,0.71801,0.744678,"[[2424  702]
+False,False,200,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,200,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,0.887723554033,0.888549,0.882932,0.885732,3.98065972328,0.745783691784,0.773402,0.71801,0.744678,"[[2424  702]
  [ 941 2396]]"
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],50,0,True,64,relu,,,,,,,,,,,
-False,False,208,sigmoid,rmsprop,1,0.01,0,0,[1],10,0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],50,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,208,sigmoid,rmsprop,1,0.01,0.0,0.0,[1],10,0.0,True,64,relu,,,,,,,,,,,
+False,False,410,sigmoid,rmsprop,5,0.001,0.2,0.2,"[1, 4, 4, 4, 4]",50,0.001,True,64,relu,1602.7097168,0.50715848554,0.0,0.0,0.0,1602.51635742,0.483601485149,0.0,0.0,0.0,"[[3126    0]
+ [3338    0]]"
+False,False,230,sigmoid,adam,3,0.0001,0.0,0.001,"[1, 4, 8]",50,0.1,True,64,sigmoid,2.19328927994,0.49284151446,0.492842,1.0,0.660273,2.19260025024,0.516398514851,0.516399,1.0,0.681085,"[[   0 3126]
+ [   0 3338]]"
+False,True,520,sigmoid,sgd,1,0.001,0.2,0.3,[1],50,0.2,True,128,relu,420.758270264,0.507002667683,1.0,4.8e-05,9.7e-05,420.721282959,0.484375,0.0,0.0,0.0,"[[3100    0]
+ [3300    0]]"
+False,True,420,sigmoid,rmsprop,1,0.01,0.0001,0.01,[1],50,0.2,True,64,relu,,,,,,,,,,,

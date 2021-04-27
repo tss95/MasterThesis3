@@ -8,6 +8,7 @@ import sklearn as sk
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 from tensorflow.keras.utils import GeneratorEnqueuer
+from tensorflow.keras.utils import Sequence
 
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
@@ -74,13 +75,11 @@ class TrainSingleModel():
         
     
         
-    def fit_model(self, model, train_enq, val_enq, y_val, meier_mode = False, **p):
+    def fit_model(self, model, train_gen, val_gen, y_val, meier_mode = False, **p):
         print("Started enquers and generators")
         tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
 
-        val_gen = val_enq.get()
-        train_gen = train_enq.get()
         if meier_mode:
             fit_args = self.helper.generate_meier_fit_args(self.loadData.train, self.loadData.val, self.loadData,
                                                             p["batch_size"], p["epochs"], val_gen,
@@ -113,13 +112,11 @@ class TrainSingleModel():
             gc.collect()
             tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
-            model.fit(train_gen, **fit_args)
+            model.fit_generator(train_gen, **fit_args)
         except Exception:
             traceback.print_exc()
-            model = None
+            #model = None
         finally:
-            train_enq.stop()
-            val_enq.stop()
-            del train_enq, val_enq , train_gen, val_gen    
+            del train_gen, val_gen 
             gc.collect()   
             return model

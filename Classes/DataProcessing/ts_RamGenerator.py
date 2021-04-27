@@ -6,6 +6,9 @@ import sys
 import threading
 
 #from .DataHandler import DataHandler
+from tensorflow.keras.utils import GeneratorEnqueuer
+from tensorflow.keras.utils import Sequence
+import time
 
 class threadsafe_iter:
 
@@ -29,7 +32,7 @@ def threadsafe_generator(f):
         return threadsafe_iter(f(*a, **kw))
     return g
 
-@threadsafe_generator    
+#@threadsafe_generator    
 def data_generator(traces, labels, batch_size, noiseAug, num_channels = 3, is_lstm = False, norm_scale = False):
     """
     Creates a generator object which yields two arrays. One array for waveforms, and one array for labels
@@ -129,4 +132,45 @@ def ramless_data_generator(ds, y, batch_size, ramLessLoader, timeAug, num_channe
 
 def load_batch(batch, timeAug, shape, ramLessLoader):
     return ramLessLoader.load_batch(batch, timeAug, np.empty((shape)))
+
+
+def get_rambatch(num_workers, max_queue_size, **kwargs):
+    # Code similar to: https://github.com/watersink/Character-Segmentation/blob/master/data_generator.py
+    try:
+        enq = GeneratorEnqueuer(data_generator(**kwargs), use_multiprocessing = False)
+        enq.start(workers = num_workers, max_queue_size = max_queue_size)
+        gen_output = None
+        while True:
+            while enq.is_running():
+                if not enq.queue.empty():
+                    gen_output = enq.get()
+                    break
+                else:
+                    time.sleep(0.01)
+            yield gen_output
+            gen_output = None
+    finally:
+        if enq is not None:
+            enq.stop()
+
+def get_ramlessbatch(num_workers, max_queue_size, **kwargs):
+    # Code similar to: https://github.com/watersink/Character-Segmentation/blob/master/data_generator.py
+    try:
+        enq = GeneratorEnqueuer(ramless_data_generator(**kwargs), use_multiprocessing = False)
+        enq.start(workers = num_workers, max_queue_size = max_queue_size)
+        gen_output = None
+        while True:
+            while enq.is_running():
+                if not enq.queue.empty():
+                    gen_output = enq.queue.get()
+                    break
+                else:
+                    time.sleep(0.01)
+            yield gen_output
+            gen_output = None
+    finally:
+        if enq is not None:
+            enq.stop()
+        
+    
     

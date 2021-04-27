@@ -17,7 +17,8 @@ from Classes.Modeling.DynamicModels import DynamicModels
 from Classes.Modeling.TrainSingleModel import TrainSingleModel
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-from Classes.DataProcessing.ts_RamGenerator import data_generator
+from Classes.DataProcessing.ts_RamGenerator import data_generator, get_rambatch
+from Classes.DataProcessing.RamGen import RamGen
 
 
 import sys
@@ -58,7 +59,7 @@ class TrainSingleModelRam(TrainSingleModel):
         self.resultsProcessor = GridSearchResultProcessor(self.num_classes, self.model_type, self.loadData, self.ramLoader, self.use_early_stopping, self.num_channels, self.beta)
         super().__init__(self.resultsProcessor)
     
-    
+    """
     def create_enqueuer(self, X, y, batch_size, noiseAug, num_channels):
         norm_scale = False
         if self.ramLoader.scaler_name == "normalize":
@@ -66,33 +67,76 @@ class TrainSingleModelRam(TrainSingleModel):
         enq = GeneratorEnqueuer(data_generator(X, y, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), 
                                 use_multiprocessing = False)
         return enq
-
+    """
     def prep_and_fit_model(self, model, x_train, y_train, x_val, y_val, workers, max_queue_size, meier_mode = False, **p):
+        norm_scale = False
+        if self.ramLoader.scaler_name == "normalize":
+            norm_scale = True
         print("Before starting enquers and generators")
         tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
-        train_enq = self.create_enqueuer(x_train, y_train, p["batch_size"], self.noiseAug, num_channels = self.num_channels)
-        val_enq = self.create_enqueuer(x_val, y_val, p["batch_size"], self.noiseAug, num_channels = self.num_channels)
-        train_enq.start(workers = workers, max_queue_size = max_queue_size)
-        val_enq.start(workers = workers, max_queue_size = max_queue_size)
-        return self.fit_model(model, train_enq, val_enq, y_val, meier_mode, **p)
+        """
+        train_gen = get_rambatch(num_workers = workers, 
+                                 max_queue_size = max_queue_size, 
+                                 traces = x_train,  
+                                 labels = y_train, 
+                                 batch_size = p['batch_size'], 
+                                 noiseAug =self.noiseAug, 
+                                 num_channels = self.num_channels, 
+                                 is_lstm = True, 
+                                 norm_scale = norm_scale)
+        val_gen = get_rambatch(num_workers = workers, 
+                               max_queue_size = max_queue_size, 
+                               traces = x_val,  
+                               labels = y_val, 
+                               batch_size = p['batch_size'], 
+                               noiseAug =self.noiseAug, 
+                               num_channels = self.num_channels, 
+                               is_lstm = True, 
+                               norm_scale = norm_scale)
+        
+        train_gen = get_batch(num_workers = workers, 
+                              max_queue_size = max_queue_size, 
+                              traces = x_train, 
+                              labels = y_train, 
+                              batch_size = p['batch_size'], 
+                              noiseAug = self.noiseAug, 
+                              num_channels = self.num_channels, 
+                              use_time_augmentor = self.ramLoader.use_time_augmentor, 
+                              norm_scale = norm_scale, 
+                              shuffle = False)
+        val_gen = get_batch(num_workers = workers, 
+                            max_queue_size = max_queue_size, 
+                            traces = x_val, 
+                            labels = y_val, 
+                            batch_size = p['batch_size'], 
+                            noiseAug = self.noiseAug, 
+                            num_channels = self.num_channels, 
+                            use_time_augmentor = self.ramLoader.use_time_augmentor, 
+                            norm_scale = norm_scale, 
+                            shuffle = False)
+        """
+        train_gen = RamGen(traces = x_train, labels = y_train, batch_size = p['batch_size'], noiseAug =self.noiseAug, num_channels = self.num_channels, norm_scale = norm_scale)
+        val_gen = RamGen(traces = x_val, labels = y_val, batch_size = p['batch_size'], noiseAug =self.noiseAug, num_channels = self.num_channels, norm_scale = norm_scale)
+
+        return self.fit_model(model, train_gen, val_gen, y_val, meier_mode, **p)
 
 
 
     def metrics_producer(self, model, x_train, y_train, x_val, y_val, workers, max_queue_size, meier_mode = False,**p):
+        norm_scale = False
+        if self.ramLoader.scaler_name == "normalize":
+            norm_scale = True
         print("Finished training, starting evaluation")
         tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         print("Evaluating validation:")
-        val_enq = self.create_enqueuer(x_val, y_val, p["batch_size"], self.noiseAug, self.num_channels)
-        val_enq.start(workers = workers, max_queue_size = max_queue_size)
-        val_gen = val_enq.get()
+        val_gen = RamGen(traces = x_val, labels = y_val, batch_size = p['batch_size'], noiseAug =self.noiseAug, num_channels = self.num_channels, norm_scale = norm_scale)
         val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
-        val_enq.stop()
-        del val_enq, val_gen
-        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, beta = self.beta)       
+        del val_gen
+        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)       
         metrics = {}
         metrics['val'] = {  "val_loss" : val_eval["loss"],
                             "val_accuracy" : val_acc,
@@ -102,16 +146,12 @@ class TrainSingleModelRam(TrainSingleModel):
 
         
         print("Evaluating train:")
-        train_enq = self.create_enqueuer(x_train, y_train, p["batch_size"], self.noiseAug, self.num_channels)
-        train_enq.start(workers = workers, max_queue_size = max_queue_size)
-        train_gen = train_enq.start()
+        train_gen = RamGen(traces = x_train, labels = y_train, batch_size = p['batch_size'], noiseAug =self.noiseAug, num_channels = self.num_channels, norm_scale = norm_scale)
         train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
-                
-        train_enq.stop()
-        del train_enq, train_gen
-        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_generator(model, x_train, y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, beta = self.beta)
+        del train_gen
+        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_generator(model, x_train, y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
         metrics['train'] = { "train_loss" : train_eval["loss"],
                             "train_accuracy" : train_acc,
                             "train_precision": train_precision,
@@ -135,12 +175,12 @@ class TrainSingleModelRam(TrainSingleModel):
             print(self.results_df.iloc[-1])
         if evaluate_train:
             print("Unsaved train eval:")
-            self.helper.evaluate_generator(model, x_train, y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, beta = self.beta)
+            self.helper.evaluate_generator(model, x_train, y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
         if evaluate_val:
             print("Unsaved val eval:")
-            self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, beta = self.beta)
+            self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
         if evaluate_test:
             print("Unsaved test eval:")
-            self.helper.evaluate_generator(model, x_test, y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, beta = self.beta)
+            self.helper.evaluate_generator(model, x_test, y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
         gc.collect()
         return model, self.results_df

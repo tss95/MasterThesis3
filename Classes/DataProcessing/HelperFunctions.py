@@ -20,7 +20,8 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
-from Classes.DataProcessing.ts_RamGenerator import data_generator, ramless_data_generator
+from Classes.DataProcessing.ts_RamGenerator import data_generator, ramless_data_generator, get_rambatch
+from Classes.DataProcessing.RamGen import RamGen
 from tensorflow.keras.utils import GeneratorEnqueuer
 
 from tensorflow.keras import utils
@@ -53,14 +54,11 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels):
+    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels, use_time_augmentor):
         steps = self.get_steps_per_epoch(X, batch_size)
-        enq = GeneratorEnqueuer(data_generator(X, y, batch_size, noiseAug, num_channels = num_channels, is_lstm  = True, norm_scale = norm_scale), use_multiprocessing = False)
-        enq.start(workers = 8, max_queue_size = 10)
-        gen = enq.get()
+        gen = RamGen(X, y, batch_size, noiseAug, num_channels, use_time_augmentor, norm_scale = norm_scale, shuffle = False)
         predictions = model.predict(x = gen, steps = steps)
-        enq.stop()
-        del enq, gen
+        del gen
         return predictions
 
     def predict_RamLessGenerator(self, model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, label_dict, num_channels):
@@ -83,12 +81,12 @@ class HelperFunctions():
         predictions = self.predict_model_no_generator(model, x_test, y_test, noiseAug, class_dict, scaler_name)
         return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
-    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, use_time_augmentor, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
         norm_scale = False
         if scaler_name == "normalize":
             norm_scale = True
         pp = pprint.PrettyPrinter(indent=4)
-        predictions = self.predict_RamGenerator(model, x_test, y_test, batch_size, norm_scale, noiseAug, label_dict, num_channels)
+        predictions = self.predict_RamGenerator(model, x_test, y_test, batch_size, norm_scale, noiseAug, label_dict, num_channels, use_time_augmentor)
         return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta)
 
     def evaluate_RamLessGenerator(self, model, ds, y, batch_size, label_dict, num_channels, ramLessLoader, timeAug, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
@@ -507,9 +505,9 @@ class HelperFunctions():
                 "validation_data" : val_gen,
                 "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                 "verbose" : 1,
-                "max_queue_size" : 10,
+                "max_queue_size" : 20,
                 "use_multiprocessing" : False, 
-                "workers" : 1,
+                "workers" : 16,
                 "callbacks" : callbacks
                 }
 

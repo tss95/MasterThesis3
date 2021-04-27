@@ -9,6 +9,7 @@ import h5py
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
+from tensorflow.keras.utils import Sequence
 
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 os.environ['CUDA_VISIBLE_DEVICES']="0" 
@@ -51,9 +52,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -70,12 +71,12 @@ handler = DataHandler(loadData)
 
 
 #- Consider editing the decay_sequences.
-"""
+
 hyper_grid = {
         "batch_size" : [64, 128, 256],
         "epochs" : [50],
         "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
-        "optimizer" : ["rmsprop", "sgd", "adam", "adam", "sgd"],
+        "optimizer" : ["rmsprop", "rmsprop", "adam", "sgd"],
         "num_layers" : [1, 1, 2, 2, 3, 4, 5],
         "units" : np.arange(50, 700, 10),
         "dropout_T_bn_F" : [True, False],
@@ -106,7 +107,7 @@ hyper_grid = {
         "activation" : ["relu"],
         "output_layer_activation" : ["sigmoid"]
 }
-
+"""
 
 model_type = "DENSE_grow"
 is_lstm = True
