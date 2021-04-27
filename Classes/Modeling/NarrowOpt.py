@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import gc
+import traceback
 
 import sklearn as sk
 from sklearn.model_selection import ParameterGrid
@@ -130,6 +131,8 @@ class NarrowOpt(GridSearchResultProcessor):
             mixed_precision.set_global_policy('mixed_float16')
             tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
             print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
+            if not self.find_changed_key(self.static_grid, self.p[i]):
+                continue
             if used_m > self.used_m:
                 print("====================================================================================")
                 print(f"POTENTIAL MEMORY LEAK ALERT!!! Previosuly max RAM usage was {self.used_m} now it is {used_m}. Leak size: {used_m - self.used_m}")
@@ -167,6 +170,7 @@ class NarrowOpt(GridSearchResultProcessor):
             else:
                 continue
         search_list = list(chain.from_iterable(search_list))
+        search_list = self.remove_redundant_models(static_grid, search_list)
         return search_list
 
     def bracket_dict(self, d):
@@ -187,6 +191,18 @@ class NarrowOpt(GridSearchResultProcessor):
             print("Skipped as it is the same as the static model.")
             print("=================================================================")
             return False
+
+    def remove_redundant_models(self, static, search):
+        key_list = list(static.keys())
+        search_mod = search
+        for idx, candidate in enumerate(search):
+            unique = False
+            for key in key_list:
+                if static[key][0] != candidate[key]:
+                    unique = True
+            if not unique:
+                del search_mod[idx]
+        return search_mod
 
     def train_model(self, singleModel, x_train, y_train, x_val, y_val, index, **p):
         _ = singleModel.run(x_train, y_train, x_val, y_val, None, None, 16, 15, 

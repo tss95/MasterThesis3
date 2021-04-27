@@ -16,7 +16,7 @@ os.chdir(base_dir)
 from Classes.Modeling.DynamicModels import DynamicModels
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-from Classes.DataProcessing.ts_RamGenerator import ramless_data_generator
+from Classes.DataProcessing.RamLessGen import RamLessGen
 from Classes.Modeling.TrainSingleModel import TrainSingleModel
 
 
@@ -53,38 +53,22 @@ class TrainSingleModelRamLess(TrainSingleModel):
             self.resultsProcessor = self.resultsProcessor = GridSearchResultProcessor(self.num_classes, self.model_type, self.loadData, self.ramLessLoader, self.use_early_stopping, self.num_channels, self.beta)
             super().__init__(self.resultsProcessor)
 
-    def create_enqueuer(self, ds, y, batch_size, ramLessLoader, timeAug, num_channels):
-        norm_scale = False
-        if self.ramLessLoader.scaler_name == "normalize":
-            norm_scale = True
-        enq = GeneratorEnqueuer(ramless_data_generator(ds, y, batch_size, ramLessLoader, timeAug, num_channels = num_channels, input_shape = ramLessLoader.input_shape, is_lstm  = True, norm_scale = norm_scale), 
-                                use_multiprocessing = False)
-        return enq
     
     def prep_and_fit_model(self, model, ramLessLoader, workers, max_queue_size, meier_mode = False, **p):
-        print("Before starting enquers and generators")
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
-        train_enq = self.create_enqueuer(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels)
-        val_enq = self.create_enqueuer(ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels)
-        train_enq.start(workers = workers, max_queue_size = max_queue_size)
-        val_enq.start(workers = workers, max_queue_size = max_queue_size)
-        return self.fit_model(model, train_enq, val_enq, ramLessLoader.y_val, meier_mode, **p)
+        norm_scale = False
+        if ramLessLoader.scaler_name == "normalize":
+            norm_scale = True
+        train_gen = RamLessGen(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
+        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
+        return self.fit_model(model, train_gen, val_gen, ramLessLoader.y_val, meier_mode, **p)
 
 
     def metrics_producer(self, model, ramLessLoader, workers, max_queue_size, meier_mode = False,**p):
-        print("Finished training, starting evaluation")
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
-        print("Evaluating validation:")
-        val_enq = val_enq = self.create_enqueuer(ramLessLoader.val_ds, ramLessLoader.y_val,  p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels)
-        val_enq.start(workers = workers, max_queue_size = max_queue_size)
-        val_gen = val_enq.get()
+        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
         val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
-        val_enq.stop()
-        del val_enq, val_gen
+        del val_gen
         val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)       
         metrics = {}
         metrics['val'] = {  "val_loss" : val_eval["loss"],
@@ -95,23 +79,17 @@ class TrainSingleModelRamLess(TrainSingleModel):
 
         
         print("Evaluating train:")
-        train_enq = self.create_enqueuer(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels)
-        train_enq.start(workers = workers, max_queue_size = max_queue_size)
-        train_gen = train_enq.start()
+        train_gen = RamLessGen(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
         train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
-        train_enq.stop()
-        del train_enq, train_gen
+        del train_gen
         _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)
         metrics['train'] = { "train_loss" : train_eval["loss"],
                             "train_accuracy" : train_acc,
                             "train_precision": train_precision,
                             "train_recall" : train_recall,
                             f"train_f{self.beta}" : train_fscore}
-        print("Finished evaluation")
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         return metrics, val_conf
     
     def run(self, ramLessLoader, workers, max_queue_size, evaluate_train = False, evaluate_val = False, evaluate_test = False, meier_mode = False, index = None, **p):

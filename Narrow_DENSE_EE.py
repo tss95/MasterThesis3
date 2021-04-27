@@ -9,7 +9,6 @@ import h5py
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
-from tensorflow.keras.utils import Sequence
 
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 os.environ['CUDA_VISIBLE_DEVICES']="0" 
@@ -35,7 +34,7 @@ os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.Modeling.RGS import RGS
+from Classes.Modeling.NarrowOpt import NarrowOpt
 import json
 #from Classes import Tf_shutup
 #Tf_shutup.Tf_shutup()
@@ -49,6 +48,9 @@ import gc
 import pprint
 
 mixed_precision.set_global_policy('mixed_float16')
+
+
+
 
 
 load_args = {
@@ -70,49 +72,43 @@ noise_ds = loadData.noise_ds
 handler = DataHandler(loadData)
 
 
-#- Consider editing the decay_sequences.
-
-hyper_grid = {
-        "batch_size" : [64, 128, 256],
+static_grid = {
+        "batch_size" : 256,
+        "epochs" : 50,
+        "learning_rate" : 0.01,
+        "optimizer" : "sgd",
+        "num_layers" : 2,
+        "units" : 320,
+        "dropout_T_bn_F" : False,
+        "use_layerwise_dropout_batchnorm" : True,
+        "growth_sequence" : [1, 2, 4, 8],
+        "dropout_rate" : 0.001,
+        "l2_r" : 0.0001,
+        "l1_r" : 0,
+        "activation" : "relu",
+        "output_layer_activation" : "sigmoid"
+    }
+search_grid = {
+        "batch_size" : [64, 128, 256, 512],
         "epochs" : [50],
-        "learning_rate" : [0.1, 0.01, 0.01, 0.001, 0.0001],
-        "optimizer" : ["rmsprop", "rmsprop", "adam", "sgd"],
-        "num_layers" : [1, 1, 2, 2, 3, 4, 5],
-        "units" : np.arange(50, 700, 10),
+        "learning_rate" : [0.1, 0.01, 0.001,],
+        "optimizer" : ["rmsprop", "adam", "sgd"],
+        "num_layers" : [1, 3, 4],
+        "units" : np.arange(304, 336, 8),
         "dropout_T_bn_F" : [True, False],
         "use_layerwise_dropout_batchnorm" : [False, True],
-        #"decay_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10]],
-        "growth_sequence" : [[1,2,4,4,2,1], [1,4,8,8,4,1], [1,1,1,1,1,1], [1, 2, 4, 6, 8, 10], [1,2,2,2,2], [1,4,4,4,4,4]],
-        "dropout_rate" : [0.3, 0.2, 0.1, 0.01, 0.001, 0],
-        "l2_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
-        "l1_r" : [0.3, 0.2, 0.1, 0.01, 0.001, 0.0001, 0],
-        "activation" : ["tanh", "relu", "relu", "relu", "sigmoid", "softmax"],
+        "growth_sequence" : [[1,4,8,8,4,1], [1,1,1,1,1,1]],
+        "dropout_rate" : [0.1, 0.01, 0.001, 0],
+        "l2_r" : [0.1, 0.01, 0.001, 0.0001, 0],
+        "l1_r" : [0.1, 0.01, 0.001, 0.0001, 0],
+        "activation" : ["tanh", "sigmoid", "softmax"],
         "output_layer_activation" : ["sigmoid"]
     }
-"""
-
-hyper_grid = {
-        "batch_size" : [64],
-        "epochs" : [10],
-        "learning_rate" : [0.01],
-        "optimizer" : ["rmsprop"],
-        "num_layers" : [1],
-        "units" : [208],
-        "dropout_T_bn_F" : [True],
-        "use_layerwise_dropout_batchnorm" : [False],
-        "growth_sequence" : [[1]],
-        "dropout_rate" : [0],
-        "l2_r" : [0],
-        "l1_r" : [0],
-        "activation" : ["relu"],
-        "output_layer_activation" : ["sigmoid"]
-}
-"""
 
 model_type = "DENSE_grow"
 is_lstm = True
 num_channels = 3
-beta = 3   
+beta = 2
 
 use_time_augmentor = True
 scaler_name = "standard"
@@ -122,15 +118,14 @@ band_min = 2.0
 band_max = 4.0
 highpass_freq = 15
 
-n_picks = 1000
-
 use_tensorboard = True
 use_liveplots = False
 use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = False
+log_data = True
+skip_to_index = 0
 
 shutdown = False
 
@@ -145,10 +140,20 @@ def clear_tensorboard_dir():
 if use_tensorboard:
     clear_tensorboard_dir()
 
-      
-randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                        filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                        use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                        use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, beta = beta)
-randomGridSearch.fit()
+
+narrowOpt = NarrowOpt(loadData, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
+                      filter_name, static_grid, search_grid, 
+                      use_tensorboard = use_tensorboard, 
+                      use_liveplots = use_liveplots, 
+                      use_custom_callback = use_custom_callback, 
+                      use_early_stopping = use_early_stopping, 
+                      band_min = band_min,
+                      band_max = band_max, 
+                      highpass_freq = highpass_freq, 
+                      start_from_scratch = start_from_scratch, 
+                      use_reduced_lr = use_reduced_lr, 
+                      num_channels = num_channels,
+                      log_data = log_data,
+                      skip_to_index = skip_to_index,
+                      beta = beta)
+narrowOpt.fit()

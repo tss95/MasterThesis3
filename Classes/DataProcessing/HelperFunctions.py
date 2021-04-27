@@ -22,6 +22,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
 from Classes.DataProcessing.ts_RamGenerator import data_generator, ramless_data_generator, get_rambatch
 from Classes.DataProcessing.RamGen import RamGen
+from Classes.DataProcessing.RamLessGen import RamLessGen
 from tensorflow.keras.utils import GeneratorEnqueuer
 
 from tensorflow.keras import utils
@@ -41,6 +42,7 @@ utils = GlobalUtils()
 class HelperFunctions():
     
     def predict_model_no_generator(self, model, x_test, y_test, noiseAug, class_dict, scaler_name, num_channels):
+        print("This function has not been updated since overhaul.")
         if noiseAug is not None:
             if scaler_name != "normalize":
                 x_test = noiseAug.batch_augment_noise(x_test, 0, noiseAug.noise_std/15)
@@ -61,14 +63,11 @@ class HelperFunctions():
         del gen
         return predictions
 
-    def predict_RamLessGenerator(self, model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, label_dict, num_channels):
+    def predict_RamLessGenerator(self, model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, num_channels):
         steps = self.get_steps_per_epoch(ds, batch_size)
-        enq = GeneratorEnqueuer(ramless_data_generator(ds, y, ramLessLoader, timeAug, num_channels, is_lstm = True, norm_scale = norm_scale))
-        enq.start(workers = 8, max_queue_size = 10)
-        gen = enq.get()
+        gen = RamLessGen(ds, y, batch_size, ramLessLoader, timeAug, num_channels, norm_scale = norm_scale, shuffle = False)
         predictions = model.predict(x = gen, steps = steps)
-        enq.stop()
-        del enq, gen
+        del gen
         return predictions
     
     def convert_to_class(self, predictions):
@@ -78,7 +77,7 @@ class HelperFunctions():
         raise Exception("More than two classes has not been implemented")
 
     def evaluate_no_generator(self, model, x_test, y_test, label_dict, num_channels, noiseAug, scaler_name, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
-        predictions = self.predict_model_no_generator(model, x_test, y_test, noiseAug, class_dict, scaler_name)
+        predictions = self.predict_model_no_generator(model, x_test, y_test, noiseAug, label_dict, scaler_name)
         return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
     def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, use_time_augmentor, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
@@ -93,7 +92,7 @@ class HelperFunctions():
         norm_scale = False 
         if ramLessLoader.scaler_name == "nornalize":
             norm_scale = True
-        predictions = self.predict_RamLessGenerator(model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, label_dict, num_channels)
+        predictions = self.predict_RamLessGenerator(model, ds, y, batch_size, norm_scale, ramLessLoader, timeAug, num_channels)
         return self.evaluate_predictions(predictions, y, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
     def evaluate_predictions(self, predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta):

@@ -19,8 +19,6 @@ class CustomCallback(tf.keras.callbacks.Callback):
     def on_train_end(self, logs=None):
         self.val_gen = None
         gc.collect()
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------Train end RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         
 
     def on_epoch_begin(self, epoch, logs=None):
@@ -29,14 +27,12 @@ class CustomCallback(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         val_predict = (np.asarray(self.model.predict(x = self.val_gen, steps = self.steps, max_queue_size = 15, workers = 8, use_multiprocessing = False))).round()
         val_targ = self.y_val[:len(val_predict)]
-        _val_f = np.round(fbeta_score(val_targ, val_predict, beta = self.beta), 4 )
+        _val_f = np.round(fbeta_score(val_targ, val_predict, pos_label = 1, beta = self.beta, average = 'binary'), 4 )
         self.val_fs = _val_f
         logs[f"val_f{self.beta}"] = _val_f
 
         print(f"- val_f{self.beta}: {_val_f}")
         gc.collect()
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------Epoch end RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         
     def on_test_begin(self, logs=None):
         pass

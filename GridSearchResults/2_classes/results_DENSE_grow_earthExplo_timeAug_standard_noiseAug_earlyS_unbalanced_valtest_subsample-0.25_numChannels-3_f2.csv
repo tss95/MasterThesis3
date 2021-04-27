@@ -1,0 +1,16 @@
+meier_load,activation,batch_size,dropout_T_bn_F,dropout_rate,epochs,growth_sequence,l1_r,l2_r,learning_rate,num_layers,optimizer,output_layer_activation,units,use_layerwise_dropout_batchnorm,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
+False,relu,64,False,0.001,25,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.644713785047,0.596749,0.886823,0.808247,0.917769491673,0.324819711538,0.08531,0.807087,0.299795,"[[ 876 2198]
+ [  49  205]]"
+False,relu,128,False,0.001,25,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.65031152648,0.595974,0.927672,0.834753,0.958364963531,0.286658653846,0.084314,0.846457,0.301458,"[[ 739 2335]
+ [  39  215]]"
+False,relu,512,False,0.001,25,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.734155273437,0.695935,0.829008,0.798472,inf,0.513346354167,0.108642,0.77533,0.348101,"[[1401 1444]
+ [  51  176]]"
+False,relu,256,False,0.001,25,"[1, 2]",0,0.0001,0.1,2,sgd,sigmoid,320,True,,,,,,,,,,,
+False,relu,64,False,0.001,50,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.703684774143,0.637543,0.940508,0.858878,1.19100964069,0.336838942308,0.090909,0.854331,0.318836,"[[ 904 2170]
+ [  37  217]]"
+False,relu,128,False,0.001,50,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.609082943925,0.562461,0.973011,0.849062,1.05324804783,0.195012019231,0.080595,0.917323,0.298183,"[[ 416 2658]
+ [  21  233]]"
+False,relu,512,False,0.001,50,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,inf,0.710473632812,0.706686,0.716825,0.714774,0.906609654427,0.587239583333,0.113586,0.674009,0.339246,"[[1651 1194]
+ [  74  153]]"
+False,relu,256,False,0.001,50,"[1, 2]",0,0.0001,0.1,2,sgd,sigmoid,320,True,,,,,,,,,,,
+False,relu,256,False,0.001,50,"[1, 2]",0,0.0001,0.001,2,sgd,sigmoid,320,True,,,,,,,,,,,
