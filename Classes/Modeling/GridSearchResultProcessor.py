@@ -124,7 +124,8 @@ class GridSearchResultProcessor():
             file_name = f"{file_name}_unbalanced_valtest"
         file_name = file_name + f"_subsample-{self.loadData.subsample_size}"
         file_name = file_name + f"_numChannels-{self.num_channels}"
-        file_name = file_name + f"_f{self.beta}"
+        if self.loadData.earth_explo_only and not self.loadData.balance_non_train_set:
+            file_name = file_name + f"_f{self.beta}"
         file_name = file_name + ".csv"
         return file_name
     

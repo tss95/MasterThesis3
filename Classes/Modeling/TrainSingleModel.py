@@ -17,19 +17,12 @@ os.chdir(base_dir)
 from Classes.Modeling.DynamicModels import DynamicModels
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-from Classes.DataProcessing.ts_RamGenerator import data_generator
-
 
 import sys
-
-
 import random
 import pprint
 import re
 import json
-
-
-
 
 class TrainSingleModel():
     
@@ -73,16 +66,18 @@ class TrainSingleModel():
             model.compile(**model_compile_args)
         return model
         
-    
+    def metrics_dict(self, metrics, set_name, loss, accuracy, precision, recall, fscore, beta):
+        metrics[set_name] = {f"{set_name}_loss" : loss,
+                             f"{set_name}_accuracy" : accuracy,
+                             f"{set_name}_precision" : precision,
+                             f"{set_name}_recall" : recall,
+                             f"{set_name}_f{beta}" : fscore}
+        return metrics
         
-    def fit_model(self, model, train_gen, val_gen, y_val, meier_mode = False, **p):
-        print("Started enquers and generators")
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
-
+    def fit_model(self, model, train_gen, val_gen, y_val, workers, max_queue_size, meier_mode = False, **p):
         if meier_mode:
             fit_args = self.helper.generate_meier_fit_args(self.loadData.train, self.loadData.val, self.loadData,
-                                                            p["batch_size"], p["epochs"], val_gen,
+                                                            p["batch_size"], p["epochs"], val_gen, workers, max_queue_size,
                                                             use_tensorboard = self.use_tensorboard, 
                                                             use_liveplots = self.use_liveplots, 
                                                             use_custom_callback = self.use_custom_callback,
@@ -90,7 +85,7 @@ class TrainSingleModel():
                                                             use_reduced_lr = self.use_reduced_lr, y_val = y_val,  beta = self.beta)
         else:    
             fit_args = self.helper.generate_fit_args(self.loadData.train, self.loadData.val, self.loadData,
-                                                    p["batch_size"], p["epochs"], val_gen,
+                                                    p["batch_size"], p["epochs"], val_gen, workers, max_queue_size,
                                                     use_tensorboard = self.use_tensorboard, 
                                                     use_liveplots = self.use_liveplots, 
                                                     use_custom_callback = self.use_custom_callback,
@@ -101,9 +96,6 @@ class TrainSingleModel():
         print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.val, p['batch_size'])*p['batch_size']}/{len(self.loadData.val)} validation points")
         print(f"Utilizes {self.helper.get_steps_per_epoch(self.loadData.train, p['batch_size'])*p['batch_size']}/{len(self.loadData.train)} training points")
         print("-------------------------------------------------------------------")
-        print("Loaded fit args. Starting training")
-        tot_m, used_m, free_m = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
-        print(f"------------------RAM usage: {used_m}/{tot_m} (Free: {free_m})------------------")
         # Fit the model using the generated args
         try:
             # Try block allows for evaluation of the current state of the model at any time.
@@ -112,7 +104,7 @@ class TrainSingleModel():
             gc.collect()
             tf.config.optimizer.set_jit(True)
             mixed_precision.set_global_policy('mixed_float16')
-            model.fit_generator(train_gen, **fit_args)
+            model.fit(train_gen, **fit_args)
         except Exception:
             traceback.print_exc()
             #model = None

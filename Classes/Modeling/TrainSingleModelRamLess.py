@@ -58,19 +58,32 @@ class TrainSingleModelRamLess(TrainSingleModel):
         norm_scale = False
         if ramLessLoader.scaler_name == "normalize":
             norm_scale = True
-        train_gen = RamLessGen(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
-        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
-        return self.fit_model(model, train_gen, val_gen, ramLessLoader.y_val, meier_mode, **p)
+        self.gen_args = {"batch_size" : p["batch_size"],
+                         "ramLessLoader" : ramLessLoader,
+                         "num_channels" : self.num_channels,
+                         "norm_scale" : norm_scale,
+                         "shuffle" : False}
+        train_gen = RamLessGen(ramLessLoader.train_ds, ramLessLoader.y_train, ramLessLoader.train_timeAug, **self.gen_args)
+        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, ramLessLoader.val_timeAug, **self.gen_args)
+        return self.fit_model(model, train_gen, val_gen, ramLessLoader.y_val, workers, max_queue_size, meier_mode, **p)
 
 
     def metrics_producer(self, model, ramLessLoader, workers, max_queue_size, meier_mode = False,**p):
-        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], ramLessLoader, ramLessLoader.val_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
-        val_eval = model.evaluate(x = val_gen, batch_size = p["batch_size"],
+        val_gen = RamLessGen(ramLessLoader.val_ds, ramLessLoader.y_val, ramLessLoader.val_timeAug, **self.gen_args)
+        val_eval = model.evaluate(x = val_gen, 
+                                  batch_size = p["batch_size"],
                                   steps = self.helper.get_steps_per_epoch(self.loadData.val, p["batch_size"]),
                                   return_dict = True)
         del val_gen
-        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)       
+        eval_args = {"batch_size": p["batch_size"],
+                     "label_dict" : self.loadData.label_dict,
+                     "num_channels" : self.num_channels,
+                     "ramLessLoader" : ramLessLoader,
+                     "num_classes" : self.num_classes,
+                     "beta" : self.beta}
+        val_conf, _, val_acc, val_precision, val_recall, val_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.val_ds, ramLessLoader.y_val, ramLessLoader.val_timeAug, **eval_args)       
         metrics = {}
+
         metrics['val'] = {  "val_loss" : val_eval["loss"],
                             "val_accuracy" : val_acc,
                             "val_precision": val_precision,
@@ -79,12 +92,19 @@ class TrainSingleModelRamLess(TrainSingleModel):
 
         
         print("Evaluating train:")
-        train_gen = RamLessGen(ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], ramLessLoader, ramLessLoader.train_timeAug, self.num_channels, norm_scale = norm_scale, shuffle = False)
-        train_eval = model.evaluate(x = train_gen, batch_size = p["batch_size"],
+        train_gen = RamLessGen(ramLessLoader.train_ds, 
+                               ramLessLoader.y_train, 
+                               p["batch_size"], ramLessLoader, 
+                               ramLessLoader.train_timeAug, 
+                               self.num_channels, 
+                               norm_scale = norm_scale, 
+                               shuffle = False)
+        train_eval = model.evaluate(x = train_gen, 
+                                    batch_size = p["batch_size"],
                                     steps = self.helper.get_steps_per_epoch(self.loadData.train, p["batch_size"]),
                                     return_dict = True)
         del train_gen
-        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)
+        _, _, train_acc, train_precision, train_recall, train_fscore = self.helper.evaluate_RamLessGenerator(model, ramLessLoader.train_ds, ramLessLoader.y_train, ramLessLoader.train_timeAug, **eval_args)
         metrics['train'] = { "train_loss" : train_eval["loss"],
                             "train_accuracy" : train_acc,
                             "train_precision": train_precision,
@@ -104,12 +124,12 @@ class TrainSingleModelRamLess(TrainSingleModel):
             print(self.results_df.iloc[-1])
         if evaluate_train:
             print("Unsaved train eval:")
-            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)
+            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.train_ds, ramLessLoader.y_train, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, plot_confusion_matrix = True, plot_p_r_curve = True, beta = self.beta)
         if evaluate_val:
             print("Unsaved val eval:")
-            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)
+            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.val_ds, ramLessLoader.y_val, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, plot_confusion_matrix = True, plot_p_r_curve = True, beta = self.beta)
         if evaluate_test:
             print("Unsaved test eval:")
-            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.test_ds, ramLessLoader.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, beta = self.beta)
+            self.helper.evaluate_RamLessGenerator(model, ramLessLoader.test_ds, ramLessLoader.y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, ramLessLoader, ramLessLoader.noiseAug, self.num_classes, plot_confusion_matrix = True, plot_p_r_curve = True, beta = self.beta)
         gc.collect()
         return model, self.results_df

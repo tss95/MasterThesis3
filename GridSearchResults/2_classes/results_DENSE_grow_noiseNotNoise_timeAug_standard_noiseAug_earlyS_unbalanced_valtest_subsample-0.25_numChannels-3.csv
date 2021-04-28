@@ -1,0 +1,7 @@
+batch_size,epochs,learning_rate,optimizer,num_layers,units,dropout_T_bn_F,use_layerwise_dropout_batchnorm,growth_sequence,dropout_rate,l2_r,l1_r,activation,output_layer_activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+64,50,0.001,rmsprop,1,200,False,False,[1],0.1,0,0,relu,sigmoid,0.0992963388562,0.970700152207,0.986375,0.953723,0.969774,1.18543899059,0.870513613861,0.898884,0.844218,0.870694,"[[2809  317]
+ [ 520 2818]]"
+64,50,0.001,rmsprop,1,200,False,False,[1],0.1,0,0,relu,sigmoid,0.0808937326074,0.979047754947,0.983668,0.973652,0.978635,1.19069969654,0.879486386139,0.912875,0.847513,0.878981,"[[2856  270]
+ [ 509 2829]]"
+64,50,0.001,rmsprop,1,200,False,False,[1],0.1,0,0,relu,sigmoid,0.127428784966,0.957738774734,0.980375,0.932925,0.956062,1.0714353323,0.865408415842,0.90406,0.827142,0.863892,"[[2833  293]
+ [ 577 2761]]"

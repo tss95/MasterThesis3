@@ -2,7 +2,7 @@ from tensorflow.keras.utils import Sequence
 
 class RamLessGen(Sequence):
     'Generates data for Keras'
-    def __init__(self, ds, labels, batch_size, ramLessLoader, timeAug, num_channels, norm_scale = False, shuffle=False):
+    def __init__(self, ds, labels, timeAug, batch_size, ramLessLoader, num_channels, norm_scale = False, shuffle=False):
         'Initialization'
         self.ds = ds
         self.labels = labels

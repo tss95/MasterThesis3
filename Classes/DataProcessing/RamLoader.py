@@ -20,6 +20,7 @@ from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
 from Classes.Scaling.DataNormalizer import DataNormalizer
+from .decorators import runtime
 
 class RamLoader:
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
@@ -83,8 +84,8 @@ class RamLoader:
         else:
             raise Exception("Loading to ram for this type of data has not been implemented.")
 
+    @runtime
     def load_to_ram_noise_not_noise(self):
-        start = time.time()
         self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
         self.val_timeAug = self.fit_timeAug(self.val_ds, "validation")
         if self.load_test_set:
@@ -115,16 +116,13 @@ class RamLoader:
             noise_traces = train_trace[noise_indexes]
             self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
         print("\n")
-        end = time.time()
-        print(f"Process took {datetime.timedelta(seconds=end-start)} seconds.")
         if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.noiseAug
 
 
-
+    @runtime
     def load_to_ram_earth_explo_only(self):
-        start = time.time()
         if self.use_time_augmentor:
             self.noise_timeAug = self.fit_timeAug(self.noise_ds, "noise set")
         self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
@@ -141,7 +139,6 @@ class RamLoader:
         self.noiseAug = None
         if self.use_noise_augmentor:
             noise_trace, noise_label = self.stage_one_load(self.noise_ds, self.noise_timeAug, 3)
-            num_noise = len(noise_trace)
             noise_trace, _ = self.stage_two_load(noise_trace, noise_label, 3, self.meier_load)
             self.noiseAug = self.fit_noiseAug(self.loadData, noise_trace)
             print("\n")
@@ -153,8 +150,6 @@ class RamLoader:
             test_trace, test_label = self.stage_two_load(test_trace, test_label, 2, self.meier_load)
         print("\n")
         print("Completed loading to RAM")
-        end = time.time()
-        print(f"Process took {datetime.timedelta(seconds=end-start)} seconds.")
         if self.load_test_set:
             return train_trace, train_label, val_trace, val_label, test_trace, test_label, self.noiseAug
         return train_trace, train_label, val_trace, val_label, self.noiseAug

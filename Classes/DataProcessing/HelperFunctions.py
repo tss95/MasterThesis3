@@ -5,12 +5,13 @@ import h5py
 import sklearn as sk
 import matplotlib.pyplot as plt
 from obspy import Stream, Trace, UTCDateTime
-from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve
+from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve, average_precision_score
 import seaborn as sns
 import os
 import csv
 import pylab as pl
 import pprint
+import gc
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
@@ -56,9 +57,9 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels, use_time_augmentor):
+    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels):
         steps = self.get_steps_per_epoch(X, batch_size)
-        gen = RamGen(X, y, batch_size, noiseAug, num_channels, use_time_augmentor, norm_scale = norm_scale, shuffle = False)
+        gen = RamGen(X, y, batch_size, noiseAug, num_channels, norm_scale = norm_scale, shuffle = False)
         predictions = model.predict(x = gen, steps = steps)
         del gen
         return predictions
@@ -80,15 +81,15 @@ class HelperFunctions():
         predictions = self.predict_model_no_generator(model, x_test, y_test, noiseAug, label_dict, scaler_name)
         return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
-    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, use_time_augmentor, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
+    def evaluate_generator(self, model, x_test, y_test, batch_size, label_dict, num_channels, noiseAug, scaler_name, num_classes, plot_conf_matrix = False, plot_p_r_curve = False, beta = 1):
         norm_scale = False
         if scaler_name == "normalize":
             norm_scale = True
         pp = pprint.PrettyPrinter(indent=4)
-        predictions = self.predict_RamGenerator(model, x_test, y_test, batch_size, norm_scale, noiseAug, label_dict, num_channels, use_time_augmentor)
+        predictions = self.predict_RamGenerator(model, x_test, y_test, batch_size, norm_scale, noiseAug, label_dict, num_channels)
         return self.evaluate_predictions(predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta)
 
-    def evaluate_RamLessGenerator(self, model, ds, y, batch_size, label_dict, num_channels, ramLessLoader, timeAug, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
+    def evaluate_RamLessGenerator(self, model, ds, y, timeAug, batch_size, label_dict, num_channels, ramLessLoader, num_classes, plot_confusion_matrix = False, plot_p_r_curve = False, beta = 1):
         norm_scale = False 
         if ramLessLoader.scaler_name == "nornalize":
             norm_scale = True
@@ -96,14 +97,15 @@ class HelperFunctions():
         return self.evaluate_predictions(predictions, y, num_classes, label_dict, plot_confusion_matrix, plot_p_r_curve, beta)
 
     def evaluate_predictions(self, predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta):
+        predictions = np.abs(predictions)
         pp = pprint.PrettyPrinter(indent = 4)
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
             y_test = y_test[:,1]
         y_test = y_test[0:predictions.shape[0]]
-        num_classes = len(set(label_dict.values()))
         predictions = np.reshape(predictions,(predictions.shape[0]))
         rounded_predictions  = np.rint(predictions)
+        assert len(rounded_predictions[rounded_predictions < 0]) == 0, f"Contains negative values: {rounded_predictions[rounded_predictions < 0]}"
         y_test = np.reshape(y_test, (y_test.shape[0]))
         assert predictions.shape == y_test.shape
         conf = tf.math.confusion_matrix(y_test, rounded_predictions, num_classes=num_classes)
@@ -111,12 +113,15 @@ class HelperFunctions():
         precision, recall, fscore = np.round(precision_recall_fscore_support(y_test, rounded_predictions, beta = beta, pos_label = 1, average = 'binary', zero_division = 0.0)[0:3], 6)
         accuracy = self.calculate_accuracy(conf)
         if plot_p_r_curve:
-            p,r,_ = precision_recall_curve(y_test, rounded_predictions, pos_label=1, sample_weight=None)
-            self.plot_precision_recall_curve(p, r)
+            p,r,_ = precision_recall_curve(y_test, predictions, pos_label=1, sample_weight=None)
+            average_precision = average_precision_score(y_test, predictions)
+            baseline = len(y_test[y_test == 1])/len(y_test)
+            self.plot_precision_recall_curve(p, r, average_precision, baseline)
         if plot_conf_matrix:
             self.plot_confusion_matrix(conf, self.handle_non_noise_dict(label_dict))
         pp.pprint(conf)
         print(class_report)
+        gc.collect()
         return conf, class_report, accuracy, precision, recall, fscore
 
     def get_prediction_errors_indexes(self, rounded_predictions, y_test):
@@ -203,14 +208,16 @@ class HelperFunctions():
 
 
 
-    def plot_precision_recall_curve(self, precision, recall):
+    def plot_precision_recall_curve(self, precision, recall, average_precision, baseline):
         plt.clf()
-        plt.plot(recall, precision)
+        plt.plot(recall, precision, label = "Classifier")
         plt.xlabel('Recall')
         plt.ylabel('Precision')
         plt.ylim([0.0, 1.05])
         plt.xlim([0.0, 1.0])
-        plt.title('Precision-Recall')
+        plt.plot([0,1], [baseline, baseline], linestyle = '--', label = "Baseline")
+        plt.title(f'Precision-Recall curve, AP: {np.round(average_precision, 2)}')
+        plt.legend(loc="upper right")
         plt.show()
 
     def handle_non_noise_dict(self, label_dict):
@@ -262,6 +269,9 @@ class HelperFunctions():
         possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
         recall = (true_positives + K.epsilon()) / (possible_positives + K.epsilon())
         return recall
+
+    def fbeta(self, precision, recall, beta):
+        return ((1+beta**2)*precision*recall)/((beta**2)*precision + recall)
     
     def get_class_distribution_from_csv(self,data_csv):
         with open(data_csv) as file:
@@ -371,14 +381,14 @@ class HelperFunctions():
             return {"loss" : loss,
                     "optimizer" : opt,
                     "metrics" : [acc,
-                                tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]
+                                self.precision,
+                                self.recall]
                                 }
         else:
             return {"loss" : loss,
                     "optimizer" : opt,
-                    "metrics" : [tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                                 tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
+                    "metrics" : [self.precision,
+                                 self.recall,
                                  acc]}
     
     def generate_gen_args(self, batch_size, detrend, use_scaler = False, scaler = None, 
@@ -397,7 +407,7 @@ class HelperFunctions():
                     "highpass_freq" : highpass_freq,
                     "is_lstm" : is_lstm}
     
-    def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False, y_val = None, beta = 1):
+    def generate_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, workers, max_queue_size, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False, y_val = None, beta = 1):
         callbacks = []
         if use_liveplots:
             #callbacks.append(PlotLossesKeras())
@@ -447,13 +457,13 @@ class HelperFunctions():
                 "validation_data" : val_gen,
                 "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                 "verbose" : 1,
-                "max_queue_size" : 10,
+                "max_queue_size" : max_queue_size,
                 "use_multiprocessing" : False, 
-                "workers" : 1,
+                "workers" : workers,
                 "callbacks" : callbacks
                 }
     
-    def generate_meier_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False, y_val = None, beta = 1):
+    def generate_meier_fit_args(self, train_ds, val_ds, loadData, batch_size, epoch, val_gen, workers, max_queue_size, use_tensorboard, use_liveplots, use_custom_callback, use_early_stopping, use_reduced_lr = False, y_val = None, beta = 1):
         callbacks = []
         print("------------ Meier ------------")
         if use_liveplots:
@@ -504,9 +514,9 @@ class HelperFunctions():
                 "validation_data" : val_gen,
                 "validation_steps" : self.get_steps_per_epoch(val_ds, batch_size),
                 "verbose" : 1,
-                "max_queue_size" : 20,
+                "max_queue_size" : max_queue_size,
                 "use_multiprocessing" : False, 
-                "workers" : 16,
+                "workers" : workers,
                 "callbacks" : callbacks
                 }
 
@@ -550,31 +560,6 @@ class HelperFunctions():
                 'starttime': start_time})
         stream = Stream([trace_BHE, trace_BHN, trace_BHZ])
         stream.plot(number_of_ticks = 8)
-
-    def get_n_points_with_highest_training_loss(self, train_ds, n, full_logs):
-        train_ds_dict = {}
-        for path, label in train_ds:
-            train_ds_dict[path] = {'label' : label,
-                                   'loss': 0,
-                                   'average_loss' : 0,
-                                   'occurances' : 0}
-        counter = 0
-        for batch in full_logs:
-            loss = batch['loss']
-            for path_class in batch['batch_samples']:
-                train_ds_dict[path_class[0]]['loss'] += loss
-                train_ds_dict[path_class[0]]['occurances'] += 1
-
-        train_ds_list = []
-        for sample in np.array(train_ds[:,0]):
-            if train_ds_dict[sample]['occurances'] == 0:
-                continue
-            train_ds_dict[sample]['average_loss'] = train_ds_dict[sample]['loss'] / train_ds_dict[sample]['occurances']
-            train_ds_list.append((sample, train_ds_dict[sample]['label'],train_ds_dict[sample]['average_loss']))
-
-        sorted_train_ds_list = sorted(train_ds_list, key=lambda x: x[2], reverse = True)
-
-        return sorted_train_ds_list[0:n]
     
     def get_max_decay_sequence(self, num_layers, units_or_num_filters, attempted_decay_sequence, num_classes):
         """

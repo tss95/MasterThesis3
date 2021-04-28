@@ -2,7 +2,7 @@ from tensorflow.keras.utils import Sequence
 
 class RamGen(Sequence):
     'Generates data for Keras'
-    def __init__(self, traces, labels, batch_size, noiseAug, num_channels, use_time_augmentor = True, norm_scale = False, shuffle=True):
+    def __init__(self, traces, labels, batch_size, noiseAug, num_channels, norm_scale = False, shuffle=True):
         'Initialization'
         self.traces = traces
         self.labels = labels
@@ -11,9 +11,6 @@ class RamGen(Sequence):
         self.num_channels = num_channels
         self.norm_scale = norm_scale
         self.shuffle = shuffle
-        self.timesteps = 9460
-        if use_time_augmentor:
-            self.timesteps = 6000
         self.on_epoch_end()
 
     def __len__(self):

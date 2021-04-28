@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, Permute, GlobalAveragePooling1D, concatenate
+from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, Permute, GlobalAveragePooling1D, concatenate, Reshape, Masking, multiply
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
@@ -65,6 +65,8 @@ class DynamicModels():
             self.model = self.create_LSTM_baseline_model(**p)
         if self.model_type == "LSTM_FCN":
             self.model = self.create_LSTM_FCN_model(**p)
+        if self.model_type == "MLSTM_FCN":
+            self.model = self.create_MLSTM_FCN_model(**p)
         if self.model_type == "CNN":
             self.model = self.create_CNN_model(**p)
         if self.model_type == "CNN_short":
@@ -158,7 +160,7 @@ class DynamicModels():
         input_layer = tf.keras.layers.Input(self.input_shape)
         ip = input_layer
 
-        x = CuDNNLSTM(units)(ip)
+        x = CuDNNLSTM(units, name = "lstm_block_out")(ip)
         x = Dropout(0.8)(x)
 
         #y = Permute((2,1))(ip)
@@ -175,7 +177,7 @@ class DynamicModels():
         # Filter size = 3
         y = Conv1D(240, 80, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
-        y = Activation('relu')(y)
+        y = Activation('relu', name= "conv_block_activation")(y)
 
         y = GlobalAveragePooling1D()(y)
 
@@ -185,9 +187,60 @@ class DynamicModels():
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
 
         return model
+    
+    def create_MLSTM_FCN_model(self, **p):
+        # Code from: https://github.com/fazlekarim/MLSTM-FCN/
+        units = p['units']
+        output_layer_activation = p['output_layer_activation']
+        
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        ip = input_layer
+
+        # LSTM block
+        # Permute layer is noramlly first in convolution block
+        x = Permute((2,1))(ip)
+        x = Masking()(x)
+        x = CUDNNLSTM(units, name = "lstm_block_out")(x)
+        x = Dropout(0.8)(x)
+
+        y = Conv1D(60, 80, padding = "same", kernel_initializer ="he_uniform")(ip)
+        y = BatchNormalization()(y)
+        y = Activation('relu')
+        y = self.squeeze_excite_block(y)
+
+        y = Conv1D(120, 50, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = BatchNormalization()(y)
+        y = Activation('relu')
+        y = self.squeeze_excite_block(y)
+
+        y = Conv1D(60, 30, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = BatchNormalization()(y)
+        y = Activation('relu')
+
+        x = concatenate([x, y])
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+
+        return model
 
         
+    def squeeze_excite_block(self, input):
+        # Code from: https://github.com/fazlekarim/MLSTM-FCN/
+        ''' Create a squeeze-excite block
+        Args:
+            input: input tensor
+            filters: number of output filters
+            k: width factor
+        Returns: a keras tensor
+        '''
+        filters = input._keras_shape[-1] # channel_axis = -1 for TF
 
+        se = GlobalAveragePooling1D()(input)
+        se = Reshape((1, filters))(se)
+        se = Dense(filters // 16,  activation='relu', kernel_initializer='he_normal', use_bias=False)(se)
+        se = Dense(filters, activation='sigmoid', kernel_initializer='he_normal', use_bias=False)(se)
+        se = multiply([input, se])
+        return se
 
 
     def create_CNN_model(self, **p):
