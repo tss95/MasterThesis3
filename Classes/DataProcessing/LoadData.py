@@ -78,7 +78,7 @@ class LoadData():
         self.csv_folder = glob_utils.csv_dir
         self.data_csv_name = glob_utils.data_csv_name
         if load_first_batch:
-            self.data_csv_name = utils.batch_1_csv_name
+            self.data_csv_name = glob_utils.batch_1_csv_name
             assert not load_everything, "Load everything should be False when using the first batch. A test set has not been generated for this dataset"
         if load_everything:
             print("Loading all of second batch. Including the test data.")
@@ -95,7 +95,8 @@ class LoadData():
         self.create_label_dict()
         self.load_data()
         print("\n")
-        self.print_data_info()
+        if not load_everything and not load_first_batch:
+            self.print_data_info()
 
     def load_data(self):
         if not self.use_true_test_set:

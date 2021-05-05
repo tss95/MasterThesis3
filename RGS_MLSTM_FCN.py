@@ -83,7 +83,7 @@ hyper_grid = {
 model_type = "MLSTM_FCN"
 is_lstm = True
 num_channels = 3
-beta = 3   
+beta = 2   
 
 use_time_augmentor = True
 scaler_name = "standard"

@@ -1,31 +1,16 @@
 import numpy as np
 import pandas as pd
-import h5py
 import sklearn as sk
-import matplotlib.pyplot as plt
-
-from tensorflow.keras.callbacks import ModelCheckpoint
-
-from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-from tensorflow.keras.layers import Activation, Conv1D, Dense, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, InputLayer, Permute, GlobalAveragePooling1D, concatenate, Reshape, Masking, multiply
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Input, Dense, LSTM, multiply, concatenate, Activation, Masking, Reshape
+from tensorflow.keras.layers import Conv1D, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, Permute, GlobalAveragePooling1D, LSTM
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
-from tensorflow.keras.layers import Dropout
 from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.utils import Sequence
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
 from tensorflow.keras import utils
-from tensorflow.keras.utils import plot_model
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.callbacks import ModelCheckpoint
-from sklearn.metrics import confusion_matrix
-
-from livelossplot import PlotLossesKeras
-
-
 from tensorflow.keras import mixed_precision
 
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
@@ -193,29 +178,30 @@ class DynamicModels():
         units = p['units']
         output_layer_activation = p['output_layer_activation']
         
-        input_layer = tf.keras.layers.Input(self.input_shape)
+        input_layer = Input(self.input_shape)
         ip = input_layer
 
         # LSTM block
         # Permute layer is noramlly first in convolution block
-        x = Permute((2,1))(ip)
-        x = Masking()(x)
-        x = CUDNNLSTM(units, name = "lstm_block_out")(x)
+        #x = Permute((2,1))(ip)
+        x = Masking()(ip)
+        x = LSTM(units, name = "lstm_block_out")(x)
         x = Dropout(0.8)(x)
 
         y = Conv1D(60, 80, padding = "same", kernel_initializer ="he_uniform")(ip)
         y = BatchNormalization()(y)
-        y = Activation('relu')
+        y = Activation('relu')(y)
         y = self.squeeze_excite_block(y)
 
         y = Conv1D(120, 50, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
-        y = Activation('relu')
+        y = Activation('relu')(y)
         y = self.squeeze_excite_block(y)
 
         y = Conv1D(60, 30, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
-        y = Activation('relu')
+        y = Activation('relu')(y)
+        y = GlobalAveragePooling1D()(y)
 
         x = concatenate([x, y])
         output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
@@ -233,7 +219,7 @@ class DynamicModels():
             k: width factor
         Returns: a keras tensor
         '''
-        filters = input._keras_shape[-1] # channel_axis = -1 for TF
+        filters = input.shape[-1] # channel_axis = -1 for TF
 
         se = GlobalAveragePooling1D()(input)
         se = Reshape((1, filters))(se)
@@ -570,15 +556,15 @@ class DynamicModels():
         model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
         return model
 
-def create_CNN_baseline_model(self, **p):
-    cnn_activation = p['cnn_activation']
-    dense_activation = p['dense_activation']
-    output_layer_activation = p['output_layer_activation']
-    input_layer = tf.keras.layers.Input(self.input_shape)
-    x = input_layer
-    x = Conv1D(32, kernel_size = 16)(x)
-    x = Activation(cnn_activation)(x)
-    x = Dense(100, activation = dense_activation)(x)
-    output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
-    model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
-    return model
+    def create_CNN_baseline_model(self, **p):
+        cnn_activation = p['cnn_activation']
+        dense_activation = p['dense_activation']
+        output_layer_activation = p['output_layer_activation']
+        input_layer = tf.keras.layers.Input(self.input_shape)
+        x = input_layer
+        x = Conv1D(16, kernel_size = 8, padding = "same")(x)
+        x = Activation(cnn_activation)(x)
+        x = GlobalAveragePooling1D()(x)
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+        return model

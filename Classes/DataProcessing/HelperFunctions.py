@@ -562,9 +562,6 @@ class HelperFunctions():
         stream.plot(number_of_ticks = 8)
     
     def get_max_decay_sequence(self, num_layers, units_or_num_filters, attempted_decay_sequence, num_classes):
-        """
-        TODO: Does not handle situations where the decay sequence causes the number of units or num filters to grow each layer.
-        """
         decay_sequence = attempted_decay_sequence
         num_out_neurons = num_classes
         if num_classes == 2:
@@ -593,6 +590,14 @@ class HelperFunctions():
             else:
                 p["growth_sequence"] = p["growth_sequence"][:num_layers]
         return p
+
+    def load_model(self, path):
+        acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuacy", dtype = None, threshold = 0.5)
+        precision = self.precision
+        recall = self.recall
+        return tf.keras.models.load_model(path, custom_objects = {"accuracy" : acc,
+                                                                  "precision": precision,
+                                                                  "recall" : recall})
 
 
     def progress_bar(self, current, total, text, barLength = 40):

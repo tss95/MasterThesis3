@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,optimizer,use_residuals,use_bottleneck,num_modules,filter_size,bottleneck_size,num_filters,residual_activation,module_activation,module_output_activation,output_layer_activation,reg_residual,reg_module,l1_r,l2_r,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+512,50,0.01,rmsprop,True,False,1,40,26,32,tanh,sigmoid,sigmoid,sigmoid,True,False,0,0.1,,,,,,,,,,,
