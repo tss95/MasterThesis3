@@ -1,0 +1,5 @@
+use_residuals,use_bottleneck,residual_activation,reg_residual,reg_module,output_layer_activation,optimizer,num_modules,num_filters,module_output_activation,module_activation,learning_rate,l2_r,l1_r,filter_size,epochs,bottleneck_size,batch_size,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
+True,False,relu,False,False,sigmoid,sgd,3,42,relu,linear,0.01,0.01,0.01,72,50,30,128,,,,,,,,,,,
+True,True,relu,False,True,sigmoid,sgd,1,38,relu,linear,0.001,0.01,0.1,60,50,32,256,1.49083209038,0.503295898438,0.638989,0.008667,0.010797,1.48641395569,0.920372596154,0.176471,0.011811,0.014521,"[[3060   14]
+ [ 251    3]]"
+True,True,relu,False,False,sigmoid,sgd,3,44,relu,relu,0.0001,0.01,0.0001,44,50,36,64,,,,,,,,,,,

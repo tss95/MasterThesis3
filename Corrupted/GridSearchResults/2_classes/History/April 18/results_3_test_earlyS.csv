@@ -1,0 +1,3 @@
+,batch_size,epochs,learning_rate,optimizer,activation,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+0,16,1,0.001,rmsprop,sigmoid,0.01,21,11,0.1,0.3,softmax,same,128,84.3670349121,0.566176474094,0.566176474094,0.566176474094,84.5425796509,0.557291686535,0.557291686535,0.557291686535
+1,128,1,0.01,sgd,tanh,0.3,17,13,0.3,0.0001,sigmoid,same,64,242.726501465,0.59765625,0.57242757082,0.5595703125,242.825271606,0.528124988079,0.492211848497,0.49375000596

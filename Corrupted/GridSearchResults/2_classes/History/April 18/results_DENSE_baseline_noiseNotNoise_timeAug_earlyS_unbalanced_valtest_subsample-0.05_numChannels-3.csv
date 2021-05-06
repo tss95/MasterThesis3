@@ -1,0 +1,2 @@
+units,output_layer_activation,optimizer,learning_rate,epochs,dense_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+170,sigmoid,sgd,0.01,50,relu,128,,,,,,,,,

@@ -61,7 +61,7 @@ load_args = {
     'upsample' : True,
     'frac_diff' : 1,
     'seed' : 1,
-    'subsample_size' : 0.25,
+    'subsample_size' : 0.05,
     'balance_non_train_set' : False,
     'use_true_test_set' : False,
     'even_balance' : True

@@ -1,0 +1,15 @@
+use_layerwise_dropout_batchnorm,second_dense_units,padding,output_layer_activation,optimizer,num_layers,num_filters,learning_rate,l2_r,l1_r,first_dense_units,filter_size,epochs,dropout_rate,dense_activation,decay_sequence,cnn_activation,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
+False,268.0,same,sigmoid,sgd,1,72,0.1,0.1,0.0001,270,40,75,0.3,tanh,[1],tanh,256,0.284861475229,0.91202712059,0.955899059772,0.863045811653,0.285464197397,0.907483577728,0.952576339245,0.857905566692,"[[2406  132]
+ [ 370 2141]]"
+False,252.0,same,sigmoid,sgd,1,62,0.1,0.1,0.0001,266,58,75,0.0,tanh,[1],relu,128,0.244861349463,0.922350287437,0.958303630352,0.882321298122,0.247025027871,0.924479186535,0.954466640949,0.890012145042,"[[2420  118]
+ [ 346 2165]]"
+False,252.0,same,sigmoid,sgd,2,62,0.01,0.1,0.001,274,58,75,0.001,tanh,"[1, 4]",relu,128,,,,,,,,,
+False,,same,sigmoid,sgd,1,70,0.01,0.1,0.001,276,50,75,0.001,tanh,[1],relu,64,,,,,,,,,
+False,,same,sigmoid,sgd,2,66,0.05,0.1,0.001,296,54,75,0.0,tanh,"[1, 1]",relu,64,,,,,,,,,
+False,,same,sigmoid,sgd,1,60,0.25,0.01,0.0001,296,50,75,0.1,tanh,[1],tanh,256,,,,,,,,,
+False,,same,sigmoid,sgd,1,62,0.05,0.1,0.01,296,50,75,0.001,tanh,[1],relu,256,,,,,,,,,
+False,,same,sigmoid,sgd,1,78,0.05,0.1,0.01,288,40,75,0.3,relu,[1],relu,64,,,,,,,,,
+False,,same,sigmoid,sgd,1,78,0.01,0.1,0.0001,280,42,75,0.001,tanh,[1],relu,64,,,,,,,,,
+False,,same,sigmoid,sgd,2,70,0.01,0.01,0.01,268,50,75,0.1,relu,"[1, 2]",tanh,256,,,,,,,,,
+False,,same,sigmoid,sgd,1,68,0.05,0.01,0.001,270,46,75,0.2,relu,[1],relu,128,,,,,,,,,
+False,,same,sigmoid,sgd,1,68,0.01,0.1,0.0001,266,42,75,0.2,relu,[1],tanh,128,,,,,,,,,

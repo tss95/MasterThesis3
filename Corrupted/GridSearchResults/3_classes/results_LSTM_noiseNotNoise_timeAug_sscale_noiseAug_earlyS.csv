@@ -1,0 +1,4 @@
+batch_size,epochs,learning_rate,num_layers,optimizer,activation,decay_sequence,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+64,33,0.01,6,sgd,tanh,"[1, 1, 1, 1, 1]",0.1,11,7,0.0001,0.2,sigmoid,same,64,,,,,,,,
+64,30,1e-05,2,rmsprop,softmax,"[1, 0.5]",0.2,19,3,0.3,0.001,sigmoid,same,1024,,,,,,,,
+64,35,0.1,4,rmsprop,tanh,"[1, 4, 8, 8]",0.4,27,11,0.0001,0.3,sigmoid,same,32,,,,,,,,

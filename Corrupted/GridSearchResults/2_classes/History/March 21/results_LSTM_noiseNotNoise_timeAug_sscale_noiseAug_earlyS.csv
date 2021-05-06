@@ -1,0 +1,10 @@
+batch_size,epochs,learning_rate,num_layers,optimizer,activation,decay_sequence,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,use_layerwise_dropout_batchnorm,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+128,50,0.1,6,sgd,tanh,"[1, 2, 4, 4, 2, 1]",0.3,13,3,0.2,0.3,sigmoid,same,4,True,,,,,,,,
+256,50,0.1,4,sgd,tanh,"[1, 0.5, 0.25, 0.25]",0.4,25,41,0.3,0.1,sigmoid,same,2,False,2.64650018649,0.662257313728,0.662257313728,1.0,2.65063019899,0.656400263309,0.656400263309,1.0
+64,50,0.1,2,sgd,tanh,"[1, 2]",0.0,25,7,0.001,0.0001,sigmoid,same,5,False,,,,,,,,
+64,50,0.025,3,sgd,tanh,"[1, 1, 1]",0.2,25,15,0.0001,0.3,sigmoid,same,4,False,0.642389777596,0.662050187588,0.662050187588,1.0,0.646326333568,0.65625,0.65625,1.0
+256,50,0.05,2,sgd,tanh,"[1, 0.5]",0.1,11,21,0.1,0.001,sigmoid,same,5,True,,,,,,,,
+1024,50,0.05,3,sgd,tanh,"[1, 2, 2]",0.0,13,15,0.01,0.01,sigmoid,same,3,False,0.88422767818,0.659912109375,0.659912109375,1.0,0.888349294662,0.65234375,0.65234375,1.0
+1024,50,0.005,2,sgd,tanh,"[1, 1]",0.001,27,41,0.3,0.001,sigmoid,same,3,True,,,,,,,,
+sgd,2,0.01,50,1024,True,9,same,sigmoid,0.3,0.3,33,21,0.3,"[1, 2]",tanh,1.7115957737,0.5048828125,0.0,0.0,1.71143567562,0.502766907215,0.0,0.0
+sgd,6,0.0001,50,1024,True,9,same,sigmoid,0.001,0.3,7,27,0.3,"[1, 4, 8, 8, 4, 1]",tanh,,,,,,,,

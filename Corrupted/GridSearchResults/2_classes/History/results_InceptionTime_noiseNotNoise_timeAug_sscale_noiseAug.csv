@@ -1,0 +1,4 @@
+batch_size,epochs,learning_rate,num_channels,optimizer,bottleneck_size,kernel_size,module_activation,module_output_activation,nr_modules,num_filters,output_activation,shortcut_activation,use_bottleneck,use_residuals,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+256,100,0.001,3,rmsprop,34,50,relu,softmax,1,38,sigmoid,tanh,True,True,0.1265818178653717,0.9793627858161926,0.9721620678901672,0.9786328077316284,0.8187551498413086,0.9006234407424927,0.8480113744735718,0.8628054261207581
+512,100,0.001,3,sgd,28,50,sigmoid,softmax,6,34,sigmoid,relu,True,False,0.6404229402542114,0.6624152660369873,0.6624152660369873,1.0,0.6448472142219543,0.65478515625,0.65478515625,1.0
+1024,100,0.01,3,adam,34,40,sigmoid,sigmoid,9,38,sigmoid,tanh,False,False,nan,nan,nan,nan,nan,nan,nan,nan

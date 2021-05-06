@@ -34,9 +34,8 @@ from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.Modeling.DynamicModels import DynamicModels
-from Classes.Modeling.TrainSingleModel import TrainSingleModel
+from Classes.Modeling.TrainSingleModelRam import TrainSingleModelRam
 from Classes.DataProcessing.RamLoader import RamLoader
-from Classes.DataProcessing.ts_RamGenerator import modified_data_generator
 import json
 
 import gc
@@ -64,194 +63,214 @@ helper = HelperFunctions()
 tf.config.optimizer.set_jit(True)
 mixed_precision.set_global_policy('mixed_float16')
 
-load_args = {
-    'earth_explo_only' : True,
-    'noise_earth_only' : False,
-    'noise_not_noise' : False,
-    'downsample' : True,
-    'upsample' : True,
-    'frac_diff' : 1,
-    'seed' : 1,
-    'subsample_size' : 0.25,
-    'balance_non_train_set' : False,
-    'use_true_test_set' : False,
-    'even_balance' : True
-}
-loadData = LoadData(**load_args)
-train_ds, val_ds, test_ds = loadData.get_datasets()
-noise_ds = loadData.noise_ds
-handler = DataHandler(loadData)
+
+def run(scaler_name, earth_explo_only = False, noise_not_noise = False):
+    load_args = {
+        'earth_explo_only' : earth_explo_only,
+        'noise_earth_only' : False,
+        'noise_not_noise' : noise_not_noise,
+        'downsample' : True,
+        'upsample' : True,
+        'frac_diff' : 1,
+        'seed' : 1,
+        'subsample_size' : 0.25,
+        'balance_non_train_set' : False,
+        'use_true_test_set' : False,
+        'even_balance' : True
+    }
+    loadData = LoadData(**load_args)
+    train_ds, val_ds, test_ds = loadData.get_datasets()
+    noise_ds = loadData.noise_ds
+    handler = DataHandler(loadData)
 
 
 
-model_type = "Meier_CNN"
-is_lstm = True
-num_channels = 3    
+    model_type = "Meier_CNN"
+    is_lstm = True
+    num_channels = 3
+    beta = 2    
 
-use_time_augmentor = True
-scaler_name = "normalize"
-use_noise_augmentor = True
-filter_name = None
-band_min = 2.0
-band_max = 4.0
-highpass_freq = 0.075
-
-
-use_tensorboard = True
-use_liveplots = False
-use_custom_callback = True
-use_early_stopping = True
-start_from_scratch = False
-use_reduced_lr = True
-log_data = True
-
-shutdown = False
-
-num_classes = len(list(set(loadData.label_dict.values())))
-
-def clear_tensorboard_dir():
-        import os
-        import shutil
-        path = f"{base_dir}/Tensorboard_dir/fit"
-        files = os.listdir(path)
-        print(files)
-        for f in files:
-            shutil.rmtree(os.path.join(path,f))
-if use_tensorboard:
-    clear_tensorboard_dir()
+    use_time_augmentor = True
+    scaler_name = scaler_name
+    use_noise_augmentor = True
+    filter_name = None
+    band_min = 2.0
+    band_max = 4.0
+    highpass_freq = 0.075
 
 
+    use_tensorboard = True
+    use_liveplots = False
+    use_custom_callback = True
+    use_early_stopping = True
+    start_from_scratch = False
+    use_reduced_lr = True
+    log_data = True
 
-epochs = 40
-batch_size = 48
+    shutdown = False
 
+    num_classes = len(list(set(loadData.label_dict.values())))
 
-_,_ , timesteps = handler.get_trace_shape_no_cast(train_ds, use_time_augmentor)
-input_shape = (timesteps, num_channels)
-
-tf.config.optimizer.set_jit(True)
-mixed_precision.set_global_policy('mixed_float16')
-
-
-ramLoader = RamLoader(loadData, 
-                      handler, 
-                      use_time_augmentor = use_time_augmentor, 
-                      use_noise_augmentor = use_noise_augmentor, 
-                      scaler_name = scaler_name,
-                      filter_name = filter_name, 
-                      band_min = band_min,
-                      band_max = band_max,
-                      highpass_freq = highpass_freq, 
-                      load_test_set = True, 
-                      meier_load = True)
-
-x_train, y_train, x_val, y_val, x_test, y_test, noiseAug = ramLoader.load_to_ram()
+    def clear_tensorboard_dir():
+            import os
+            import shutil
+            path = f"{base_dir}/Tensorboard_dir/fit"
+            files = os.listdir(path)
+            print(files)
+            for f in files:
+                shutil.rmtree(os.path.join(path,f))
+    if use_tensorboard:
+        clear_tensorboard_dir()
 
 
 
+    epochs = 40
+    batch_size = 48
+
+
+    _,_ , timesteps = handler.get_trace_shape_no_cast(train_ds, use_time_augmentor)
+    input_shape = (timesteps, num_channels)
+
+    tf.config.optimizer.set_jit(True)
+    mixed_precision.set_global_policy('mixed_float16')
+
+
+    ramLoader = RamLoader(loadData, 
+                        handler, 
+                        use_time_augmentor = use_time_augmentor, 
+                        use_noise_augmentor = use_noise_augmentor, 
+                        scaler_name = scaler_name,
+                        filter_name = filter_name, 
+                        band_min = band_min,
+                        band_max = band_max,
+                        highpass_freq = highpass_freq, 
+                        load_test_set = False, 
+                        meier_load = True)
+
+    x_train, y_train, x_val, y_val, noiseAug = ramLoader.load_to_ram()
 
 
 
-modelTrain = TrainSingleModel(x_train, y_train, x_val, y_val, x_test, y_test, noiseAug, helper,
-                              loadData, model_type, num_channels, use_tensorboard, use_liveplots,
-                              use_custom_callback, use_early_stopping, use_reduced_lr, ramLoader,
-                              log_data = log_data, results_df = None, results_file_name = None, index = None, 
-                              start_from_scratch = start_from_scratch)
-
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : False,
-    "use_averagepool" : False,
-    "use_batchnorm" : False
-}
-
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
-
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
-
-# =================================================================
-
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : True,
-    "use_averagepool" : False,
-    "use_batchnorm" : False
-}
-
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
-
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
-
-# =================================================================
- 
-
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : False,
-    "use_averagepool" : True,
-    "use_batchnorm" : False
-}
-
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
-
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
-
-# =================================================================
- 
 
 
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : False,
-    "use_averagepool" : False,
-    "use_batchnorm" : True
-}
 
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
+    modelTrain = TrainSingleModelRam(noiseAug, helper, loadData,
+                                     model_type, num_channels, use_tensorboard,
+                                     use_liveplots, use_custom_callback, 
+                                     use_early_stopping, use_reduced_lr, ramLoader,
+                                     log_data = log_data,
+                                     start_from_scratch = False, 
+                                     beta = beta)
 
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : False,
+        "use_averagepool" : False,
+        "use_batchnorm" : False
+    }
+
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
+
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
+
+    # =================================================================
+
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : True,
+        "use_averagepool" : False,
+        "use_batchnorm" : False
+    }
+
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
+
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
+
+    # =================================================================
+    tf.config.optimizer.set_jit(True)
+    mixed_precision.set_global_policy('mixed_float16')
+
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : False,
+        "use_averagepool" : True,
+        "use_batchnorm" : False
+    }
+
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
+
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
+
+    # =================================================================
+    
+    tf.config.optimizer.set_jit(True)
+    mixed_precision.set_global_policy('mixed_float16')
+
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : False,
+        "use_averagepool" : False,
+        "use_batchnorm" : True
+    }
+
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
+
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
 
 
-# =================================================================
- 
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : True,
-    "use_averagepool" : False,
-    "use_batchnorm" : True
-}
+    # =================================================================
+    tf.config.optimizer.set_jit(True)
+    mixed_precision.set_global_policy('mixed_float16')
 
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : True,
+        "use_averagepool" : False,
+        "use_batchnorm" : True
+    }
 
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
 
-# =================================================================
- 
-params = {
-    "epochs" : epochs,
-    "batch_size" : batch_size,
-    "use_maxpool" : False,
-    "use_averagepool" : True,
-    "use_batchnorm" : True
-}
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
 
-model = modelTrain.run(16, 15, evaluate_train = False, evaluate_val = False, evaluate_test = True, meier_mode = True, **params)
+    # =================================================================
+    tf.config.optimizer.set_jit(True)
+    mixed_precision.set_global_policy('mixed_float16')
 
-tf.keras.backend.clear_session()
-tf.compat.v1.reset_default_graph()
-del model
+    params = {
+        "epochs" : epochs,
+        "batch_size" : batch_size,
+        "use_maxpool" : False,
+        "use_averagepool" : True,
+        "use_batchnorm" : True
+    }
+
+    model = modelTrain.run(x_train, y_train, x_val, y_val, None, None, 16, 15, meier_mode = True, **params)
+
+    tf.keras.backend.clear_session()
+    tf.compat.v1.reset_default_graph()
+    del model
+
+if __name__ == "__main__":
+    run("standard", noise_not_noise = True)
+    run("robust", noise_not_noise = True)
+    run("minmax", noise_not_noise = True)
+    run("standard", earth_explo_only = True)
+    run("robust", earth_explo_only = True)
+    run("minmax", earth_explo_only = True)
+    run("normalize", earth_explo_only = True)

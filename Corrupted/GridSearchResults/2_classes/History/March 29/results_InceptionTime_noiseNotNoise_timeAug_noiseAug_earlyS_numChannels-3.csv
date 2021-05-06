@@ -1,0 +1,6 @@
+optimizer,num_channels,learning_rate,epochs,batch_size,use_residuals,use_bottleneck,shortcut_activation,reg_shortcut,reg_module,output_activation,num_filters,nr_modules,module_output_activation,module_activation,l2_r,l1_r,kernel_size,bottleneck_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+adam,3,0.1,50,512,True,True,sigmoid,False,False,sigmoid,28,1,softmax,relu,0.0,0.01,46,34,,,,,,,,
+sgd,3,0.001,50,512,True,True,sigmoid,True,False,sigmoid,30,6,relu,sigmoid,0.01,0.001,38,46,,,,,,,,
+adam,3,0.01,50,32,True,True,sigmoid,True,False,sigmoid,32,1,sigmoid,linear,0.01,0.001,44,30,,,,,,,,
+adam,3,0.01,50,512,False,False,relu,False,False,sigmoid,34,1,relu,softmax,0.01,0.01,52,44,,,,,,,,
+adam,3,0.01,50,64,True,False,relu,False,False,sigmoid,34,3,tanh,tanh,0,0.0001,50,46,nan,nan,nan,nan,nan,nan,nan,nan

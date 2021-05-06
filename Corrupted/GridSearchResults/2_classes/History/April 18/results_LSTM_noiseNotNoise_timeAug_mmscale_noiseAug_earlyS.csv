@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,num_channels,num_layers,optimizer,activation,decay_sequence,dropout_rate,filters,kernel_size,l1_r,l2_r,output_layer_activation,padding,start_neurons,use_layerwise_dropout_batchnorm,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall
+34,40,0.025,2,6,sgd,tanh,"[1, 2, 4, 4, 2, 1]",0.1,11,5,5e-05,0.005,sigmoid,same,34,False,,,,,,,,

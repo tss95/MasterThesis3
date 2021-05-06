@@ -1,0 +1,2 @@
+meier_load,activation,batch_size,dropout_T_bn_F,dropout_rate,epochs,growth_sequence,l1_r,l2_r,learning_rate,num_layers,optimizer,output_layer_activation,units,use_layerwise_dropout_batchnorm,train_loss,train_accuracy,train_precision,train_recall,train_f3,val_loss,val_accuracy,val_precision,val_recall,val_f3,confusion_matrix
+False,relu,64,False,0.001,25,"[1, 2]",0,0.0001,0.01,2,sgd,sigmoid,320,True,,,,,,,,,,,
