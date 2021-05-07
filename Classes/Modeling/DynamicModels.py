@@ -14,6 +14,7 @@ from tensorflow.keras import utils
 from tensorflow.keras import mixed_precision
 
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
+from Classes.DataProcessing.HelperFunctions import HelperFunctions
 
 class DynamicModels():
     
@@ -473,6 +474,7 @@ class DynamicModels():
         return InceptionTimeModel(self.input_shape, self.num_classes, **p).model
 
     def create_Meier_CNN_model(self, **p):
+        helper = HelperFunctions()
 
         use_maxpool = p['use_maxpool']
         use_averagepool = p['use_averagepool']
@@ -524,8 +526,8 @@ class DynamicModels():
             "loss" : loss,
             "optimizer" : tf.keras.optimizers.Adam(learning_rate=0.001),
             "metrics" : [acc,
-                        tf.keras.metrics.Precision(thresholds=None, top_k=None, class_id=None, name=None, dtype=None),
-                        tf.keras.metrics.Recall(thresholds=None, top_k=None, class_id=None, name=None, dtype=None)]}
+                        helper.precision,
+                        helper.recall]}
         model.compile(**compile_args)
         return model
 

@@ -264,13 +264,8 @@ def run(scaler_name, earth_explo_only = False, noise_not_noise = False):
 
     tf.keras.backend.clear_session()
     tf.compat.v1.reset_default_graph()
-    del model
+    del model, x_train, y_train, x_val, y_val, noiseAug
+    gc.collect()
 
 if __name__ == "__main__":
-    run("standard", noise_not_noise = True)
-    run("robust", noise_not_noise = True)
-    run("minmax", noise_not_noise = True)
-    run("standard", earth_explo_only = True)
-    run("robust", earth_explo_only = True)
-    run("minmax", earth_explo_only = True)
-    run("normalize", earth_explo_only = True)
+    run("normalize", noise_not_noise = True)

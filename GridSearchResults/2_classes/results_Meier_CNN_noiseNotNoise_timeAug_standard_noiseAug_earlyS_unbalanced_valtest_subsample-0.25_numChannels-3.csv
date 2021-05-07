@@ -1,4 +1,6 @@
 epochs,batch_size,use_maxpool,use_averagepool,use_batchnorm,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
-40,48,False,False,False,0.6930818557739258,0.507301179604,1.0,0.00029,0.000362,0.6931496858596802,0.483796296296,1.0,0.000598,0.000747,"[[3133    0]
+40,48,False,False,False,0.693081855774,0.507301179604,1.0,0.00029,0.000362,0.69314968586,0.483796296296,1.0,0.000598,0.000747,"[[3133    0]
  [3345    2]]"
 40,48,True,False,False,,,,,,,,,,,
+40,48,False,False,False,,,,,,,,,,,
+40,48,False,False,False,,,,,,,,,,,
