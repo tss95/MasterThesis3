@@ -1,9 +1,9 @@
 
 
-import keras
-from keras.datasets import mnist
-from keras.utils import to_categorical
-from keras.models import Sequential
+import tensorflow as tf
+import tensorflow.keras
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
 from keras.layers import Flatten, Dense, Activation
 
 import numpy as np
