@@ -37,4 +37,14 @@ batch_size,epochs,learning_rate,optimizer,use_residuals,use_bottleneck,num_modul
  [  49  205]]"
 64,50,0.0001,adam,True,True,1,72,40,40,relu,linear,relu,sigmoid,True,True,0.0,0.0,0.645647704601,0.634589174455,0.621333,0.684285,0.670694,0.659445285797,0.594350961538,0.122069,0.69685,0.358881,"[[1801 1273]
  [  77  177]]"
-128,50,0.01,sgd,True,True,4,64,48,56,relu,relu,relu,sigmoid,True,False,0.0001,0.01,,,,,,,,,,,
+128,50,0.01,sgd,True,True,4,64,48,56,relu,relu,relu,sigmoid,True,False,0.0001,0.01,0.43748408556,0.810698987539,0.908693,0.689702,0.724629,0.289123058319,0.887019230769,0.354762,0.586614,0.518802,"[[2803  271]
+ [ 105  149]]"
+256,50,0.01,sgd,True,False,1,64,48,88,tanh,relu,relu,sigmoid,False,True,0.1,0.1,,,,,,,,,,,
+256,50,0.01,sgd,False,True,1,48,32,88,relu,relu,tanh,sigmoid,False,False,0.0001,0.001,0.69313710928,0.513549804688,0.55373,0.125404,0.148355,0.692604064941,0.832632211538,0.091644,0.133858,0.122567,"[[2737  337]
+ [ 220   34]]"
+128,50,0.0001,rmsprop,True,False,1,64,56,88,tanh,linear,relu,sigmoid,True,False,0.0,0.1,0.664213895798,0.616822429907,0.606032,0.661933,0.649942,0.669607043266,0.574519230769,0.115232,0.685039,0.344418,"[[1738 1336]
+ [  80  174]]"
+128,50,0.01,sgd,True,False,4,72,48,88,relu,linear,relu,sigmoid,False,True,0.001,0.0,,,,,,,,,,,
+256,50,0.01,adam,False,False,1,56,48,64,relu,linear,relu,sigmoid,False,False,0.01,0.01,,,,,,,,,,,
+64,50,0.001,sgd,True,True,1,32,32,72,tanh,linear,relu,sigmoid,False,False,0.001,0.1,,,,,,,,,,,
+256,50,0.001,rmsprop,True,True,1,48,32,88,relu,relu,relu,sigmoid,False,False,0.1,0.01,,,,,,,,,,,
