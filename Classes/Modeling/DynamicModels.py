@@ -53,6 +53,8 @@ class DynamicModels():
             self.model = self.create_LSTM_FCN_model(**p)
         if self.model_type == "MLSTM_FCN":
             self.model = self.create_MLSTM_FCN_model(**p)
+        if self.model_type == "MLSTM_FCN_edited":
+            self.model = self.create_MLSTM_FCN_edited_model(**p)
         if self.model_type == "CNN":
             self.model = self.create_CNN_model(**p)
         if self.model_type == "CNN_short":
@@ -184,23 +186,59 @@ class DynamicModels():
 
         # LSTM block
         # Permute layer is noramlly first in convolution block
-        #x = Permute((2,1))(ip)
-        x = Masking()(ip)
+        x = Permute((2,1))(ip)
+        x = Masking()(x)
         x = LSTM(units, name = "lstm_block_out")(x)
         x = Dropout(0.8)(x)
 
-        y = Conv1D(60, 80, padding = "same", kernel_initializer ="he_uniform")(ip)
+        y = Conv1D(128, 8, padding = "same", kernel_initializer ="he_uniform")(ip)
         y = BatchNormalization()(y)
         y = Activation('relu')(y)
         y = self.squeeze_excite_block(y)
 
-        y = Conv1D(120, 50, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = Conv1D(256, 5, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
         y = Activation('relu')(y)
         y = self.squeeze_excite_block(y)
 
-        y = Conv1D(60, 30, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = Conv1D(128, 3, padding = "same", kernel_initializer ="he_uniform")(y)
         y = BatchNormalization()(y)
+        y = Activation('relu')(y)
+        y = GlobalAveragePooling1D()(y)
+
+        x = concatenate([x, y])
+        output_layer = Dense(self.output_nr_nodes(self.num_classes), activation = output_layer_activation, dtype = 'float32')(x)
+        model = tf.keras.Model(inputs = input_layer, outputs = output_layer)
+
+        return model
+
+
+    def create_MLSTM_FCN_edited_model(self, **p):
+        units = p['units']
+        output_layer_activation = p['output_layer_activation']
+        
+        input_layer = Input(self.input_shape)
+        ip = input_layer
+
+        # LSTM block
+        # Permute layer is noramlly first in convolution block
+        x = Permute((2,1))(ip)
+        x = Masking()(x)
+        x = LSTM(units, name = "lstm_block_out")(x)
+        x = Dropout(0.8)(x)
+
+        y = Conv1D(78, 72, padding = "same", kernel_initializer ="he_uniform")(ip)
+        y = MaxPool1D()(y)
+        y = Activation('relu')(y)
+        y = self.squeeze_excite_block(y)
+
+        y = Conv1D(312, 72, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = MaxPool1D()(y)
+        y = Activation('relu')(y)
+        y = self.squeeze_excite_block(y)
+
+        y = Conv1D(624, 72, padding = "same", kernel_initializer ="he_uniform")(y)
+        y = MaxPool1D()(y)
         y = Activation('relu')(y)
         y = GlobalAveragePooling1D()(y)
 

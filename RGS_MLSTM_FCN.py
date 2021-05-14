@@ -51,9 +51,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : True,
+    'earth_explo_only' : False,
     'noise_earth_only' : False,
-    'noise_not_noise' : False,
+    'noise_not_noise' : True,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
@@ -72,10 +72,10 @@ handler = DataHandler(loadData)
 #- Consider editing the decay_sequences.
 
 hyper_grid = {
-        "batch_size" : [128],
+        "batch_size" : [68, 128, 256],
         "epochs" : [50],
-        "learning_rate" : [0.001],
-        "optimizer" : ["adam"],
+        "learning_rate" : [0.01, 0.0001, 0.001],
+        "optimizer" : ["adam", "sgd", "rmsprop"],
         "units" : [8, 64, 128],
         "output_layer_activation" : ["sigmoid"]
     }
@@ -86,7 +86,7 @@ num_channels = 3
 beta = 2   
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0

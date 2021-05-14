@@ -77,24 +77,24 @@ hyper_grid = {
     "optimizer" : ["sgd", "adam", "rmsprop"],
     "use_residuals" : [True, True, False],
     "use_bottleneck" : [True, True, False],
-    "num_modules" : np.concatenate((np.array([1]), np.arange(1, 7, 3))),
-    "filter_size" : np.arange(32, 89, 8),
-    "bottleneck_size" : np.arange(32, 57, 8),
-    "num_filters" : np.arange(32, 89, 8),
-    "residual_activation" : ["relu", "relu", "relu", "relu", "tanh"],
-    "module_activation" : ["linear", "linear", "linear", "relu", "tanh"],
-    "module_output_activation" : ["relu", "relu", "relu", "relu", "linear", "tanh"],
+    "num_modules" : np.concatenate((np.array([1]), np.arange(3, 7, 3))),
+    "filter_size" : np.arange(56, 88, 8),
+    "bottleneck_size" : [32],
+    "num_filters" : np.arange(40, 80,8),
+    "residual_activation" : ["relu"],
+    "module_activation" : ["linear"],
+    "module_output_activation" : ["relu"],
     "output_layer_activation": ["sigmoid"],
-    "reg_residual": [True, False, False],
-    "reg_module" : [True, False, False],
-    "l1_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0],
-    "l2_r" : [0.1, 0.01, 0.01, 0.001, 0.0001, 0]
+    "reg_residual": [False],
+    "reg_module" : [False],
+    "l1_r" : [0],
+    "l2_r" : [0]
 }
 
 model_type = "InceptionTime"
 is_lstm = True
 num_channels = 3
-beta = 2    
+beta = 2   
 
 use_time_augmentor = True
 scaler_name = "normalize"

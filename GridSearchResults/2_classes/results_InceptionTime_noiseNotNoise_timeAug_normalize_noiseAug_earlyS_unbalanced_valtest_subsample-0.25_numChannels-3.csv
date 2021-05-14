@@ -1,3 +1,4 @@
-batch_size,epochs,learning_rate,optimizer,use_residuals,use_bottleneck,num_modules,filter_size,bottleneck_size,num_filters,residual_activation,module_activation,module_output_activation,output_layer_activation,reg_residual,reg_module,l1_r,l2_r,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
-512,50,0.01,rmsprop,True,False,1,40,26,32,tanh,sigmoid,sigmoid,sigmoid,True,False,0,0.1,0.258977144957,0.898389862805,0.908233,0.883134,0.895508,0.219855934381,0.92236328125,0.925237,0.924362,0.924799,"[[2734  237]
- [ 240 2933]]"
+batch_size,epochs,learning_rate,optimizer,use_residuals,use_bottleneck,num_modules,filter_size,bottleneck_size,num_filters,residual_activation,module_activation,module_output_activation,output_layer_activation,reg_residual,reg_module,l1_r,l2_r,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
+128,50,0.001,rmsprop,False,True,4,88,40,40,relu,linear,relu,sigmoid,False,False,0,0,0.0940671414137,0.966844512195,0.981639,0.950529,0.956592,0.109133422375,0.9684375,0.970249,0.968485,0.968837,"[[3002   98]
+ [ 104 3196]]"
+64,50,0.001,rmsprop,True,False,6,56,32,64,relu,linear,relu,sigmoid,False,False,0,0,,,,,,,,,,,

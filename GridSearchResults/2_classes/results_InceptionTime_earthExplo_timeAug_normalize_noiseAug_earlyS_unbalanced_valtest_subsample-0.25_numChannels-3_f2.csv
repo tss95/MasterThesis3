@@ -1,50 +1,145 @@
-batch_size,epochs,learning_rate,optimizer,use_residuals,use_bottleneck,num_modules,filter_size,bottleneck_size,num_filters,residual_activation,module_activation,module_output_activation,output_layer_activation,reg_residual,reg_module,l1_r,l2_r,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
-128,50,0.001,rmsprop,False,True,4,88,40,40,relu,linear,relu,sigmoid,False,False,0.0,0.0,,,,,,,,,,,
-128,50,0.001,rmsprop,False,True,4,88,40,40,relu,linear,relu,sigmoid,False,False,0.0,0.0,0.135304868221,0.949109228972,0.950316,0.947487,0.948051,0.332770287991,0.874399038462,0.353047,0.775591,0.625794,"[[2713  361]
+meier_load,use_residuals,use_bottleneck,residual_activation,reg_residual,reg_module,output_layer_activation,optimizer,num_modules,num_filters,module_output_activation,module_activation,learning_rate,l2_r,l1_r,filter_size,epochs,bottleneck_size,batch_size,train_loss,train_accuracy,train_precision,train_recall,train_f2,val_loss,val_accuracy,val_precision,val_recall,val_f2,confusion_matrix
+False,True,False,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.0001,0,0,40,50,32,128,0.693106949329,0.501947040498,0.622642,0.003221,0.004021,0.689546108246,0.921574519231,0.0,0.0,0.0,"[[3067    7]
+ [ 254    0]]"
+False,True,False,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,40,50,32,64,0.657020628452,0.620643496885,0.606945,0.679014,0.663263,0.67066693306,0.567908653846,0.114081,0.688976,0.343137,"[[1715 1359]
+ [  79  175]]"
+False,False,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,40,50,32,64,0.496243417263,0.767352998442,0.754909,0.789946,0.782681,0.527499258518,0.736478365385,0.187563,0.73622,0.464481,"[[2264  810]
+ [  67  187]]"
+False,True,False,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,40,50,32,128,0.520840227604,0.749123831776,0.719402,0.81469,0.793665,0.596950173378,0.676081730769,0.159504,0.759843,0.433513,"[[2057 1017]
+ [  61  193]]"
+False,True,False,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,40,50,32,128,0.0561375208199,0.985324182243,0.981642,0.989068,0.987574,0.410916537046,0.860877403846,0.3267,0.775591,0.6084,"[[2668  406]
  [  57  197]]"
-128,50,0.001,rmsprop,False,True,4,88,40,40,relu,linear,relu,sigmoid,False,False,0.0,0.0,,,,,,,,,,,
-64,50,0.0001,adam,True,True,1,72,56,88,relu,linear,relu,sigmoid,False,True,0.001,0.0001,0.711200356483,0.497833917445,0.498253,0.995412,0.829814,0.713848292828,0.0784254807692,0.075972,0.992126,0.290792,"[[   9 3065]
- [   2  252]]"
-64,50,0.01,sgd,True,True,1,48,40,88,relu,tanh,relu,sigmoid,False,True,0.001,0.01,1.55841577053,0.493915498442,0.495674,0.850024,0.743693,1.56005597115,0.192908653846,0.071831,0.80315,0.264523,"[[ 438 2636]
- [  50  204]]"
-64,50,0.001,rmsprop,False,True,1,40,48,56,relu,relu,relu,sigmoid,True,False,0.001,0.0001,0.517361402512,0.747566199377,0.708929,0.837775,0.80839,0.63054227829,0.644831730769,0.153214,0.807087,0.435429,"[[1941 1133]
- [  49  205]]"
-128,50,0.01,sgd,True,True,4,32,32,88,relu,linear,relu,sigmoid,False,False,0.0001,0.01,0.424043416977,0.810212227414,0.816667,0.798731,0.802255,0.435312837362,0.806790865385,0.249678,0.76378,0.540993,"[[2491  583]
- [  60  194]]"
-128,50,0.001,sgd,True,True,4,80,40,80,relu,tanh,relu,sigmoid,True,False,0.0,0.001,0.491746544838,0.775238512461,0.754029,0.815227,0.802205,0.555846750736,0.725060096154,0.187913,0.783465,0.479518,"[[2214  860]
- [  55  199]]"
-64,50,0.01,sgd,True,True,1,48,48,64,tanh,linear,tanh,sigmoid,False,False,0.01,0.0001,0.693125247955,0.482062889408,0.488934,0.852806,0.742317,0.694055497646,0.175480769231,0.072752,0.834646,0.26972,"[[ 372 2702]
- [  42  212]]"
-256,50,0.001,adam,True,True,1,48,48,32,relu,tanh,relu,sigmoid,False,True,0.0,0.001,0.651530265808,0.633056640625,0.602916,0.773382,0.73199,0.725342333317,0.518028846154,0.112959,0.775591,0.356884,"[[1527 1547]
- [  57  197]]"
-256,50,0.001,rmsprop,False,False,1,48,56,40,relu,linear,relu,sigmoid,False,False,0.0001,0.1,0.623541116714,0.666088867188,0.65741,0.689697,0.682989,0.635988712311,0.640324519231,0.130196,0.653543,0.362287,"[[1965 1109]
- [  88  166]]"
-256,50,0.0001,rmsprop,False,False,1,80,32,48,tanh,relu,relu,sigmoid,False,False,0.01,0.1,0.626647055149,0.658203125,0.659751,0.649349,0.651403,0.624422907829,0.657752403846,0.135202,0.645669,0.367878,"[[2025 1049]
- [  90  164]]"
-64,50,0.001,sgd,True,True,1,64,32,72,relu,linear,relu,sigmoid,False,True,0.1,0.0001,2.27093720436,0.498734423676,0.49871,1.0,0.832615,2.273229599,0.0766225961538,0.076345,1.0,0.292425,"[[   1 3073]
- [   0  254]]"
-256,50,0.01,sgd,True,True,1,40,48,48,relu,linear,relu,sigmoid,False,False,0.0001,0.0,0.692489326,0.5666015625,0.627216,0.322299,0.357011,0.691202998161,0.770432692308,0.112462,0.291339,0.221027,"[[2490  584]
- [ 180   74]]"
-64,50,0.01,rmsprop,True,True,1,40,56,56,relu,linear,relu,sigmoid,True,False,0.01,0.001,0.487218111753,0.774338006231,0.768502,0.783504,0.780457,0.504198849201,0.746694711538,0.192268,0.724409,0.466295,"[[2301  773]
- [  70  184]]"
-128,50,0.01,sgd,True,True,1,40,48,40,relu,linear,linear,sigmoid,True,False,0.0,0.0001,0.693250477314,0.495813862928,0.495,0.545925,0.534918,0.693739771843,0.438401442308,0.077888,0.586614,0.254353,"[[1310 1764]
- [ 105  149]]"
-256,50,0.001,sgd,False,True,1,56,40,40,relu,linear,relu,sigmoid,False,False,0.1,0.0,0.693143188953,0.501171875,0.272727,0.000294,0.000367,0.692803502083,0.923076923077,0.25,0.003937,0.004902,"[[3071    3]
- [ 253    1]]"
-64,50,0.0001,rmsprop,True,False,1,48,56,80,relu,linear,relu,sigmoid,False,True,0.0,0.01,0.682476460934,0.628845404984,0.615297,0.682382,0.667819,0.68850928545,0.587439903846,0.124748,0.732283,0.370961,"[[1769 1305]
- [  68  186]]"
-256,50,0.01,adam,True,False,1,80,48,56,relu,linear,relu,sigmoid,False,False,0.0,0.01,0.539169073105,0.738232421875,0.696372,0.84218,0.80833,0.655273377895,0.635817307692,0.149854,0.807087,0.42995,"[[1911 1163]
- [  49  205]]"
-64,50,0.0001,adam,True,True,1,72,40,40,relu,linear,relu,sigmoid,True,True,0.0,0.0,0.645647704601,0.634589174455,0.621333,0.684285,0.670694,0.659445285797,0.594350961538,0.122069,0.69685,0.358881,"[[1801 1273]
- [  77  177]]"
-128,50,0.01,sgd,True,True,4,64,48,56,relu,relu,relu,sigmoid,True,False,0.0001,0.01,0.43748408556,0.810698987539,0.908693,0.689702,0.724629,0.289123058319,0.887019230769,0.354762,0.586614,0.518802,"[[2803  271]
- [ 105  149]]"
-256,50,0.01,sgd,True,False,1,64,48,88,tanh,relu,relu,sigmoid,False,True,0.1,0.1,,,,,,,,,,,
-256,50,0.01,sgd,False,True,1,48,32,88,relu,relu,tanh,sigmoid,False,False,0.0001,0.001,0.69313710928,0.513549804688,0.55373,0.125404,0.148355,0.692604064941,0.832632211538,0.091644,0.133858,0.122567,"[[2737  337]
- [ 220   34]]"
-128,50,0.0001,rmsprop,True,False,1,64,56,88,tanh,linear,relu,sigmoid,True,False,0.0,0.1,0.664213895798,0.616822429907,0.606032,0.661933,0.649942,0.669607043266,0.574519230769,0.115232,0.685039,0.344418,"[[1738 1336]
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.001,0,0,40,50,32,128,0.60690331459,0.68601538162,0.668353,0.735188,0.720772,0.637011408806,0.634314903846,0.132723,0.685039,0.373872,"[[1937 1137]
  [  80  174]]"
-128,50,0.01,sgd,True,False,4,72,48,88,relu,linear,relu,sigmoid,False,True,0.001,0.0,,,,,,,,,,,
-256,50,0.01,adam,False,False,1,56,48,64,relu,linear,relu,sigmoid,False,False,0.01,0.01,,,,,,,,,,,
-64,50,0.001,sgd,True,True,1,32,32,72,tanh,linear,relu,sigmoid,False,False,0.001,0.1,,,,,,,,,,,
-256,50,0.001,rmsprop,True,True,1,48,32,88,relu,relu,relu,sigmoid,False,False,0.1,0.01,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,40,50,32,128,0.0925049632788,0.974810163551,0.981631,0.967594,0.970369,0.29560276866,0.890925480769,0.385263,0.720472,0.613682,"[[2782  292]
+ [  71  183]]"
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,40,50,32,256,0.657919883728,0.68193359375,0.673846,0.701694,0.695942,0.671750307083,0.662560096154,0.142387,0.681102,0.387719,"[[2032 1042]
+ [  81  173]]"
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.01,0,0,40,50,32,128,0.31297186017,0.861906152648,0.926876,0.785017,0.809805,0.270057678223,0.891225961538,0.386555,0.724409,0.616622,"[[2782  292]
+ [  70  184]]"
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.0001,0,0,40,50,32,128,0.69318562746,0.49871008567,0.498698,1.0,0.832609,0.69587123394,0.0763221153846,0.076322,1.0,0.292357,"[[   0 3074]
+ [   0  254]]"
+False,True,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.001,0,0,40,50,32,64,0.483496755362,0.775408878505,0.751564,0.821035,0.806132,0.552244782448,0.714242788462,0.184044,0.799213,0.479,"[[2174  900]
+ [  51  203]]"
+False,True,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.0001,0,0,40,50,32,64,0.248053371906,0.908732476636,0.888579,0.934114,0.924638,0.393279612064,0.821213942308,0.275362,0.822835,0.588732,"[[2524  550]
+ [  45  209]]"
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.0001,0,0,40,50,32,256,0.435850590467,0.801831054688,0.836699,0.748653,0.764748,0.388286352158,0.822115384615,0.25578,0.69685,0.51815,"[[2559  515]
+ [  77  177]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.0001,0,0,40,50,32,128,0.350524455309,0.848033489097,0.920832,0.760664,0.788079,0.278073310852,0.896935096154,0.399093,0.692913,0.603981,"[[2809  265]
+ [  78  176]]"
+False,True,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.001,0,0,40,50,32,256,0.198429569602,0.926513671875,0.912021,0.943639,0.937141,0.351442337036,0.852163461538,0.320783,0.838583,0.633929,"[[2623  451]
+ [  41  213]]"
+False,True,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,40,50,32,128,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.001,0,0,40,50,32,64,0.598395109177,0.694582359813,0.681409,0.727867,0.718076,0.62508648634,0.653245192308,0.140575,0.692913,0.388007,"[[1998 1076]
+ [  78  176]]"
+False,False,False,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,40,50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.0001,0,0,40,50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,adam,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,128,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,False,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.01,0,0,[56 64 72 80],50,32,64,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.0001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,3,32,relu,linear,0.001,0,0,[56 64 72 80],50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.001,0,0,64,50,32,64,0.580488622189,0.707700545171,0.710631,0.698145,0.700607,0.577922284603,0.696514423077,0.148045,0.625984,0.380383,"[[2159  915]
+ [  95  159]]"
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.001,0,0,56,50,32,64,0.545027434826,0.730870327103,0.716608,0.761445,0.752034,0.579710185528,0.690805288462,0.160386,0.720472,0.4242,"[[2116  958]
+ [  71  183]]"
+False,True,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,64,50,32,128,0.0137028302997,0.99832067757,0.998097,0.998536,0.998448,0.478992879391,0.866887019231,0.331551,0.732283,0.589727,"[[2699  375]
+ [  68  186]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.01,0,0,56,50,32,256,0.281495302916,0.87880859375,0.903814,0.847077,0.857847,0.309478700161,0.868088942308,0.33913,0.767717,0.612822,"[[2694  380]
+ [  59  195]]"
+False,True,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.0001,0,0,56,50,32,64,0.173255592585,0.941004672897,0.958481,0.92162,0.928764,0.291709810495,0.880408653846,0.356574,0.704724,0.589592,"[[2751  323]
+ [  75  179]]"
+False,True,True,relu,False,False,sigmoid,sgd,3,32,relu,linear,0.01,0,0,64,50,32,64,0.398042559624,0.822551596573,0.81566,0.83226,0.828886,0.437529802322,0.794170673077,0.241916,0.795276,0.545651,"[[2441  633]
+ [  52  202]]"
+False,False,True,relu,False,False,sigmoid,adam,6,32,relu,linear,0.001,0,0,80,50,32,256,0.0985235348344,0.967163085938,0.953804,0.981686,0.97598,0.422758549452,0.840745192308,0.302857,0.834646,0.617716,"[[2586  488]
+ [  42  212]]"
+False,True,True,relu,False,False,sigmoid,adam,1,32,relu,linear,0.0001,0,0,80,50,32,128,0.647005081177,0.635221962617,0.640659,0.611518,0.617132,0.627591967583,0.652043269231,0.1289,0.61811,0.351388,"[[2013 1061]
+ [  97  157]]"
+False,True,True,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,72,50,32,256,0.536299407482,0.741040039063,0.707602,0.819068,0.794051,0.621216654778,0.65625,0.147943,0.73622,0.410088,"[[1997 1077]
+ [  67  187]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,56,50,32,128,0.531792938709,0.74793126947,0.722694,0.80244,0.785113,0.597619354725,0.686598557692,0.162532,0.748031,0.434783,"[[2095  979]
+ [  64  190]]"
+False,False,True,relu,False,False,sigmoid,rmsprop,3,32,relu,linear,0.0001,0,0,72,50,32,256,0.384899318218,0.833618164062,0.835892,0.829057,0.830415,0.398912400007,0.816105769231,0.261968,0.775591,0.557127,"[[2519  555]
+ [  57  197]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,1,32,relu,linear,0.01,0,0,80,50,32,256,0.605444967747,0.684936523438,0.665799,0.739056,0.723143,0.643793225288,0.633713942308,0.139117,0.732283,0.39524,"[[1923 1151]
+ [  68  186]]"
+False,True,True,relu,False,False,sigmoid,rmsprop,6,32,relu,linear,0.0001,0,0,64,50,32,128,0.271860092878,0.900360202492,0.914921,0.882235,0.888584,0.324774593115,0.862379807692,0.3223,0.728346,0.581761,"[[2685  389]
+ [  69  185]]"
+False,True,True,relu,False,False,sigmoid,sgd,1,32,relu,linear,0.0001,0,0,64,50,32,256,0.693125903606,0.50146484375,0.75,0.000147,0.000184,0.692025899887,0.923677884615,0.0,0.0,0.0,"[[3074    0]
+ [ 254    0]]"
+False,False,True,relu,False,False,sigmoid,sgd,6,32,relu,linear,0.001,0,0,72,50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,sgd,6,56,relu,linear,0.001,0,0,80,50,32,256,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,6,72,relu,linear,0.01,0,0,80,50,32,256,,,,,,,,,,,
+False,True,True,relu,False,False,sigmoid,rmsprop,6,72,relu,linear,0.01,0,0,56,50,32,128,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,0.0280627738684,0.991165303738,0.989494,0.992826,0.992158,0.432140618563,0.889423076923,0.386454,0.76378,0.638999,"[[2766  308]
+ [  60  194]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,3,64,relu,linear,0.0001,0,0,72,50,32,64,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,0.000926226435695,0.999926985981,0.999902,0.999951,0.999941,0.565901458263,0.893329326923,0.400394,0.799213,0.666448,"[[2770  304]
+ [  51  203]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,,,,,,,,,,,

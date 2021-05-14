@@ -1,2 +1,0 @@
-use_residuals,use_bottleneck,residual_activation,reg_residual,reg_module,output_layer_activation,optimizer,num_modules,num_filters,module_output_activation,module_activation,learning_rate,l2_r,l1_r,filter_size,epochs,bottleneck_size,batch_size,train_loss,train_accuracy,train_precision,train_recall,val_loss,val_accuracy,val_precision,val_recall,confusion_matrix
-False,True,relu,False,False,sigmoid,sgd,6,22,relu,linear,0.1,0.1,0.001,40,50,44,64,,,,,,,,,
