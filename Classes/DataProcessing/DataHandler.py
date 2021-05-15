@@ -1,19 +1,9 @@
 import numpy as np
-import pandas as pd
 import json
 import h5py
-import matplotlib.pyplot as plt
-from obspy import Stream, Trace, UTCDateTime
-import os
-import csv
-import seaborn as sns
-import time
-import tables
-import random
-
+from obspy import Stream, Trace
 import tensorflow as tf
-from .LoadData import LoadData
-from .TimeAugmentor import TimeAugmentor
+from tensorflow.keras import utils
 
 class DataHandler():
     
@@ -95,5 +85,11 @@ class DataHandler():
         tensor = tf.convert_to_tensor(value, dtype_hint, name)
         return tensor
     
+    def transform_labels(self, labels):
+        transformed_labels = np.empty((len(labels), 1))
+        for idx, label in enumerate(labels):
+            lab = self.label_dict.get(label)
+            lab = utils.to_categorical(labels, self.num_classes, dtype=np.int8)
+            
 
     

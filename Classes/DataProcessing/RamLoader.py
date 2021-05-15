@@ -1,21 +1,13 @@
 import numpy as np
-import pandas as pd
 from tensorflow.keras import utils
-from obspy import Stream, Trace, UTCDateTime
-import time
-import datetime
+from obspy import Stream, Trace
+
 
 import os
-import sys
 classes_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(classes_dir)
-#from Classes.DataProcessing.LoadData import LoadData
-from Classes.DataProcessing.HelperFunctions import HelperFunctions
-from Classes.DataProcessing.DataHandler import DataHandler
-from Classes.DataProcessing.DataGenerator import DataGenerator
 from Classes.DataProcessing.TimeAugmentor import TimeAugmentor
 from Classes.DataProcessing.NoiseAugmentor import NoiseAugmentor
-from Classes.Scaling.ScalerFitter import ScalerFitter
 from Classes.Scaling.MinMaxScalerFitter import MinMaxScalerFitter
 from Classes.Scaling.StandardScalerFitter import StandardScalerFitter
 from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
@@ -39,34 +31,6 @@ class RamLoader:
         self.load_test_set = load_test_set
         self.num_classes = len(set(handler.loadData.label_dict.values()))
         self.meier_load = meier_load
-
-    
-
-    """
-    Time, filter, scaler, noise:
-    1. timeaug
-    2. filter
-    3 scaler
-    4. noise
-    Time, scaler, noise:
-    1. timeaug
-    2. scaler
-    3. noise
-    filter, scaler, noise:
-    1. filter
-    2. scaler
-    3. noise
-    
-
-    PROBLEMS: 
-    - Scaling is different if a filter is used. If a filter is used, we need to load the data into ram,
-    detrend/filter it, as well as time augment it, prior to fitting the scaler.
-
-    - Initially this class was initiated once for each dataset. Since we are fitting timeAug and scalers
-    within this class now, we need to do everything in on initiation of the class
-
-    These solutions should be resolved.
-    """
     
     def fit_timeAug(self, ds, dataset_name):
         timeAug = None
