@@ -1,0 +1,2 @@
+batch_size,epochs,learning_rate,optimizer,units,output_layer_activation,train_loss,train_accuracy,train_precision,train_recall,train_f1,val_loss,val_accuracy,val_precision,val_recall,val_f1,confusion_matrix
+128,50,0.01,sgd,1,sigmoid,,,,,,,,,,,

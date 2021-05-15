@@ -1,11 +1,6 @@
+
 import numpy as np
 import os
-import sys
-import pandas as pd
-import seaborn as sns
-
-import pylab as pl
-import h5py
 
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
@@ -25,27 +20,15 @@ if gpus:
     # Memory growth must be set before GPUs have been initialized
     print(e)
 
-
-from sklearn.metrics import confusion_matrix
-
-
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.Modeling.RGS import RGS
-import json
-#from Classes import Tf_shutup
-#Tf_shutup.Tf_shutup()
-
 helper = HelperFunctions()
 
-import sys
 
-import random
-import gc
-import pprint
 
 mixed_precision.set_global_policy('mixed_float16')
 
@@ -71,6 +54,7 @@ handler = DataHandler(loadData)
 
 #- Consider editing the decay_sequences.
 
+
 hyper_grid = {
         "batch_size" : [64, 128, 256],
         "epochs" : [50],
@@ -90,13 +74,13 @@ hyper_grid = {
         "output_layer_activation" : ["sigmoid"]
     }
 
-
 model_type = "LSTM"
 is_lstm = True
-num_channels = 3   
+num_channels = 3
+beta = 2   
 
 use_time_augmentor = True
-scaler_name = "standard"
+scaler_name = "normalize"
 use_noise_augmentor = True
 filter_name = None
 band_min = 2.0
@@ -111,9 +95,7 @@ use_custom_callback = True
 use_early_stopping = True
 start_from_scratch = False
 use_reduced_lr = True
-log_data = False
-
-ramless = True
+log_data = True
 
 shutdown = False
 
@@ -128,30 +110,10 @@ def clear_tensorboard_dir():
 if use_tensorboard:
     clear_tensorboard_dir()
 
+      
 randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                            filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                            use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                            use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, ramLess = ramless)
-results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
-"""
-
-try:
-    randomGridSearch = RGS(loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
-                            filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
-                            use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
-                            use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
-                            start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels)
-    results_df, min_loss, max_accuracy, max_precision, max_recall = randomGridSearch.fit()
-
-except Exception as e:
-    print(str(e))
-
-finally:
-    if shutdown:
-        os.system("shutdown now -h")
-    else:
-        print("Process completed.")
-            
-"""
-
+                        filter_name, n_picks, hyper_grid=hyper_grid, use_tensorboard = use_tensorboard, 
+                        use_liveplots = use_liveplots, use_custom_callback = use_custom_callback, use_early_stopping = use_early_stopping, 
+                        use_reduced_lr = use_reduced_lr, band_min = band_min, band_max = band_max, highpass_freq = highpass_freq, 
+                        start_from_scratch = start_from_scratch, is_lstm = is_lstm, log_data = log_data, num_channels = num_channels, beta = beta)
+randomGridSearch.fit()

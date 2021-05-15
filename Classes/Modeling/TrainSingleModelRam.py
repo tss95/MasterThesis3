@@ -64,9 +64,10 @@ class TrainSingleModelRam(TrainSingleModel):
         if self.ramLoader.scaler_name == "normalize":
             norm_scale = True
         self.gen_args = {"batch_size" : p["batch_size"],
-                    "noiseAug" : self.noiseAug,
-                    "num_channels" : self.num_channels,
-                    "norm_scale" : norm_scale}
+                        "noiseAug" : self.noiseAug,
+                        "num_channels" : self.num_channels,
+                        "norm_scale" : norm_scale,
+                        "label_dict" : self.loadData.label_dict}
         
         train_gen = RamGen(traces = x_train, labels = y_train, **self.gen_args)
         val_gen = RamGen(traces = x_val, labels = y_val, **self.gen_args)

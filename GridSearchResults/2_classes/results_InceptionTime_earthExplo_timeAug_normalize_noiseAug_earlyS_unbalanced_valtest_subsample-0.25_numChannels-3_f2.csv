@@ -143,3 +143,7 @@ False,True,False,relu,False,False,sigmoid,rmsprop,3,64,relu,linear,0.0001,0,0,72
 False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,0.000926226435695,0.999926985981,0.999902,0.999951,0.999941,0.565901458263,0.893329326923,0.400394,0.799213,0.666448,"[[2770  304]
  [  51  203]]"
 False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,,,,,,,,,,,
+False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,0.000280524225673,0.999975661994,0.999951,1.0,0.99999,0.79007256031,0.8828125,0.373134,0.787402,0.64433,"[[2738  336]
+ [  54  200]]"
+False,True,False,relu,False,False,sigmoid,rmsprop,6,64,relu,linear,0.001,0,0,56,50,32,64,0.00102916301694,0.999756619938,0.999951,0.999561,0.999639,0.589485347271,0.89453125,0.399586,0.759843,0.643763,"[[2784  290]
+ [  61  193]]"

@@ -1,34 +1,21 @@
 import numpy as np
-import pandas as pd
-import json
 import h5py
-import sklearn as sk
 import matplotlib.pyplot as plt
-from obspy import Stream, Trace, UTCDateTime
-from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve, average_precision_score
+from obspy import Stream, Trace
+from sklearn.metrics import classification_report, precision_recall_fscore_support, precision_recall_curve, average_precision_score
 import seaborn as sns
 import os
-import csv
-import pylab as pl
+
 import pprint
 import gc
 
 import tensorflow as tf
-from tensorflow.keras import mixed_precision
-#import tensorflow_addons as tfa
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras import regularizers
-from Classes.DataProcessing.ts_RamGenerator import data_generator, ramless_data_generator, get_rambatch
+from tensorflow.keras import utils
+
 from Classes.DataProcessing.RamGen import RamGen
 from Classes.DataProcessing.RamLessGen import RamLessGen
-from tensorflow.keras.utils import GeneratorEnqueuer
-
 from tensorflow.keras import utils
 from tensorflow.keras import backend as K
-from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.callbacks import EarlyStopping
 
 import datetime
@@ -59,7 +46,7 @@ class HelperFunctions():
     
     def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels):
         steps = self.get_steps_per_epoch(X, batch_size)
-        gen = RamGen(X, y, batch_size, noiseAug, num_channels, norm_scale = norm_scale, shuffle = False)
+        gen = RamGen(X, y, batch_size, noiseAug, num_channels, norm_scale = norm_scale, shuffle = False, label_dict = label_dict)
         predictions = model.predict(x = gen, steps = steps)
         del gen
         return predictions
@@ -99,9 +86,14 @@ class HelperFunctions():
     def evaluate_predictions(self, predictions, y_test, num_classes, label_dict, plot_conf_matrix, plot_p_r_curve, beta):
         predictions = np.abs(predictions)
         pp = pprint.PrettyPrinter(indent = 4)
+        # The following line is used now that generators transform labels internally.
+        y_test = self.transform_labels(y_test, label_dict)
+        """
+        This code is used when RamLoader handles labels
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
             y_test = y_test[:,1]
+        """
         y_test = y_test[0:predictions.shape[0]]
         predictions = np.reshape(predictions,(predictions.shape[0]))
         rounded_predictions  = np.rint(predictions)
@@ -151,31 +143,6 @@ class HelperFunctions():
         accuracy = (tn + tp)/(tp + tn + fn + fp)
         return accuracy
 
-    """
-    def plot_confusion_matrix(self, conf, label_dict):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        cax = ax.matshow(conf)
-        labels = list(self.handle_non_noise_dict(label_dict))
-        print("labels")
-        if labels == ["noise", "not-noise"]
-            classifier = "3N"
-        else:
-            classifier = "EE"
-        print(classifier)
-        plt.title(f'Confusion matrix of the {classifier} classifier')
-        #fig.colorbar(cax)
-        ax.set_xticklabels([''] + labels)
-        ax.set_yticklabels([''] + labels)
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        print(conf.shape)
-        for i in range(conf.shape[0]):
-            for j in range(conf.shape[1]):
-                text = ax.text(j, i, int(conf[i, j]), ha="center", va="center", color="black")
-        
-        plt.show()
-    """
 
     def plot_confusion_matrix(self, conf, label_dict):
         fig = plt.figure()
@@ -590,6 +557,13 @@ class HelperFunctions():
             else:
                 p["growth_sequence"] = p["growth_sequence"][:num_layers]
         return p
+
+    def transform_labels(self, labels, label_dict):
+        num_classes = len(set(label_dict.values()))
+        lab = [label_dict.get(x) for x in labels]
+        lab = utils.to_categorical(lab, num_classes, dtype = np.int8)
+        lab = lab[:,1]
+        return np.reshape(lab, (lab.shape[0], 1))
 
     def load_model(self, path):
         acc = tf.keras.metrics.BinaryAccuracy(name="binary_accuacy", dtype = None, threshold = 0.5)
