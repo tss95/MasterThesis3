@@ -25,7 +25,7 @@ base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
 os.chdir(base_dir)
 from GlobalUtils import GlobalUtils
 from Classes.Modeling.CustomCallback import CustomCallback
-utils = GlobalUtils()
+glob_utils = GlobalUtils()
 
 class HelperFunctions():
     
@@ -87,13 +87,13 @@ class HelperFunctions():
         predictions = np.abs(predictions)
         pp = pprint.PrettyPrinter(indent = 4)
         # The following line is used now that generators transform labels internally.
-        y_test = self.transform_labels(y_test, label_dict)
-        """
-        This code is used when RamLoader handles labels
+        #y_test = self.transform_labels(y_test, label_dict)
+        
+        #This code is used when RamLoader handles labels. Should be removed when the code works as expected.
         if predictions.shape[1] == 2:
             predictions = predictions[:,1]
             y_test = y_test[:,1]
-        """
+        
         y_test = y_test[0:predictions.shape[0]]
         predictions = np.reshape(predictions,(predictions.shape[0]))
         rounded_predictions  = np.rint(predictions)
@@ -380,7 +380,7 @@ class HelperFunctions():
             #callbacks.append(PlotLossesKeras())
             print("")
         if use_tensorboard:
-            log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_dir = f"{glob_utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
@@ -437,7 +437,7 @@ class HelperFunctions():
             #callbacks.append(PlotLossesKeras())
             print("")
         if use_tensorboard:
-            log_dir = f"{utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_dir = f"{glob_utils.base_dir}/Tensorboard_dir/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
             callbacks.append(tensorboard_callback)
         if use_custom_callback:
@@ -560,7 +560,7 @@ class HelperFunctions():
 
     def transform_labels(self, labels, label_dict):
         num_classes = len(set(label_dict.values()))
-        lab = [label_dict.get(x) for x in labels]
+        lab = [label_dict.get(x) for x in np.reshape(labels,(labels.shape[0]))]
         lab = utils.to_categorical(lab, num_classes, dtype = np.int8)
         lab = lab[:,1]
         return np.reshape(lab, (lab.shape[0], 1))

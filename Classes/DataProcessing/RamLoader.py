@@ -45,8 +45,40 @@ class RamLoader:
             return self.load_to_ram_noise_not_noise()
         if self.loadData.earth_explo_only:
             return self.load_to_ram_earth_explo_only()
+        if self.loadData.use_true_test_set:
+            return self.load_to_ram_final_evaluation()
         else:
             raise Exception("Loading to ram for this type of data has not been implemented.")
+
+
+    @runtime
+    def load_to_ram_final_evaluation(self):
+        """
+        This is written to as quickly as possible get the results I need.
+
+        Shortcomings:
+        - Does not handle models where different preprocessing steps are necessary.
+        - "Meier mode" is not implemented.
+        - Use beyond the design with caution.
+        """
+        print("Initializing loading of the test set")
+        print("Step 1: Fit augmentors and scalers on training data")
+        self.train_timeAug = self.fit_timeAug(self.train_ds, "train")
+        train_trace, train_label = self.stage_one_load(self.train_ds, self.train_timeAug, 0)
+        self.scaler = self.fit_scaler(train_trace)
+        train_trace, train_label = self.stage_two_load(train_trace, train_label, 0, False)
+        self.noiseAug = None
+        if self.use_noise_augmentor:
+            noise_indexes = np.where(train_label == self.loadData.label_dict["noise"])
+            noise_traces = train_trace[noise_indexes]
+            self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
+        print("Step 2: Load and transform the test set, using the previously fitted scaler and augmentors")
+        del train_trace, train_label
+        self.test_timeAug = self.fit_timeAug(self.test_ds, "test")
+        test_trace, test_label = self.stage_one_load(self.test_ds, self.test_timeAug, 2)
+        test_trace, test_label = self.stage_two_load(test_trace, test_label, 2, False)
+        return test_trace, test_label, self.noiseAug
+
 
     @runtime
     def load_to_ram_noise_not_noise(self):
@@ -76,7 +108,6 @@ class RamLoader:
                 noise_indexes = np.where(train_label[:,self.loadData.label_dict["noise"]] == 1)
             if not self.meier_load and self.num_classes == 2:
                 noise_indexes = np.where(train_label == self.loadData.label_dict["noise"])
-            print(noise_indexes)
             noise_traces = train_trace[noise_indexes]
             self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
         print("\n")

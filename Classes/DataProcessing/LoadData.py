@@ -107,12 +107,7 @@ class LoadData():
             if self.noise_earth_only:
                 raise Exception("Not implemented noise earth only. Seems unecessary")
         else:
-            if self.noise_not_noise:
-                self.load_noise_not_noise_true_test()
-            if self.earth_explo_only:
-                self.load_earth_explo_only_true_test()
-            if self.noise_earth_only:
-                raise Exception("Not implemented noise earth only with true test. Is unecessary") 
+            self.load_final_evaluation()
                 
                 
     def load_noise_not_noise_true_test(self):
@@ -260,6 +255,20 @@ class LoadData():
         # Create noise_ds. 
         self.noise_ds = self.train[self.train[:,1] == "noise"]        
         
+    def load_final_evaluation(self):
+        self.train = self.full_ds
+        self.test = self.test_ds
+        # Up and down sampling 
+        self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
+        if self.even_balance:
+            self.train = self.even_label_occurances(self.train)
+        self.train = self.train[np.random.choice(self.train.shape[0], int(len(self.train)*self.subsample_size), replace = False)]
+
+        # Mapping redundnad samples for time augmentor
+        self.train = self.map_redundancy(self.train, "train")
+        self.test = self.map_redundancy(self.test, "test")
+        self.val = None
+        self.noise_ds = self.train[self.train[:,1] == "noise"]
             
     def load_earth_explo_only(self):
         noise = self.full_ds[self.full_ds[:,1] == "noise"]
@@ -322,14 +331,20 @@ class LoadData():
         self.complete_label_dict = {'noise' : 0, 'earthquake' : 1, 'explosion' : 2}
         # Method which produces the dictionary for labels. This is used in order to disguise labels during training.
         if self.earth_explo_only:
-            self.label_dict = {'explosion' : 0, 'earthquake' : 1}
+            self.label_dict = self.earth_explo_dict()
         elif self.noise_earth_only:
             self.label_dict = {'earthquake' : 0, 'noise' : 1}
         elif self.noise_not_noise:
-            self.label_dict = { 'noise': 0, 'earthquake' : 1, 'explosion' : 1}
+            self.label_dict = self.noise_not_noise_dict()
         else:
-            self.label_dict = {'earthquake' : 0, 'noise' : 1, 'explosion' : 2, 'induced' : 3}
+            self.label_dict = {'noise' : 0, 'explosion' : 1, 'earthquake' : 2}
     
+    def noise_not_noise_dict(self):
+        return {'noise': 0, 'earthquake' : 1, 'explosion' : 1}
+    
+    def earth_explo_dict(self):
+        return {'explosion' : 0, 'earthquake' : 1}
+
     def get_datasets(self):
         return self.train, self.val, self.test  
         
@@ -449,6 +464,8 @@ class LoadData():
             print("Loaded explosion and earthquake dataset:")
         if self.noise_not_noise:
             print("Loaded noise non-noise dataset.")
+        if self.use_true_test_set:
+            print("Loaded true test set, accompanied by a train set for preprocessing fitting.")
         if self.even_balance:
             print("Evenly balanced among classes in the train set.")
         if self.balance_non_train_set:
@@ -457,9 +474,10 @@ class LoadData():
         print("Train ds:")
         labels, counts = np.unique(self.train[:,1], return_counts = True)
         print(self.generate_dist_string_EE(labels, counts))
-        print("Val ds:")
-        labels, counts = np.unique(self.val[:,1], return_counts = True)
-        print(self.generate_dist_string_EE(labels, counts))
+        if not self.use_true_test_set:
+            print("Val ds:")
+            labels, counts = np.unique(self.val[:,1], return_counts = True)
+            print(self.generate_dist_string_EE(labels, counts))
         print("Test ds:")
         labels, counts = np.unique(self.test[:,1], return_counts = True)
         print(self.generate_dist_string_EE(labels, counts))
