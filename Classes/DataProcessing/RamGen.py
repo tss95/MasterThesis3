@@ -46,9 +46,12 @@ class RamGen(Sequence):
             else:
                 batch_traces = self.noiseAug.batch_augment_noise(batch_traces, 0, self.noiseAug.noise_std*(1/15))
         batch_traces = batch_traces[:][:,0:self.num_channels]
-        batch_traces = np.reshape(batch_traces, (batch_traces.shape[0], batch_traces.shape[2], batch_traces.shape[1]))
         if self.final_eval:
             batch_labels = self.__transform_labels(batch_labels)
+        if self.batch_size == 1:
+            batch_traces = np.reshape(batch_traces, (1, batch_traces.shape[2], batch_traces.shape[1]))
+        else:
+            batch_traces = np.reshape(batch_traces, (batch_traces.shape[0], batch_traces.shape[2], batch_traces.shape[1]))
         return batch_traces, batch_labels
 
     def __transform_labels(self, labels):

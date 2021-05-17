@@ -44,9 +44,9 @@ class HelperFunctions():
         predictions = self.convert_to_class(predictions)
         return predictions
     
-    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels):
+    def predict_RamGenerator(self, model, X, y, batch_size, norm_scale, noiseAug, label_dict, num_channels, final_eval = False):
         steps = self.get_steps_per_epoch(X, batch_size)
-        gen = RamGen(X, y, batch_size, noiseAug, num_channels, norm_scale = norm_scale, shuffle = False, label_dict = label_dict)
+        gen = RamGen(X, y, batch_size, noiseAug, num_channels, norm_scale = norm_scale, shuffle = False, label_dict = label_dict, final_eval = final_eval)
         predictions = model.predict(x = gen, steps = steps)
         del gen
         return predictions

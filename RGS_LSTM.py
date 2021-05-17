@@ -34,9 +34,9 @@ mixed_precision.set_global_policy('mixed_float16')
 
 
 load_args = {
-    'earth_explo_only' : False,
+    'earth_explo_only' : True,
     'noise_earth_only' : False,
-    'noise_not_noise' : True,
+    'noise_not_noise' : False,
     'downsample' : True,
     'upsample' : True,
     'frac_diff' : 1,
