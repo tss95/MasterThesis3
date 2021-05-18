@@ -59,7 +59,7 @@ class LoadData():
     def __init__(self, earth_explo_only = False, noise_earth_only = False, noise_not_noise = False, 
                  downsample = False, upsample = False, frac_diff = 1, seed = None, subsample_size = 1,
                  balance_non_train_set = False, use_true_test_set = False, load_everything = False, 
-                 load_first_batch = False, even_balance = False):
+                 load_first_batch = False, even_balance = False, load_nukes = False):
 
         self.seed = seed
         np.random.seed(self.seed)
@@ -74,8 +74,12 @@ class LoadData():
         self.use_true_test_set = use_true_test_set
         # If true, then the class distribution will be equal to 1/num_classes.
         self.even_balance = even_balance
-        
+        self.load_nukes = load_nukes
+
         self.csv_folder = glob_utils.csv_dir
+        if self.load_nukes:
+            self.initialize_nuclear_tests()
+            return
         self.data_csv_name = glob_utils.data_csv_name
         if load_first_batch:
             self.data_csv_name = glob_utils.batch_1_csv_name
@@ -89,8 +93,8 @@ class LoadData():
                 self.test_ds = self.csv_to_numpy(self.test_csv_name, self.csv_folder)
                 print("WARNING: You are using the true test set.")
                 print("If this is an error, please set use_true_test_set = False and reload the kernel")
-            if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
-                raise Exception("Invalid load data arguments.")
+        if sum([self.earth_explo_only, self.noise_earth_only, self.noise_not_noise]) > 1:
+            raise Exception("Invalid load data arguments.")
         self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
         self.create_label_dict()
         self.load_data()
@@ -108,8 +112,16 @@ class LoadData():
                 raise Exception("Not implemented noise earth only. Seems unecessary")
         else:
             self.load_final_evaluation()
-                
-                
+
+
+    def initialize_nuclear_tests(self):
+        nuke_csv_name = glob_utils.nukes_csv_name
+        nukes = self.csv_to_numpy(nuke_csv_name, self.csv_folder)
+        full_ds = np.zeros((nukes.shape[0], nukes.shape[1] + 1), dtype = object)
+        full_ds[:,:-1] = nukes
+        self.full_ds = full_ds
+        self.create_label_dict()
+        
     def load_noise_not_noise_true_test(self):
         # Training and validation:
         noise = self.full_ds[self.full_ds[:,1] == "noise"]
@@ -412,7 +424,6 @@ class LoadData():
             print("This functions barely works, and is a piece of shit that should not be trusted. Only works because noise has id: 0")
             ids = self.label_dict.values()
             most_occuring_id = max(ids)
-            least_occuring_id = min(ids)
             label_count_dict = {}
             for label, id in self.label_dict.items():
                 label_count_dict[label] = len(ds[ds[:,1] == label])

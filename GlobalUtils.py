@@ -11,4 +11,5 @@ class GlobalUtils():
     batch_1_csv_name = 'full_batch_1.csv'
     no_nan_no_induced_csv_name = 'event_paths_no_nan_no_induced.csv'
     test_csv_name = 'DO_NOT_TOUCH_test_set.csv'
+    nukes_csv_name = 'nukes.csv'
     
