@@ -77,10 +77,10 @@ class LoadData():
         self.load_nukes = load_nukes
 
         self.csv_folder = glob_utils.csv_dir
+        self.data_csv_name = glob_utils.data_csv_name
         if self.load_nukes:
             self.initialize_nuclear_tests()
             return
-        self.data_csv_name = glob_utils.data_csv_name
         if load_first_batch:
             self.data_csv_name = glob_utils.batch_1_csv_name
             assert not load_everything, "Load everything should be False when using the first batch. A test set has not been generated for this dataset"
@@ -115,11 +115,31 @@ class LoadData():
 
 
     def initialize_nuclear_tests(self):
+        # Need to load data to fit preprocessors
+        self.full_ds = self.csv_to_numpy(self.data_csv_name, self.csv_folder)
+        noise = self.full_ds[self.full_ds[:,1] == "noise"]
+        explosions = self.full_ds[self.full_ds[:,1] == "explosion"]
+        earthquakes = self.full_ds[self.full_ds[:,1] == "earthquake"]
+        
+        train_noise, _ = train_test_split(noise, test_size = 0.15, random_state = self.seed)
+        train_explo, _ = train_test_split(explosions, test_size = 0.15, random_state = self.seed)
+        train_earth, _ = train_test_split(earthquakes, test_size = 0.15, random_state = self.seed)
+
+        self.train = np.concatenate((train_noise, train_explo, train_earth))
+        self.train = self.balance_ds(self.train, self.downsample, self.upsample, frac_diff = self.frac_diff)
+
+        if self.even_balance:
+            self.train = self.even_label_occurances(self.train)
+        self.train = self.train[np.random.choice(self.train.shape[0], int(len(self.train)*self.subsample_size), replace = False)]
+        self.train = self.map_redundancy(self.train, "train")
+        self.noise_ds = self.train[self.train[:,1] == "noise"]
+        self.val = None
+        self.test = None
         nuke_csv_name = glob_utils.nukes_csv_name
         nukes = self.csv_to_numpy(nuke_csv_name, self.csv_folder)
-        full_ds = np.zeros((nukes.shape[0], nukes.shape[1] + 1), dtype = object)
-        full_ds[:,:-1] = nukes
-        self.full_ds = full_ds
+        nukes_ds = np.zeros((nukes.shape[0], nukes.shape[1] + 1), dtype = object)
+        nukes_ds[:,:-1] = nukes
+        self.nukes_ds = nukes_ds
         self.create_label_dict()
         
     def load_noise_not_noise_true_test(self):

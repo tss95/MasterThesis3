@@ -47,8 +47,36 @@ class RamLoader:
             return self.load_to_ram_earth_explo_only()
         if self.loadData.use_true_test_set:
             return self.load_to_ram_final_evaluation()
+        if self.loadData.load_nukes:
+            return self.load_to_ram_nukes()
         else:
             raise Exception("Loading to ram for this type of data has not been implemented.")
+
+    def manually_cut_nuke(self, trace):
+        new_trace = np.empty((3, 6000))
+        for ch in range(new_trace.shape[0]):
+            new_trace[ch] = trace[ch][2000: trace.shape[1]-4001]
+        return new_trace
+
+    @runtime
+    def load_to_ram_nukes(self):
+        print("Initializing loading of the nukes.")
+        print("Step 1: Fit augmentors and scalers on training data. As normalized scaler is assumed to be used, only the noise events are loaded.")
+        self.train_timeAug = self.fit_timeAug(self.noise_ds, "train")
+        train_trace, train_label = self.stage_one_load(self.noise_ds, self.train_timeAug, 0)
+        self.scaler = self.fit_scaler(train_trace)
+        train_trace, train_label = self.stage_two_load(train_trace, train_label, 0, False)
+        self.noiseAug = None
+        if self.use_noise_augmentor:
+            noise_indexes = np.where(train_label == self.loadData.label_dict["noise"])
+            noise_traces = train_trace[noise_indexes]
+            self.noiseAug = self.fit_noiseAug(self.loadData, noise_traces)
+        print("Step 2: Load and transform the test set, using the previously fitted scaler and augmentors")
+        del train_trace, train_label
+        self.nuke_ds = self.loadData.nukes_ds
+        nuke_trace, nuke_label = self.nuke_stage_one_load(self.nuke_ds)
+        nuke_trace, nuke_label = self.stage_two_load(nuke_trace, nuke_label, 4, False)
+        return nuke_trace, nuke_label, self.noiseAug
 
 
     @runtime
@@ -190,8 +218,24 @@ class RamLoader:
             return "test set"
         if substage == 3:
             return "noise set"
+        if substage == 4:
+            return "nuclear set"
         return ""
     
+    def nuke_stage_one_load(self, ds):
+        loaded_label = np.empty((len(ds), 1))
+        loaded_trace = np.empty((self.handler.get_trace_shape_no_cast(ds, True)))
+        num_events = len(ds)
+        bar_text = self.stage_one_text(4)
+        for i in range(num_events):
+            self.progress_bar(i+1, num_events, bar_text)
+            loaded_label[i] = self.handler.label_dict.get(ds[i][1])
+            trace = self.handler.path_to_trace(ds[i][0])[0]
+            loaded_trace[i] = self.manually_cut_nuke(trace)
+        print("\n")
+        return loaded_trace, loaded_label
+
+
     def stage_one_load(self, ds, timeAug, substage):
         loaded_label = np.empty((len(ds), 1))
         loaded_trace = np.empty((self.handler.get_trace_shape_no_cast(ds, self.use_time_augmentor)))
