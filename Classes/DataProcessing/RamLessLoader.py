@@ -21,6 +21,28 @@ from Classes.Scaling.RobustScalerFitter import RobustScalerFitter
 from Classes.Scaling.DataNormalizer import DataNormalizer
 
 class RamLessLoader:
+    """
+    Class responsible for fitting preprocessing elements prior to use. Does not load data to RAM. Has not been used in the project, and so is not tested.
+
+    PARAMETERS:
+    ------------------------------------------------------------------------
+
+    loadData: (object)           Fitted LoadData object.
+    handler: (object)            DataHandler object. Holds functions which are relevant to the loading and handling of the recordings.
+    use_time_augmentor: (bool)   Boolean for whether or not to use time augmentation. 
+    use_noise_augmentor: (bool)  Boolean for whether or not to use noise augmentation.
+    scaler_name: (str)           String representing the name of the scaler type to be used in the preprocessing.
+    filter_name: (str)           Name of the digital filter to be used. Will use default filter values unless otherwised specified.
+    band_min: (float)            Minimum frequency parameter for Bandpass filter
+    band_max: (float)            Maximum frequency parameter for Bandpass filter
+    highpass_freq: (float)       Corner frequency for Highpass filter.
+    load_test_set: (bool)        Whether or not to load the test set.
+    meier_load: (bool)           True if training/evaluating Meier et al.'s model.
+    """
+
+
+
+
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
                 filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False, meier_load = False):
         self.loadData = loadData
@@ -38,47 +60,6 @@ class RamLessLoader:
         self.num_classes = len(set(self.loadData.label_dict.values()))
         self.meier_load = meier_load
 
-
-    
-
-    """
-    This class will be used in two cases: 
-        1. When training a model with more data than RAM capacity
-        2. When preprocessing the test data, two different versions of this class needs to be fitted. Will likely be fitted with a large amount of data.
-             - The test data will likely be treated as validation data for this class. 
-    
-    In essence, this class will function as the holder of preprocessing variables and objects, and will be passed into the generators in some way.
-
-
-    The fitting of the time augmentor will be the same as the orginal RamLoader.
-    Due to dependency issues, I need to consider what is the most efficient way of doing this:
-     - Time aug and the filters are independent of everything.
-     - Normalize scaler does not fit to the data, and will be handled directly in the generator.
-     - The other scalers will need:
-        1. Load each datapoint
-        2. Apply time aug
-        3. Apply filter (if necessary)
-        4. partial_fit
-        5. Returned fitted scaler
-     - NoiseAug needs:
-        1. Load each datapoint
-        2. Apply time aug
-        3. Apply filter
-        4. Apply scaler
-        5. fit noiseAug
-        6. Return noiseAug
-
-    Observations:
-    For noise-not-nosie:
-     - other than time-aug, every other preprocessing step which requires fitting, can be done partially and exclusively on the training set. This way theres no repeated loading of the data.
-     - This is not entierly true. The scaler needs to be fitted completely before actually scaling any data.
-     - The validation and test data will all be transformed in the generators
-
-     For earth explo:
-      - We can fit time aug the same way we already do.
-      - Then we can fit the training set preprocessors.
-      - Finally we can fit the noise augmentor
-    """
     
     def fit_timeAug(self, ds, dataset_name):
         timeAug = None

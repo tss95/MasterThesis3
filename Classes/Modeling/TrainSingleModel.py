@@ -1,30 +1,24 @@
-import numpy as np
-import pandas as pd
-import h5py
 import gc
 import traceback
-
-import sklearn as sk
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
-from tensorflow.keras.utils import GeneratorEnqueuer
-from tensorflow.keras.utils import Sequence
-
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
-
 from Classes.Modeling.DynamicModels import DynamicModels
-from Classes.DataProcessing.HelperFunctions import HelperFunctions
-from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-
-import sys
-import random
 import pprint
-import re
-import json
 
 class TrainSingleModel():
+
+    """
+    Parent class of TrainSingleModelRam and TrainSingleModelRamLess. Holds functions which both can utilize as is.
+
+    Note: This class should never be initiated directly.
+
+    PARAMETERS:
+    ----------------------------------------------------------------
+    resultProcessor: (object)           GridSearchResultProcessor object, already initialized.
+    """
     
     def __init__(self, resultProcessor):
         self.results_df = None

@@ -1,38 +1,36 @@
-import numpy as np
-import pandas as pd
-import h5py
+
 import gc
-import traceback
-
-import sklearn as sk
-import tensorflow as tf
-from tensorflow.keras import mixed_precision
-from tensorflow.keras.utils import GeneratorEnqueuer
-
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
-
-from Classes.Modeling.DynamicModels import DynamicModels
 from Classes.Modeling.TrainSingleModel import TrainSingleModel
-from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
-from Classes.DataProcessing.ts_RamGenerator import data_generator, get_rambatch
 from Classes.DataProcessing.RamGen import RamGen
 
 
-import sys
-
-
-import random
-import pprint
-import re
-import json
-
-
-
-
 class TrainSingleModelRam(TrainSingleModel):
+    """
+    Responsible for training a model when data can be held in RAM. Also performs all necessary processes related to storing of the model
+    and initializing relevant processes.
+
+    PARAMETERS:
+    -------------------------------------------------------------------------------
+    noiseAug: (object)          Fitted noise augmentor. Can be None if it is not used.
+    helper: (object)            HelperFunctions object. Holds functions which are used for many processes.
+    loadData: (object)           Fitted LoadData object.
+    model_type: (str)            String representing the name of the model architecture to be trained.
+    num_channels: (int)          Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    use_tensorboard: (bool)      Whether or not to log to tensorboard. Does not launch tensorboard.
+    use_liveplots: (bool)        Whether or not to use LiveLossPlots. Requires Keras to be installed along with LiveLossPLots.
+    use_custom_callback: (bool)  Whether or not to use custom_callback. Required to get FBeta after each epoch. Will log FBeta to results file if log_data == True.
+    use_early_stopping: (bool)   Whether or not to use early stopping. Default parameters. Parameters can be changed in HelperFunctions.py.
+    use_reduced_lr: (bool)       Whether or not to use reduce learning rate on plateau with default parameters. Can be changed in HelperFunctions.py.
+    ramLoader: (object)         The ramLoader or ramLessLoader object. Used to get preprocessing hyperparameters.
+    log_data: (bool)             Whether or not to log the results to the results file.
+    start_from_scratch: (bool)   Whether or not to erease the results file prior to training. Has not been used for many iterations of the code. May not work as expected.
+    beta: (float)                Beta value to use for FBeta.
+    """
+
     
     def __init__(self, noiseAug, helper, loadData, 
                  model_type, num_channels, use_tensorboard, use_liveplots, use_custom_callback,
@@ -114,12 +112,12 @@ class TrainSingleModelRam(TrainSingleModel):
             print(self.results_df.iloc[-1])
         if evaluate_train:
             print("Unsaved train eval:")
-            self.helper.evaluate_generator(model, x_train, y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
+            self.helper.evaluate_generator(model, x_train, y_train, p['batch_size'], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name, self.num_classes, beta = self.beta)
         if evaluate_val:
             print("Unsaved val eval:")
-            self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
+            self.helper.evaluate_generator(model, x_val, y_val, p["batch_size"],self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, beta = self.beta)
         if evaluate_test:
             print("Unsaved test eval:")
-            self.helper.evaluate_generator(model, x_test, y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, self.ramLoader.use_time_augmentor, beta = self.beta)
+            self.helper.evaluate_generator(model, x_test, y_test, p["batch_size"], self.loadData.label_dict, self.num_channels, self.noiseAug, self.ramLoader.scaler_name,  self.num_classes, beta = self.beta)
         gc.collect()
         return model

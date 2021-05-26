@@ -1,12 +1,5 @@
 import numpy as np
 import os
-import sys
-import pandas as pd
-import seaborn as sns
-
-import pylab as pl
-import h5py
-
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
 
@@ -26,31 +19,14 @@ if gpus:
     print(e)
 
 
-from sklearn.metrics import confusion_matrix
-
-
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
 from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.Modeling.RGS import RGS
-import json
-#from Classes import Tf_shutup
-#Tf_shutup.Tf_shutup()
-
 helper = HelperFunctions()
-
-import sys
-
-import random
-import gc
-import pprint
-
 mixed_precision.set_global_policy('mixed_float16')
-
-
-
 
 
 load_args = {

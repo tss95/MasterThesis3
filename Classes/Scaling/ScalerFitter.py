@@ -1,21 +1,9 @@
-import numpy as np
-import pandas as pd
-import json
-import h5py
-import matplotlib.pyplot as plt
-from obspy import Stream, Trace, UTCDateTime
-import os
-import csv
-from tensorflow.keras import utils
-import seaborn as sns
-import time
-import tables
-import random
-
-import tensorflow as tf
-
 
 class ScalerFitter():
+
+    """
+    Parent class for the scalers. Holds functions used by all. Should not be initialized.
+    """
     
     def __init__(self, scaler):
         self.scaler = scaler

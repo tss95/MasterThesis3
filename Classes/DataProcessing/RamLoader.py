@@ -15,6 +15,27 @@ from Classes.Scaling.DataNormalizer import DataNormalizer
 from .decorators import runtime
 
 class RamLoader:
+    """
+    Class responsible for preprocessing and loading the recordings to RAM.
+
+    PARAMETERS:
+    ------------------------------------------------------------------------
+
+    loadData: (object)           Fitted LoadData object.
+    handler: (object)            DataHandler object. Holds functions which are relevant to the loading and handling of the recordings.
+    use_time_augmentor: (bool)   Boolean for whether or not to use time augmentation. 
+    use_noise_augmentor: (bool)  Boolean for whether or not to use noise augmentation.
+    scaler_name: (str)           String representing the name of the scaler type to be used in the preprocessing.
+    filter_name: (str)           Name of the digital filter to be used. Will use default filter values unless otherwised specified.
+    band_min: (float)            Minimum frequency parameter for Bandpass filter
+    band_max: (float)            Maximum frequency parameter for Bandpass filter
+    highpass_freq: (float)       Corner frequency for Highpass filter.
+    load_test_set: (bool)        Whether or not to load the test set.
+    meier_load: (bool)           True if training/evaluating Meier et al.'s model.
+    """
+
+
+
     def __init__(self, loadData, handler, use_time_augmentor = False, use_noise_augmentor = False, scaler_name = None, 
                 filter_name = None, band_min = 2.0, band_max = 4.0, highpass_freq = 0.1, load_test_set = False, meier_load = False):
         self.loadData = loadData

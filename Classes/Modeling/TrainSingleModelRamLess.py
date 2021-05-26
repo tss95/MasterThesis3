@@ -1,37 +1,34 @@
-import numpy as np
-import pandas as pd
-import h5py
+
 import gc
-import traceback
-
-import sklearn as sk
-import tensorflow as tf
-from tensorflow.keras import mixed_precision
-from tensorflow.keras.utils import GeneratorEnqueuer
-
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
-
-from Classes.Modeling.DynamicModels import DynamicModels
-from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.DataProcessing.RamLessGen import RamLessGen
 from Classes.Modeling.TrainSingleModel import TrainSingleModel
 
-
-import sys
-
-
-import random
-import pprint
-import re
-import json
-
-
-
-
 class TrainSingleModelRamLess(TrainSingleModel):
+
+    """
+    Responsible for training a model when data cannot be held in RAM. Also performs all necessary processes related to storing of the model
+    and initializing relevant processes.
+
+    PARAMETERS:
+    -------------------------------------------------------------------------------
+    ramLessLoader: (object)      Fitted ramLessLoader. Responsible to transforming the data through the generator.
+    helper: (object)             HelperFunctions object. Holds functions which are used for many processes.
+    loadData: (object)           Fitted LoadData object.
+    model_type: (str)            String representing the name of the model architecture to be trained.
+    num_channels: (int)          Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    use_tensorboard: (bool)      Whether or not to log to tensorboard. Does not launch tensorboard.
+    use_liveplots: (bool)        Whether or not to use LiveLossPlots. Requires Keras to be installed along with LiveLossPLots.
+    use_custom_callback: (bool)  Whether or not to use custom_callback. Required to get FBeta after each epoch. Will log FBeta to results file if log_data == True.
+    use_early_stopping: (bool)   Whether or not to use early stopping. Default parameters. Parameters can be changed in HelperFunctions.py.
+    use_reduced_lr: (bool)       Whether or not to use reduce learning rate on plateau with default parameters. Can be changed in HelperFunctions.py.
+    log_data: (bool)             Whether or not to log the results to the results file.
+    start_from_scratch: (bool)   Whether or not to erease the results file prior to training. Has not been used for many iterations of the code. May not work as expected.
+    beta: (float)                Beta value to use for FBeta.
+    """
     
     def __init__(self, ramLessLoader, helper, loadData, 
                  model_type, num_channels, use_tensorboard, use_liveplots, use_custom_callback,

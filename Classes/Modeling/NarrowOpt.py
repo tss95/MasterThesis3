@@ -1,9 +1,6 @@
-import numpy as np
-import pandas as pd
 import gc
 import traceback
 
-import sklearn as sk
 from sklearn.model_selection import ParameterGrid
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
@@ -20,12 +17,48 @@ from Classes.Modeling.GridSearchResultProcessor import GridSearchResultProcessor
 from Classes.Modeling.TrainSingleModelRam import TrainSingleModelRam
 from Classes.Modeling.TrainSingleModelRamLess import TrainSingleModelRamLess
 
-import random
 import pprint
 from itertools import chain
 
 
 class NarrowOpt(GridSearchResultProcessor):
+    """
+    This class performs a local search of the input grid. The process takes a static grid which represents the "base" model, and uses the search grid to
+    iteratively train models with one hyperparameter changed from the static grid. The process is complete when every hyperparameter has been exhausted.
+
+    Note: Despite RamLess being an option, this functionality has not been fully tested. Should be implemented for data too large to hold in RAM.
+
+    PARAMETERS:
+    -----------------------------------------------------------------------------------------------------------------
+
+    loadData: (object)           Fitted LoadData object.
+    model_type: (str)            String representing the name of the model architecture to be trained.
+    scaler_name: (str)           String representing the name of the scaler type to be used in the preprocessing.
+    use_time_augmentor: (bool)   Boolean for whether or not to use time augmentation. 
+    use_noise_augmentor: (bool)  Boolean for whether or not to use noise augmentation.
+    filter_name: (str)           Name of the digital filter to be used. Will use default filter values unless otherwised specified.
+    static_gird: (dict)          Dictionary containing all of the necessary key,value pairs for the static model. 
+    search_grid: (dict)          Dictionary containing all of the hyperparameters in to be searched. All values must be wrapped in [].
+    use_tensorboard: (bool)      Whether or not to log to tensorboard. Does not launch tensorboard.
+    use_liveplots: (bool)        Whether or not to use LiveLossPlots. Requires Keras to be installed along with LiveLossPLots.
+    use_custom_callback: (bool)  Whether or not to use custom_callback. Required to get FBeta after each epoch. Will log FBeta to results file if log_data == True.
+    use_early_stopping: (bool)   Whether or not to use early stopping. Default parameters. Parameters can be changed in HelperFunctions.py.
+    band_min: (float)            Minimum frequency parameter for Bandpass filter
+    band_max: (float)            Maximum frequency parameter for Bandpass filter
+    highpass_freq: (float)       Corner frequency for Highpass filter.
+    start_from_scratch: (bool)   Whether or not to erease the results file prior to training. Has not been used for many iterations of the code. May not work as expected.
+    use_reduced_lr: (bool)       Whether or not to use reduce learning rate on plateau with default parameters. Can be changed in HelperFunctions.py.
+    num_channels: (int)          Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    log_data: (bool)             Whether or not to log the results to the results file.
+    skip_to_index: (int)         Optional parameter which skips training models up until the given index. Useful for resuming ended training prior to completion.
+    beta: (float)                Beta value to use for FBeta.
+    ramLess: (boot)              Whether or not to load data to ram, or load batch wise during training. Experimental feature. Has not been necessary, so may not work as expected.
+
+    """
+
+
+
+
     def __init__(self, loadData, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                 filter_name, static_grid, search_grid, use_tensorboard = False, 
                 use_liveplots = False, use_custom_callback = False, use_early_stopping = False, band_min = 2.0,

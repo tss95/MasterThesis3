@@ -3,7 +3,27 @@ import numpy as np
 from tensorflow.keras import utils
 
 class RamGen(Sequence):
-    def __init__(self, traces, labels, batch_size, noiseAug, num_channels, norm_scale = False, shuffle=True, label_dict = None, final_eval = False):
+    """
+    Class used as the generator for models. This is used when the data is stored in RAM. Only performs reduction of channels, noiseAug and transforms labels when using true test set.
+    This implementation allows the use of several workers. Allows for multiprocessing, but this worsens current memory leak.
+    Code has been inspired by: https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly.
+
+    PARAMETERS:
+    -------------------------------------------------------------------------------------------
+    traces: (np.array)          Loaded and transformed waveforms.
+    labels: (np.array)          Labels corresponding to the order of traces.
+    batch_size: (int)           Size of the batches to generate.
+    noiseAug: (object)          Fitted noise augmentor. Can be None if it is not used.
+    num_channels: (int)         Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    norm_scale: (bool)          Whether or not normalize scaler is used.
+    shuffle: (bool)             Unused. Has no effect.
+    label_dict: (dict)          Dictionary used to translate string labels to a format the model understands.
+    final_eval: (bool)          Whether or not the true test set is being used.
+    """
+
+
+
+    def __init__(self, traces, labels, batch_size, noiseAug, num_channels, norm_scale = False, shuffle=False, label_dict = None, final_eval = False):
         self.traces = traces
         self.labels = labels
         self.batch_size = batch_size

@@ -25,7 +25,8 @@ class CustomCallback(tf.keras.callbacks.Callback):
         pass
 
     def on_epoch_end(self, epoch, logs=None):
-        val_predict = (np.asarray(self.model.predict(x = self.val_gen, steps = self.steps, max_queue_size = 15, workers = 8, use_multiprocessing = False))).round()
+        pred = self.model.predict(x = self.val_gen, steps = self.steps, max_queue_size = 15, workers = 8, use_multiprocessing = False)
+        val_predict = np.asarray(pred).round()
         val_targ = self.y_val[:len(val_predict)]
         if val_predict.shape[1] == 2:
             val_predict = val_predict[:,1]

@@ -1,9 +1,26 @@
 from tensorflow.keras.utils import Sequence
 
 class RamLessGen(Sequence):
-    'Generates data for Keras'
+    
+    """
+    Class used as the generator for models. This is used when the data is not stored in RAM. This loads and transforms data on the fly.
+    This implementation allows the use of several workers. Allows for multiprocessing, but this worsens current memory leak.
+    Code has been inspired by: https://stanford.edu/~shervine/blog/keras-how-to-generate-data-on-the-fly.
+
+    NOTE: This class has not been used, and so may not work as expected.
+
+    PARAMETERS:
+    -------------------------------------------------------------------------------------------
+    ds: (np.array)              List of waveforms to be used.
+    labels: (np.array)          Labels corresponding to the order of the ds. Already one-hot encoded.
+    timeAug: (object)           Fitted time augmentor to the ds.
+    batch_size: (int)           Size of the batches to generate.
+    ramLessLoader: (object)     Fitted ramLessLoader object. Performs all preprocessing.
+    num_channels: (int)         Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    norm_scale: (bool)          Whether or not normalize scaler is used.
+    shuffle: (bool)             Unused. Has no effect.
+    """
     def __init__(self, ds, labels, timeAug, batch_size, ramLessLoader, num_channels, norm_scale = False, shuffle=False):
-        'Initialization'
         self.ds = ds
         self.labels = labels
         self.batch_size = batch_size
@@ -23,14 +40,12 @@ class RamLessGen(Sequence):
         return int(np.floor(len(self.labels) / self.batch_size))
 
     def __getitem__(self, index):
-        'Generate one batch of data'
         batch_traces = self.__data_generation(self.ds[index*self.batch_size:(index+1)*self.batch_size])
         batch_labels = self.labels[index*self.batch_size:(index+1)*self.batch_size]
         return batch_traces, batch_labels
 
     def on_epoch_end(self):
         import numpy as np
-        'Updates indexes after each epoch'
         pass
 
     def on_train_end(self):
@@ -41,8 +56,6 @@ class RamLessGen(Sequence):
 
     def __data_generation(self, batch_ds):
         import numpy as np
-        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
-        # Initialization
         batch_traces = self.ramLessLoader.load_batch(batch_ds, self.timeAug, np.empty((self.batch_size, self.num_channels, self.timesteps)))
         if self.noiseAug is not None:
             if self.norm_scale:

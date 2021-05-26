@@ -1,10 +1,6 @@
 
 import numpy as np
-import pandas as pd
-import json
-import h5py
 import os
-import csv
 from sklearn.model_selection import train_test_split
 
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3/'
@@ -54,6 +50,8 @@ class LoadData():
     
     even_balance:(Bool)          Whether or not to balance the classes so that each class so that the distribution of each class
                                  is all_events/nr_clases.
+
+    load_nukes: (Bool)           Whether or not to load to nuclear explosion waveforms.
     """
     
     def __init__(self, earth_explo_only = False, noise_earth_only = False, noise_not_noise = False, 

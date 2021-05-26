@@ -1,42 +1,57 @@
-import numpy as np
-import pandas as pd
-import h5py
 import gc
 import traceback
-
-import sklearn as sk
-
 from sklearn.model_selection import ParameterGrid
-
-
-
-
 import tensorflow as tf
 from tensorflow.keras import mixed_precision
-from tensorflow.keras.utils import GeneratorEnqueuer
-
+import random
+import pprint
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
 os.chdir(base_dir)
-
-from Classes.Modeling.DynamicModels import DynamicModels
-from Classes.DataProcessing.LoadData import LoadData
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
 from Classes.DataProcessing.DataHandler import DataHandler
 from Classes.DataProcessing.RamLoader import RamLoader
 from Classes.DataProcessing.RamLessLoader import RamLessLoader
-from Classes.DataProcessing.ts_RamGenerator import data_generator
 from Classes.Modeling.TrainSingleModelRam import TrainSingleModelRam
 from Classes.Modeling.TrainSingleModelRamLess import TrainSingleModelRamLess
 
-
-import sys
-
-
-import random
-import pprint
-
 class RGS():
+    """
+    This class performs a random grid search of the input grid.
+
+    Note: Despite RamLess being an option, this functionality has not been fully tested. Should be implemented for data too large to hold in RAM.
+
+    PARAMETERS:
+    -----------------------------------------------------------------------------------------------------------------
+
+    loadData: (object)           Fitted LoadData object.
+    train_ds: (np.array)         Array holding the training dataset from LoadData. Redundant, can be gained from loadData. 
+    val_ds: (np.array)           Array holding the validation dataset from LoadData. Redundant, can be gained from loadData. 
+    test_ds: (np.array)          Array holding the pseudo test dataset from LoadData. Redundant, can be gained from loadData. 
+    model_type: (str)            String representing the name of the model architecture to be trained.
+    scaler_name: (str)           String representing the name of the scaler type to be used in the preprocessing.
+    use_time_augmentor: (bool)   Boolean for whether or not to use time augmentation. 
+    use_noise_augmentor: (bool)  Boolean for whether or not to use noise augmentation.
+    filter_name: (str)           Name of the digital filter to be used. Will use default filter values unless otherwised specified.
+    n_picks: (int)               How many selections from the possible combinations of the hyperparamteres to be searched.
+    hyper_grid: (dict)           Dictionary containing all of the hyperparameters in to be searched. All values must be wrapped in [].
+    use_tensorboard: (bool)      Whether or not to log to tensorboard. Does not launch tensorboard.
+    use_liveplots: (bool)        Whether or not to use LiveLossPlots. Requires Keras to be installed along with LiveLossPLots.
+    use_custom_callback: (bool)  Whether or not to use custom_callback. Required to get FBeta after each epoch. Will log FBeta to results file if log_data == True.
+    use_early_stopping: (bool)   Whether or not to use early stopping. Default parameters. Parameters can be changed in HelperFunctions.py.
+    band_min: (float)            Minimum frequency parameter for Bandpass filter
+    band_max: (float)            Maximum frequency parameter for Bandpass filter
+    highpass_freq: (float)       Corner frequency for Highpass filter.
+    start_from_scratch: (bool)   Whether or not to erease the results file prior to training. Has not been used for many iterations of the code. May not work as expected.
+    use_reduced_lr: (bool)       Whether or not to use reduce learning rate on plateau with default parameters. Can be changed in HelperFunctions.py.
+    num_channels: (int)          Option to train and evaluate the models on a reduced number of channels. P-beam is the last channel to be removed.
+    log_data: (bool)             Whether or not to log the results to the results file.
+    skip_to_index: (int)         Optional parameter which skips training models up until the given index. Useful for resuming ended training prior to completion.
+    beta: (float)                Beta value to use for FBeta.
+    ramLess: (boot)              Whether or not to load data to ram, or load batch wise during training. Experimental feature. Has not been necessary, so may not work as expected.
+    """
+
+
     
     def __init__(self, loadData, train_ds, val_ds, test_ds, model_type, scaler_name, use_time_augmentor, use_noise_augmentor,
                  filter_name, n_picks, hyper_grid, use_tensorboard = False, 
@@ -146,7 +161,6 @@ class RGS():
                 print("====================================================================================")
                 self.used_m = used_m
             try:
-                # The hard defined variables in the run call refer to nr_workers and max_queue_size respectively.
                 if not self.ramLess:
                     self.train_model(singleModel, x_train, y_train, x_val, y_val, i, **self.p[i])
                 else:

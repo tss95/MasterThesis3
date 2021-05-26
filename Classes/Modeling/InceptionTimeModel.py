@@ -1,11 +1,6 @@
-import numpy as np
-import pandas as pd
-
 import tensorflow as tf
 
 from Classes.DataProcessing.HelperFunctions import HelperFunctions
-#from Classes.Modeling.InceptionModule import InceptionModule
-
 from tensorflow.keras import mixed_precision
 mixed_precision.set_global_policy('mixed_float16')
 
@@ -13,6 +8,8 @@ mixed_precision.set_global_policy('mixed_float16')
 class InceptionTimeModel:
 
     """
+    Code inspired by, and model gained from: https://github.com/hfawaz/InceptionTime
+
     Default values: 
     num_modules = 6
     filter_size = 40
@@ -23,7 +20,6 @@ class InceptionTimeModel:
     module_output_activation = relu
     output_activation = sigmoid
 
-    
     """
 
 

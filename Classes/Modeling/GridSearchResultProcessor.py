@@ -1,10 +1,7 @@
-from Classes.DataProcessing.LoadData import LoadData
 import os
-import sys
 import numpy as np
 import pandas as pd
-from os import listdir
-from os.path import isfile, join
+from os.path import isfile
 
 import os
 base_dir = '/media/tord/T7/Thesis_ssd/MasterThesis3'
@@ -14,6 +11,22 @@ from GlobalUtils import GlobalUtils
 utils = GlobalUtils()
 
 class GridSearchResultProcessor():
+
+
+    """
+    Class responsible for handling the results of the various models. Generates files and their names depending on selection. A lot of hardcoded values,
+    so this class needs to be changed to handle different metrics and new preprocessing parameters. Generally, not very robust.
+
+    PARAMETERS:
+    ----------------------------------------------------------------
+    num_classes: (int)          The number of classes as interpereted by the model.
+    loadData: (object)          Fitted LoadData object.
+    model_type: (str)           String representing the name of the model architecture to be trained.
+    ramLoader: (object)         The ramLoader or ramLessLoader object. Used to get preprocessing hyperparameters.
+    use_early_stopping: (bool)  Whether or not to use early stopping. Default parameters. Parameters can be changed in HelperFunctions.py.
+    num_channels: (int)         How many channels were used during training.
+    beta: (float)               Beta value related to FBeta.
+    """
 
     def __init__(self, num_classes, model_type, loadData, ramLoader, use_early_stopping, num_channels, beta):
         self.num_classes = num_classes
@@ -74,10 +87,6 @@ class GridSearchResultProcessor():
         return isfile(file_name)
         
         
-    """
-    def save_results_df(self, results_df, file_name):
-        results_df.to_csv(file_name, mode = 'w', index=False)
-    """
     def clear_results_df(self, file_name):
         path = self.get_results_file_path()
         file = f"{path}/{file_name}"

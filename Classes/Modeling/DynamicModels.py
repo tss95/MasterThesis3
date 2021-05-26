@@ -1,16 +1,9 @@
-import numpy as np
-import pandas as pd
-import sklearn as sk
 
 import tensorflow as tf
-from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Dense, LSTM, multiply, concatenate, Activation, Masking, Reshape
 from tensorflow.keras.layers import Conv1D, Dropout, Flatten, MaxPool1D, AveragePooling1D, BatchNormalization, Permute, GlobalAveragePooling1D, LSTM
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
-from tensorflow.keras.losses import categorical_crossentropy
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import regularizers
-from tensorflow.keras import utils
 from tensorflow.keras import mixed_precision
 
 from Classes.Modeling.InceptionTimeModel import InceptionTimeModel
@@ -22,7 +15,7 @@ class DynamicModels():
     Class that allows the user to load a predefined model this class. Models are numbered between 1 and 8.
     
     PARAMETERS
-    ---------
+    -------------------------------------------------------------------------------------
     model_nr: (int) which model to load
     input_shape : (int, int, int) shape of the input (batch, number of channels, channel lenght)
     num_classes: (int) number of classes
